@@ -20,6 +20,16 @@ export interface SendTextParams {
   text: string;
 }
 
+/** قائمة تفاعلية لاختيار عدد الحاضرين (Meta interactive list). */
+export interface SendListParams {
+  to: string;
+  header?: string;
+  body: string;
+  footer?: string;
+  buttonLabel: string;
+  rows: { id: string; title: string; description?: string }[];
+}
+
 export interface SendResult {
   ok: boolean;
   messageId?: string;
@@ -33,13 +43,16 @@ export interface WhatsAppProvider {
   sendTemplate(params: SendTemplateParams): Promise<SendResult>;
   sendImage(params: SendImageParams): Promise<SendResult>;
   sendText(params: SendTextParams): Promise<SendResult>;
+  sendList(params: SendListParams): Promise<SendResult>;
 }
 
 /** رد المدعو المستخرج من webhook. */
 export interface InboundReply {
   from: string;                 // رقم المرسل
   messageId: string;
-  kind: 'accept' | 'decline' | 'text' | 'unknown';
+  kind: 'accept' | 'decline' | 'seats' | 'text' | 'unknown';
   buttonPayload?: string;
+  /** عدد الحاضرين المختار من القائمة التفاعلية */
+  seats?: number;
   text?: string;
 }

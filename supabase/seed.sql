@@ -19,25 +19,33 @@ update public.profiles p set role = 'scanner', full_name = 'ماسح البوا�
   from auth.users u where u.id = p.id and u.email = 'scanner@barqiyah.sa';
 
 -- ---------- الباقات ----------
-insert into public.packages (name, seats, price, active) values
-  ('باقة ١٠٠ مقعد', 100,  499.00, true),
-  ('باقة ٣٠٠ مقعد', 300, 1299.00, true),
-  ('باقة ٥٠٠ مقعد', 500, 1999.00, true),
-  ('باقة ١٠٠٠ مقعد', 1000, 3499.00, true)
-on conflict do nothing;
+insert into public.packages (name, seats, price, active)
+select v.name, v.seats, v.price, true
+from (values
+  ('باقة ١٠٠ مقعد', 100,  499.00),
+  ('باقة ٣٠٠ مقعد', 300, 1299.00),
+  ('باقة ٥٠٠ مقعد', 500, 1999.00),
+  ('باقة ١٠٠٠ مقعد', 1000, 3499.00)
+) as v(name, seats, price)
+where not exists (select 1 from public.packages p where p.name = v.name);
 
 -- ---------- القوالب العامة (يبنيها الأدمن) ----------
-insert into public.templates (owner_id, name, body_text, status, whatsapp_category, meta_template_name) values
-  (null, 'كلاسيكي — ذهبي',
+insert into public.templates (owner_id, name, body_text, status, whatsapp_category, meta_template_name)
+select null, v.name, v.body, 'approved'::template_status, v.cat::whatsapp_category, v.meta
+from (values
+  ('كلاسيكي — ذهبي',
    'يسرّ {{1}} دعوتكم لحضور حفل زواج {{2}}، وذلك يوم {{3}} في {{4}}. حضوركم شرف لنا.',
-   'approved', 'utility', 'barqiyah_invite_classic'),
-  (null, 'بسيط — أبيض',
+   'utility', 'barqiyah_invite_classic'),
+  ('بسيط — أبيض',
    'بدعوة من {{1}}: نتشرّف بحضوركم مناسبة {{2}} يوم {{3}} — {{4}}.',
-   'approved', 'utility', 'barqiyah_invite_simple'),
-  (null, 'مودرن — رمادي',
+   'utility', 'barqiyah_invite_simple'),
+  ('مودرن — رمادي',
    '{{1}} تدعوكم لمشاركتهم فرحة {{2}} — {{3}} — {{4}}.',
-   'approved', 'marketing', 'barqiyah_invite_modern')
-on conflict do nothing;
+   'marketing', 'barqiyah_invite_modern')
+) as v(name, body, cat, meta)
+where not exists (
+  select 1 from public.templates t where t.owner_id is null and t.name = v.name
+);
 
 -- ---------- مناسبة تجريبية كاملة ----------
 do $$
@@ -70,12 +78,24 @@ begin
     returning id into v_event;
   end if;
 
-  insert into public.inviters (event_id, name, role_label) values
-    (v_event, 'محمد العبدالله', 'المالك') returning id into v_inv_own;
-  insert into public.inviters (event_id, name, role_label) values
-    (v_event, 'أحمد العبدالله', 'داعٍ') returning id into v_inv_2;
-  insert into public.inviters (event_id, name, role_label) values
-    (v_event, 'سعد العبدالله', 'داعٍ') returning id into v_inv_3;
+  -- الدعاة (بلا تكرار عند إعادة تشغيل الملف)
+  select id into v_inv_own from public.inviters where event_id = v_event and name = 'محمد العبدالله';
+  if v_inv_own is null then
+    insert into public.inviters (event_id, name, role_label)
+    values (v_event, 'محمد العبدالله', 'المالك') returning id into v_inv_own;
+  end if;
+
+  select id into v_inv_2 from public.inviters where event_id = v_event and name = 'أحمد العبدالله';
+  if v_inv_2 is null then
+    insert into public.inviters (event_id, name, role_label)
+    values (v_event, 'أحمد العبدالله', 'داعٍ') returning id into v_inv_2;
+  end if;
+
+  select id into v_inv_3 from public.inviters where event_id = v_event and name = 'سعد العبدالله';
+  if v_inv_3 is null then
+    insert into public.inviters (event_id, name, role_label)
+    values (v_event, 'سعد العبدالله', 'داعٍ') returning id into v_inv_3;
+  end if;
 
   insert into public.guests (event_id, inviter_id, name, phone, max_seats, confirmed_seats, status, qr_token, scans_used, sent_at, responded_at)
   values

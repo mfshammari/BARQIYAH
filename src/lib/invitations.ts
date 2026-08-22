@@ -2,7 +2,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient, adminClientAvailable } from '@/lib/supabase/admin';
 import { appUrl } from '@/lib/env';
-import { buildButtonPayloads, getWhatsAppProvider } from '@/lib/whatsapp';
+import { buildButtonPayloads, buildSeatsPayload, getWhatsAppProvider } from '@/lib/whatsapp';
 import { OCCASION_LABELS, type EventRow, type Guest, type Template } from '@/lib/types';
 import { formatDate } from '@/lib/format';
 
@@ -156,6 +156,53 @@ export async function sendInvitations(
   }
 
   return outcomes;
+}
+
+/**
+ * بعد ضغط زر «تأكيد الحضور»: نسأل المدعو عن العدد الفعلي.
+ * دعوة بمقعد واحد لا تحتاج سؤالاً. حتى ١٠ مقاعد نعرض قائمة تفاعلية داخل واتساب،
+ * وما فوقها نرسل رابط صفحة الرد لأن Meta تحدّ القائمة بعشرة صفوف.
+ */
+export async function askForSeatCount(guestId: string): Promise<{ ok: boolean; error?: string }> {
+  if (!adminClientAvailable) return { ok: false, error: 'service role غير مضبوط' };
+
+  const admin = createAdminClient();
+  const { data: guest } = await admin
+    .from('guests').select('*').eq('id', guestId).maybeSingle<Guest>();
+  if (!guest) return { ok: false, error: 'المدعو غير موجود' };
+
+  const provider = await getWhatsAppProvider();
+  const rsvpUrl = appUrl(`/rsvp/${guest.invite_token}`);
+
+  const result = guest.max_seats <= 10
+    ? await provider.sendList({
+        to: guest.phone,
+        header: 'تأكيد الحضور',
+        body: 'كم عدد الحاضرين معكم؟ اختر العدد الفعلي من القائمة.',
+        footer: `دعوتكم تتسع لـ ${guest.max_seats}`,
+        buttonLabel: 'اختيار العدد',
+        rows: Array.from({ length: guest.max_seats }, (_, i) => ({
+          id: buildSeatsPayload(guest.invite_token, i + 1),
+          title: `${i + 1}`,
+          description: i === 0 ? 'شخص واحد' : `${i + 1} أشخاص`,
+        })),
+      })
+    : await provider.sendText({
+        to: guest.phone,
+        text:
+          `شكراً لتأكيدكم. حدّدوا عدد الحاضرين الفعلي من هذا الرابط ` +
+          `(الحد الأقصى ${guest.max_seats}):\n${rsvpUrl}`,
+      });
+
+  await logMessage({
+    event_id: guest.event_id, guest_id: guest.id, kind: 'seat_prompt',
+    provider: result.provider, to_phone: guest.phone,
+    status: result.ok ? 'sent' : 'failed',
+    message_id: result.messageId ?? null, error: result.error ?? null,
+    payload: { max_seats: guest.max_seats, rsvp_url: rsvpUrl },
+  });
+
+  return { ok: result.ok, error: result.error };
 }
 
 /**

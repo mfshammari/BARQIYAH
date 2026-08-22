@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": ".test-build",
+    "module": "esnext",
+    "rootDir": "src",
+    "jsx": "react-jsx",
+    "declaration": false,
+    "incremental": false
+  },
+  "include": [
+    "src/lib/whatsapp/parse.ts",
+    "src/lib/whatsapp/types.ts",
+    "src/lib/format.ts",
+    "src/lib/balance.ts",
+    "src/lib/types.ts"
+  ]
+}

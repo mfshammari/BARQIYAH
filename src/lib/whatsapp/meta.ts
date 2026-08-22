@@ -1,5 +1,5 @@
 import type {
-  SendImageParams, SendResult, SendTemplateParams, SendTextParams, WhatsAppProvider,
+  SendImageParams, SendListParams, SendResult, SendTemplateParams, SendTextParams, WhatsAppProvider,
 } from './types';
 
 const GRAPH_VERSION = 'v21.0';
@@ -112,6 +112,24 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
       to: params.to,
       type: 'text',
       text: { body: params.text, preview_url: false },
+    });
+  }
+
+  async sendList(params: SendListParams): Promise<SendResult> {
+    return this.post({
+      messaging_product: 'whatsapp',
+      to: params.to,
+      type: 'interactive',
+      interactive: {
+        type: 'list',
+        ...(params.header ? { header: { type: 'text', text: params.header } } : {}),
+        body: { text: params.body },
+        ...(params.footer ? { footer: { text: params.footer } } : {}),
+        action: {
+          button: params.buttonLabel,
+          sections: [{ title: 'عدد الحاضرين', rows: params.rows.slice(0, 10) }],
+        },
+      },
     });
   }
 }

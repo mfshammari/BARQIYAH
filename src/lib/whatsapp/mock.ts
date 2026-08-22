@@ -1,5 +1,5 @@
 import type {
-  SendImageParams, SendResult, SendTemplateParams, SendTextParams, WhatsAppProvider,
+  SendImageParams, SendListParams, SendResult, SendTemplateParams, SendTextParams, WhatsAppProvider,
 } from './types';
 
 /**
@@ -28,5 +28,9 @@ export class MockWhatsAppProvider implements WhatsAppProvider {
 
   async sendText(params: SendTextParams): Promise<SendResult> {
     return this.ok({ kind: 'text', ...params });
+  }
+
+  async sendList(params: SendListParams): Promise<SendResult> {
+    return this.ok({ kind: 'list', ...params });
   }
 }
