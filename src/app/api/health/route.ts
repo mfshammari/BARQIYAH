@@ -78,6 +78,31 @@ export async function GET() {
     'SUPABASE_SERVICE_ROLE_KEY',
     'APP_URL',
   ]);
+  /**
+   * تقنيع القيم السرّية: طول ومقدّمة قصيرة فقط، ورصد المسافات الزائدة
+   * (سطر جديد في آخر القيمة سبب شائع لا يُرى بالعين في لوحة Vercel).
+   */
+  const mask = (value: string | undefined) => {
+    if (!value) return null;
+    return {
+      length: value.length,
+      prefix: `${value.slice(0, 4)}…`,
+      has_whitespace: value !== value.trim(),
+    };
+  };
+
+  // رابط المشروع علني بطبيعته — يُدمج في كود المتصفح لكل زائر — فعرضه
+  // هنا لا يكشف شيئاً، ويُنهي التخمين عند الأخطاء الإملائية في القيمة.
+  const values = ok
+    ? undefined
+    : {
+        NEXT_PUBLIC_SUPABASE_URL: env.supabaseUrl || null,
+        NEXT_PUBLIC_SUPABASE_URL_has_whitespace: env.supabaseUrl !== env.supabaseUrl.trim(),
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: mask(env.supabaseAnonKey),
+        SUPABASE_SERVICE_ROLE_KEY: mask(env.supabaseServiceKey),
+        APP_URL: process.env.APP_URL || null,
+      };
+
   const found_names = ok
     ? undefined
     : Object.keys(process.env)
@@ -90,6 +115,7 @@ export async function GET() {
       ok,
       database,
       config,
+      values,
       found_names,
       whatsapp: metaConfigured ? 'meta' : 'mock',
       checked_at: new Date().toISOString(),
