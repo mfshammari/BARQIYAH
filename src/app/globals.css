@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   design tokens — الهوية اللونية والخطوط في مكان واحد
+   لتغيير الهوية لاحقاً: عدّل هذه القيم فقط.
+   ============================================================ */
+:root {
+  /* أسطح */
+  --bg: #F7F5F0;
+  --surface: #FFFFFF;
+  --panel: #FCFAF4;
+
+  /* نص */
+  --ink: #1E2A24;
+  --muted: #6E7B74;
+  --line: #E7E2D6;
+
+  /* الهوية: أخضر عميق + ذهبي هادئ */
+  --brand: #153A2B;
+  --brand-dark: #0E2A1F;
+  --brand-soft: #E8EFEA;
+  --gold: #B08A47;
+  --gold-soft: #D8BE86;
+  --gold-line: #E3D8BE;
+
+  /* حالات */
+  --ok: #12805F;
+  --ok-soft: #E3F3ED;
+  --warn: #B77B1B;
+  --warn-soft: #FBF1DE;
+  --danger: #C0392F;
+  --danger-soft: #FBE9E7;
+  --info: #2F5C9E;
+  --info-soft: #E9EFF9;
+
+  /* خطوط */
+  --font-body: 'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Tajawal', var(--font-body);
+  --font-cerem: 'Aref Ruqaa', 'Amiri', serif;
+
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+
+html, body { padding: 0; margin: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* الأرقام دائماً LTR داخل النص العربي */
+.num { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+
+/* ============================================================
+   مكوّنات مشتركة
+   ============================================================ */
+@layer components {
+  .card {
+    @apply bg-surface border border-line rounded-xl shadow-card;
+  }
+  .card-pad { @apply p-4 sm:p-5; }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold
+           text-sm px-4 py-2.5 transition-colors disabled:opacity-50
+           disabled:cursor-not-allowed select-none;
+  }
+  .btn-primary  { @apply btn bg-brand text-white hover:bg-brand-dark; }
+  .btn-gold     { @apply btn bg-gold text-white hover:brightness-95; }
+  .btn-ghost    { @apply btn bg-surface border border-line text-ink hover:bg-panel; }
+  .btn-soft     { @apply btn bg-brand-soft text-brand hover:brightness-95; }
+  .btn-danger   { @apply btn bg-danger-soft text-danger hover:brightness-95; }
+  .btn-sm       { @apply px-3 py-1.5 text-[13px] rounded-lg; }
+
+  .field {
+    @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm
+           text-ink placeholder:text-muted/70 outline-none
+           focus:border-brand focus:ring-2 focus:ring-brand/15;
+  }
+  .label { @apply block text-[13px] font-semibold text-ink mb-1.5; }
+  .hint  { @apply text-[12px] text-muted mt-1; }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1
+           text-[12px] font-semibold whitespace-nowrap;
+  }
+
+  .table-wrap { @apply overflow-x-auto -mx-4 sm:mx-0; }
+  .tbl { @apply w-full text-sm border-collapse min-w-[640px]; }
+  .tbl thead th {
+    @apply text-right text-[12px] font-semibold text-muted bg-panel
+           px-3 py-2.5 border-b border-line whitespace-nowrap;
+  }
+  .tbl tbody td { @apply px-3 py-3 border-b border-line/70 align-middle; }
+  .tbl tbody tr:hover { @apply bg-panel/60; }
+
+  .page-title { @apply font-display font-extrabold text-xl sm:text-2xl text-ink; }
+  .page-sub   { @apply text-[13.5px] text-muted mt-1; }
+  .sec-title  { @apply font-display font-bold text-base text-ink; }
+}
+
+/* شريط تمرير أنيق */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #DCD6C7; border-radius: 8px; border: 3px solid var(--bg); }
+::-webkit-scrollbar-track { background: transparent; }
+
+@media print {
+  .no-print { display: none !important; }
+}
