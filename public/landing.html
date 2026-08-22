@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>برقية · دعواتٌ تليق بمناسبتك</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Aref+Ruqaa:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap');
+
+:root{
+  --ivory:#F5F1E8; --paper:#FCFAF4; --green:#153A2B; --green-2:#1E4C39;
+  --gold:#B08A47; --gold-soft:#D8BE86; --gold-line:#E3D8BE;
+  --ink:#282621; --muted:#6E695C; --line:#E6DFCE;
+  --cerem:'Aref Ruqaa',serif; --disp:'Amiri',serif; --body:'IBM Plex Sans Arabic',system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:var(--body);background:var(--ivory);color:var(--ink);line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
+.wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+
+/* ديكور مشترك: مسطرة ذهبية بمعيّن في الوسط */
+.rule{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 auto}
+.rule::before,.rule::after{content:"";height:1px;width:56px;background:linear-gradient(90deg,transparent,var(--gold-soft))}
+.rule::after{background:linear-gradient(90deg,var(--gold-soft),transparent)}
+.rule span{color:var(--gold);font-size:9px;transform:rotate(45deg);display:inline-block}
+.eyebrow{font-size:12.5px;letter-spacing:3px;color:var(--gold);font-weight:600;text-align:center;margin-bottom:14px}
+.sec-title{font-family:var(--disp);font-weight:700;font-size:clamp(28px,4vw,44px);text-align:center;color:var(--green);line-height:1.3}
+.sec-head{margin-bottom:52px}
+.sec-head .rule{margin-top:18px}
+
+/* أزرار */
+.btn{display:inline-flex;align-items:center;gap:8px;font-family:var(--body);font-weight:600;font-size:15px;
+  padding:13px 28px;border-radius:2px;border:1px solid transparent;cursor:pointer;transition:.25s;letter-spacing:.3px}
+.btn-primary{background:var(--green);color:var(--ivory)}
+.btn-primary:hover{background:var(--green-2);transform:translateY(-2px)}
+.btn-ghost{background:transparent;color:var(--green);border-color:var(--gold-line)}
+.btn-ghost:hover{border-color:var(--gold);background:#fff}
+.btn-gold{background:var(--gold);color:#fff}
+.btn-gold:hover{background:#9C7A3C;transform:translateY(-2px)}
+
+/* الهيدر */
+header{position:sticky;top:0;z-index:50;background:rgba(245,241,232,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:74px}
+.brand{font-family:var(--cerem);font-size:30px;color:var(--green);font-weight:700;letter-spacing:1px}
+.brand .dot{color:var(--gold)}
+.nav-links{display:flex;align-items:center;gap:34px}
+.nav-links a{font-size:15px;color:var(--ink);font-weight:500;position:relative;transition:.2s}
+.nav-links a:hover{color:var(--gold)}
+.nav-links a::after{content:"";position:absolute;bottom:-6px;right:0;width:0;height:1px;background:var(--gold);transition:.25s}
+.nav-links a:hover::after{width:100%}
+.nav-cta{display:flex;align-items:center;gap:14px}
+.burger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:6px}
+.burger span{width:24px;height:2px;background:var(--green);transition:.2s}
+
+/* الواجهة الرئيسية */
+.hero{position:relative;padding:72px 0 90px;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0;background:
+  radial-gradient(ellipse 60% 50% at 80% 0%,rgba(176,138,71,.08),transparent),
+  radial-gradient(ellipse 50% 40% at 10% 100%,rgba(21,58,43,.05),transparent);pointer-events:none}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center;position:relative}
+.hero-eyebrow{font-size:13px;letter-spacing:4px;color:var(--gold);font-weight:600;margin-bottom:22px}
+.hero h1{font-family:var(--disp);font-weight:700;font-size:clamp(34px,5vw,56px);line-height:1.35;color:var(--green);margin-bottom:24px}
+.hero h1 em{font-style:normal;color:var(--gold);position:relative}
+.hero p.lead{font-size:18px;color:var(--muted);max-width:520px;margin-bottom:36px;line-height:1.9}
+.hero-actions{display:flex;gap:14px;flex-wrap:wrap}
+.hero-trust{margin-top:34px;display:flex;gap:28px;flex-wrap:wrap;font-size:13.5px;color:var(--muted)}
+.hero-trust b{color:var(--green);font-family:var(--disp);font-size:22px;font-weight:700;display:block}
+
+/* بطاقة الدعوة (العنصر المميز) */
+.invite{position:relative;justify-self:center;width:330px;max-width:100%;transition:transform .5s}
+.invite:hover{transform:rotate(-1deg) translateY(-4px)}
+.invite-card{background:linear-gradient(160deg,#1A4433,#123528);border-radius:3px;padding:14px;
+  box-shadow:0 30px 60px -20px rgba(21,58,43,.5);position:relative}
+.invite-frame{border:1px solid rgba(216,190,134,.45);padding:34px 26px 26px;text-align:center;position:relative}
+.invite-frame::before{content:"";position:absolute;inset:5px;border:1px solid rgba(216,190,134,.18)}
+.monogram{width:52px;height:52px;border-radius:50%;border:1px solid var(--gold-soft);color:var(--gold-soft);
+  font-family:var(--cerem);font-size:26px;display:grid;place-items:center;margin:0 auto 18px;position:relative;z-index:1}
+.invite-kicker{color:var(--gold-soft);font-size:11px;letter-spacing:3px;margin-bottom:16px}
+.invite-frame h3{font-family:var(--disp);color:#F5EEDC;font-size:15px;font-weight:400;line-height:2;position:relative;z-index:1}
+.invite-frame h3 .var{color:var(--gold-soft);border-bottom:1px dashed rgba(216,190,134,.5);padding-bottom:1px}
+.invite-name{font-family:var(--cerem);color:#fff;font-size:26px;margin:10px 0 6px}
+.invite-date{color:rgba(245,238,220,.7);font-size:12px;letter-spacing:1px;margin-top:14px}
+.invite-foot{display:flex;align-items:center;justify-content:space-between;margin-top:22px;padding-top:16px;border-top:1px solid rgba(216,190,134,.2)}
+.invite-seal{font-family:var(--cerem);color:var(--gold-soft);font-size:15px}
+#miniqr{width:46px;height:46px;display:grid;grid-template-columns:repeat(11,1fr);gap:1px;background:#fff;padding:4px;border-radius:2px}
+#miniqr i{background:transparent}#miniqr i.on{background:#123528}
+.invite-badge{position:absolute;top:-14px;left:-14px;background:var(--gold);color:#fff;font-size:11px;font-weight:600;
+  padding:6px 12px;border-radius:2px;box-shadow:0 8px 18px -6px rgba(176,138,71,.6);letter-spacing:.5px}
+
+/* كيف تعمل */
+.how{padding:96px 0;background:var(--paper);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;position:relative}
+.step{text-align:center;padding:0 8px;position:relative}
+.step-num{font-family:var(--disp);font-size:40px;color:var(--gold-soft);font-weight:700;line-height:1;margin-bottom:16px}
+.step-ic{width:60px;height:60px;margin:0 auto 18px;border:1px solid var(--gold-line);border-radius:50%;
+  display:grid;place-items:center;color:var(--green);background:#fff;transition:.3s}
+.step:hover .step-ic{border-color:var(--gold);transform:translateY(-3px)}
+.step-ic svg{width:26px;height:26px}
+.step h4{font-family:var(--disp);font-size:20px;color:var(--green);margin-bottom:8px;font-weight:700}
+.step p{font-size:14px;color:var(--muted);line-height:1.8}
+.steps::before{content:"";position:absolute;top:78px;right:12%;left:12%;height:1px;
+  background:repeating-linear-gradient(90deg,var(--gold-line) 0 6px,transparent 6px 12px);z-index:0}
+
+/* المناسبات */
+.occasions{padding:96px 0}
+.occ-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.occ{background:var(--paper);border:1px solid var(--line);padding:34px 26px;text-align:center;transition:.3s;position:relative;overflow:hidden}
+.occ::before{content:"";position:absolute;top:0;right:0;left:0;height:2px;background:var(--gold);transform:scaleX(0);transition:.3s;transform-origin:right}
+.occ:hover{border-color:var(--gold-line);box-shadow:0 20px 40px -28px rgba(21,58,43,.4);transform:translateY(-3px)}
+.occ:hover::before{transform:scaleX(1)}
+.occ-ic{font-size:30px;margin-bottom:14px;color:var(--gold)}
+.occ h4{font-family:var(--disp);font-size:22px;color:var(--green);margin-bottom:6px;font-weight:700}
+.occ p{font-size:13.5px;color:var(--muted)}
+
+/* الباقات */
+.pricing{padding:96px 0;background:var(--green);color:var(--ivory);position:relative}
+.pricing .eyebrow{color:var(--gold-soft)}
+.pricing .sec-title{color:#fff}
+.pricing .rule::before{background:linear-gradient(90deg,transparent,rgba(216,190,134,.6))}
+.pricing .rule::after{background:linear-gradient(90deg,rgba(216,190,134,.6),transparent)}
+.price-note{text-align:center;color:rgba(245,241,232,.75);font-size:15px;margin:-32px auto 48px;max-width:520px}
+.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;align-items:stretch}
+.plan{background:rgba(255,255,255,.04);border:1px solid rgba(216,190,134,.22);padding:36px 30px;display:flex;flex-direction:column;transition:.3s}
+.plan:hover{border-color:var(--gold-soft);transform:translateY(-4px)}
+.plan.featured{background:var(--ivory);color:var(--ink);position:relative;box-shadow:0 30px 60px -24px rgba(0,0,0,.5)}
+.plan-tag{position:absolute;top:-13px;right:50%;transform:translateX(50%);background:var(--gold);color:#fff;font-size:12px;
+  font-weight:600;padding:6px 18px;letter-spacing:.5px;white-space:nowrap}
+.plan-name{font-family:var(--disp);font-size:26px;font-weight:700;margin-bottom:6px}
+.plan.featured .plan-name{color:var(--green)}
+.plan-desc{font-size:13.5px;opacity:.8;min-height:42px;margin-bottom:22px}
+.plan-price{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+.plan-price b{font-family:var(--disp);font-size:46px;font-weight:700;line-height:1}
+.plan-price span{font-size:16px;opacity:.8}
+.plan-seats{font-size:14px;color:var(--gold-soft);margin-bottom:26px;font-weight:600}
+.plan.featured .plan-seats{color:var(--gold)}
+.plan ul{list-style:none;margin-bottom:30px;flex:1}
+.plan li{font-size:14px;padding:9px 0;border-bottom:1px solid rgba(216,190,134,.14);display:flex;align-items:center;gap:10px}
+.plan.featured li{border-color:var(--line)}
+.plan li::before{content:"◆";color:var(--gold);font-size:8px}
+.plan .btn{width:100%;justify-content:center}
+.plan:not(.featured) .btn-ghost{color:var(--ivory);border-color:rgba(216,190,134,.35)}
+.plan:not(.featured) .btn-ghost:hover{border-color:var(--gold-soft);background:rgba(255,255,255,.05)}
+
+/* المميزات */
+.features{padding:96px 0}
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px 40px}
+.feat{display:flex;gap:16px;align-items:flex-start}
+.feat-ic{flex-shrink:0;width:44px;height:44px;border:1px solid var(--gold-line);border-radius:50%;display:grid;place-items:center;color:var(--gold)}
+.feat-ic svg{width:20px;height:20px}
+.feat h4{font-family:var(--disp);font-size:19px;color:var(--green);margin-bottom:3px;font-weight:700}
+.feat p{font-size:14px;color:var(--muted);line-height:1.75}
+
+/* دعوة ختامية */
+.cta{padding:100px 0;text-align:center;position:relative;background:var(--paper);border-top:1px solid var(--line)}
+.cta h2{font-family:var(--disp);font-size:clamp(30px,4.5vw,46px);color:var(--green);margin-bottom:18px;font-weight:700}
+.cta p{font-size:17px;color:var(--muted);margin-bottom:34px;max-width:480px;margin-inline:auto}
+
+/* الفوتر */
+footer{background:var(--green);color:rgba(245,241,232,.7);padding:56px 0 30px}
+.foot-top{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:30px;padding-bottom:34px;border-bottom:1px solid rgba(216,190,134,.18)}
+.foot-brand{font-family:var(--cerem);font-size:34px;color:#fff}
+.foot-brand .dot{color:var(--gold-soft)}
+.foot-brand p{font-size:14px;margin-top:8px;max-width:280px;color:rgba(245,241,232,.6)}
+.foot-cols{display:flex;gap:64px;flex-wrap:wrap}
+.foot-col h5{color:var(--gold-soft);font-size:13px;letter-spacing:1px;margin-bottom:14px;font-weight:600}
+.foot-col a{display:block;font-size:14px;padding:5px 0;color:rgba(245,241,232,.7);transition:.2s}
+.foot-col a:hover{color:#fff}
+.foot-bottom{text-align:center;padding-top:26px;font-size:13px;color:rgba(245,241,232,.45)}
+
+/* حركة الظهور */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
+.reveal.in{opacity:1;transform:none}
+
+@media(max-width:900px){
+  .hero-grid{grid-template-columns:1fr;gap:48px}
+  .invite{order:-1}
+  .steps{grid-template-columns:repeat(2,1fr);gap:34px}.steps::before{display:none}
+  .occ-grid,.plans,.feat-grid{grid-template-columns:1fr}
+  .plan.featured{order:-1}
+  .nav-links{position:fixed;inset:74px 0 auto 0;background:var(--ivory);flex-direction:column;gap:0;
+    padding:10px 24px 24px;border-bottom:1px solid var(--line);transform:translateY(-120%);transition:.3s;box-shadow:0 20px 30px -20px rgba(0,0,0,.2)}
+  .nav-links.open{transform:none}
+  .nav-links a{padding:14px 0;border-bottom:1px solid var(--line);width:100%}
+  .burger{display:flex}
+  .hero-actions .btn,.nav-cta .btn-ghost{display:none}
+  .nav-cta .btn-primary{padding:10px 18px;font-size:14px}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  .reveal{opacity:1!important;transform:none!important}
+}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a href="#" class="brand">برقية<span class="dot">.</span></a>
+    <nav class="nav-links" id="menu">
+      <a href="#how">كيف تعمل</a>
+      <a href="#occasions">المناسبات</a>
+      <a href="#pricing">الباقات</a>
+      <a href="#features">المميزات</a>
+    </nav>
+    <div class="nav-cta">
+      <a href="#" class="btn btn-ghost">تسجيل الدخول</a>
+      <a href="#pricing" class="btn btn-primary">ابدأ الآن</a>
+      <button class="burger" id="burger" aria-label="القائمة">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- الواجهة الرئيسية -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-text">
+      <div class="hero-eyebrow">منصة الدعوات الرقمية</div>
+      <h1>ادعُ ضيوفك <em>ببرقية</em><br>وتابع حضورهم حتى الباب</h1>
+      <p class="lead">أنشئ مناسبتك، اختر قالب دعوتك وأضف صورتك، وأرسلها عبر واتساب. لكل مدعوٍّ بطاقة دخول بباركود تُمسح عند الوصول — وأنت تتابع من أكّد ومن حضر لحظةً بلحظة.</p>
+      <div class="hero-actions">
+        <a href="#pricing" class="btn btn-primary">أنشئ مناسبتك</a>
+        <a href="#how" class="btn btn-ghost">شاهد كيف تعمل</a>
+      </div>
+      <div class="hero-trust">
+        <div><b>واتساب</b>وصولٌ مباشر لكل مدعو</div>
+        <div><b>باركود</b>بطاقة دخول لكل ضيف</div>
+        <div><b>لحظياً</b>تقارير حضورٍ فورية</div>
+      </div>
+    </div>
+
+    <div class="invite">
+      <div class="invite-card">
+        <div class="invite-badge">دعوة بباركود</div>
+        <div class="invite-frame">
+          <div class="monogram">ب</div>
+          <div class="invite-kicker">بمناسبة حفل الزفاف</div>
+          <h3>تتشرّف <span class="var">أسرة العبدالله</span><br>بدعوتكم لمشاركتهم فرحتهم</h3>
+          <div class="invite-name">وليمة العُرس</div>
+          <div class="invite-date">مساء الخميس · ١٥ رمضان</div>
+          <div class="invite-foot">
+            <div class="invite-seal">برقية</div>
+            <div id="miniqr" aria-hidden="true"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- كيف تعمل -->
+<section class="how" id="how">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">تجربة الاستخدام</div>
+      <h2 class="sec-title">كيف تعمل برقية؟</h2>
+      <div class="rule"><span>◆</span></div>
+    </div>
+    <div class="steps">
+      <div class="step reveal">
+        <div class="step-num">٠١</div>
+        <div class="step-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg></div>
+        <h4>أنشئ مناسبتك</h4>
+        <p>اختر نوع المناسبة وتاريخها، والباقة المناسبة بعدد المقاعد.</p>
+      </div>
+      <div class="step reveal">
+        <div class="step-num">٠٢</div>
+        <div class="step-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
+        <h4>جهّز دعوتك</h4>
+        <p>اختر قالباً معتمداً لنوع مناسبتك، وأضف صورة الدعوة الخاصة بك.</p>
+      </div>
+      <div class="step reveal">
+        <div class="step-num">٠٣</div>
+        <div class="step-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 11.5a8.4 8.4 0 01-11.9 7.6L3 21l1.9-6A8.5 8.5 0 1121 11.5z"/></svg></div>
+        <h4>أرسلها عبر واتساب</h4>
+        <p>تصل دعوةٌ أنيقة لكل مدعو، أو أنشئ بطاقةً يدوية وسلّمها بنفسك.</p>
+      </div>
+      <div class="step reveal">
+        <div class="step-num">٠٤</div>
+        <div class="step-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3"/><rect x="9" y="9" width="6" height="6"/></svg></div>
+        <h4>استقبل ضيوفك</h4>
+        <p>يُمسح باركود كل مدعوٍّ عند الباب، وتتابع الحضور مباشرةً من لوحتك.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- المناسبات -->
+<section class="occasions" id="occasions">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">لكل مناسبةٍ برقيّتها</div>
+      <h2 class="sec-title">أنواع الاحتفالات</h2>
+      <div class="rule"><span>◆</span></div>
+    </div>
+    <div class="occ-grid">
+      <div class="occ reveal"><div class="occ-ic">❦</div><h4>حفل زفاف</h4><p>قوالب فخمة تليق بليلة العمر.</p></div>
+      <div class="occ reveal"><div class="occ-ic">✦</div><h4>خطوبة وملكة</h4><p>دعواتٌ راقية لبداية الفرح.</p></div>
+      <div class="occ reveal"><div class="occ-ic">❁</div><h4>عقد قران</h4><p>مناسبةٌ خاصة بحضورٍ منتقى.</p></div>
+      <div class="occ reveal"><div class="occ-ic">✵</div><h4>حفل تخرّج</h4><p>احتفِ بالإنجاز مع من تحب.</p></div>
+      <div class="occ reveal"><div class="occ-ic">❋</div><h4>مولودٌ جديد</h4><p>شارك بشرى الفرح الصغير.</p></div>
+      <div class="occ reveal"><div class="occ-ic">◈</div><h4>مناسبات رسمية</h4><p>حفلاتٌ ومؤتمرات بتنظيمٍ دقيق.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- الباقات -->
+<section class="pricing" id="pricing">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">الأسعار</div>
+      <h2 class="sec-title">باقاتٌ بعدد المقاعد</h2>
+      <div class="rule"><span>◆</span></div>
+    </div>
+    <p class="price-note">ادفع مرةً واحدة لكل مناسبة — لا اشتراكات. المقعد الواحد = ضيفٌ واحد يدخل الحفل، وكل باقة مستقلة لمناسبتها.</p>
+    <div class="plans">
+      <div class="plan reveal">
+        <div class="plan-name">أساسية</div>
+        <div class="plan-desc">مثالية للمناسبات العائلية والقوائم الصغيرة.</div>
+        <div class="plan-price"><b>٢٩٩</b><span>﷼</span></div>
+        <div class="plan-seats">١٠٠ مقعد</div>
+        <ul>
+          <li>قوالب دعوات معتمدة</li>
+          <li>إرسال عبر واتساب</li>
+          <li>باركود لكل مدعو</li>
+          <li>٥ رسائل تجريبية مجانية</li>
+        </ul>
+        <a href="#" class="btn btn-ghost">اختر الأساسية</a>
+      </div>
+
+      <div class="plan featured reveal">
+        <div class="plan-tag">الأكثر طلباً</div>
+        <div class="plan-name">قياسية</div>
+        <div class="plan-desc">الخيار الأنسب لأغلب حفلات الزفاف.</div>
+        <div class="plan-price"><b>٦٩٩</b><span>﷼</span></div>
+        <div class="plan-seats">٣٠٠ مقعد</div>
+        <ul>
+          <li>كل مزايا الباقة الأساسية</li>
+          <li>إدارة الدعاة وتوزيع القوائم</li>
+          <li>حسابات مسح متعددة للأبواب</li>
+          <li>تقارير حضورٍ لحظية</li>
+          <li>طلب قالبٍ خاص بك</li>
+        </ul>
+        <a href="#" class="btn btn-primary">اختر القياسية</a>
+      </div>
+
+      <div class="plan reveal">
+        <div class="plan-name">مميزة</div>
+        <div class="plan-desc">للحفلات الكبيرة والقوائم الطويلة.</div>
+        <div class="plan-price"><b>١١٩٩</b><span>﷼</span></div>
+        <div class="plan-seats">٦٠٠ مقعد</div>
+        <ul>
+          <li>كل مزايا الباقة القياسية</li>
+          <li>أولوية في اعتماد القوالب</li>
+          <li>حدٌّ أعلى للدعاة والماسحين</li>
+          <li>دعمٌ مخصّص طوال المناسبة</li>
+        </ul>
+        <a href="#" class="btn btn-ghost">اختر المميزة</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- المميزات -->
+<section class="features" id="features">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">المميزات</div>
+      <h2 class="sec-title">كل ما تحتاجه لإدارة الحضور</h2>
+      <div class="rule"><span>◆</span></div>
+    </div>
+    <div class="feat-grid">
+      <div class="feat reveal"><div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3"/><rect x="9" y="9" width="6" height="6"/></svg></div><div><h4>باركود لكل مدعو</h4><p>بطاقة دخول فريدة تُمسح مرةً واحدة وتمنع تكرار الدخول.</p></div></div>
+      <div class="feat reveal"><div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6L9 17l-5-5"/></svg></div><div><h4>تأكيد فوري</h4><p>يؤكّد المدعو حضوره وعدد مرافقيه بضغطةٍ من الواتساب.</p></div></div>
+      <div class="feat reveal"><div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0112 0M16 6a3 3 0 010 6M18 20a6 6 0 00-3-5"/></svg></div><div><h4>إدارة الدعاة</h4><p>أضف دعاةً يوزّعون قوائمهم، ويظهر لكل مدعوٍّ اسم داعيه.</p></div></div>
+      <div class="feat reveal"><div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 9h18"/></svg></div><div><h4>رصيد بالمقاعد</h4><p>تابع المتاح والمحجوز والمؤكّد، مع استرداد المقاعد الملغاة.</p></div></div>
+      <div class="feat reveal"><div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l2.4 7.4H22l-6 4.5 2.3 7.1L12 16.5 5.7 21l2.3-7.1-6-4.5h7.6z"/></svg></div><div><h4>قوالب لكل مناسبة</h4><p>مكتبة قوالب مصنّفة، أو اطلب تصميماً خاصاً باسمك.</p></div></div>
+      <div class="feat reveal"><div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></div><div><h4>تقارير الحضور</h4><p>من قبِل، ومن اعتذر، ومن حضر — أرقامٌ واضحة لحظياً.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- دعوة ختامية -->
+<section class="cta">
+  <div class="wrap">
+    <div class="rule" style="margin-bottom:26px"><span>◆</span></div>
+    <h2>ابدأ أولى مناسباتك مع برقية</h2>
+    <p>جهّز دعوتك خلال دقائق، وجرّبها مجاناً بخمس رسائل قبل الإطلاق.</p>
+    <a href="#pricing" class="btn btn-gold">أنشئ حسابك الآن</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-top">
+      <div class="foot-brand">برقية<span class="dot">.</span>
+        <p>منصةٌ سعودية لإدارة دعوات المناسبات، من الإرسال إلى باب الحفل.</p>
+      </div>
+      <div class="foot-cols">
+        <div class="foot-col"><h5>المنصة</h5><a href="#how">كيف تعمل</a><a href="#pricing">الباقات</a><a href="#occasions">المناسبات</a></div>
+        <div class="foot-col"><h5>الحساب</h5><a href="#">تسجيل الدخول</a><a href="#">إنشاء حساب</a><a href="#">لوحة التحكم</a></div>
+        <div class="foot-col"><h5>تواصل</h5><a href="#">الدعم</a><a href="#">واتساب</a><a href="#">الشروط والخصوصية</a></div>
+      </div>
+    </div>
+    <div class="foot-bottom">© ٢٠٢٦ برقية — جميع الحقوق محفوظة</div>
+  </div>
+</footer>
+
+<script>
+// قائمة الجوال
+const burger=document.getElementById('burger'),menu=document.getElementById('menu');
+burger.addEventListener('click',()=>menu.classList.toggle('open'));
+menu.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>menu.classList.remove('open')));
+
+// باركود مصغّر زخرفي
+(function(){
+  const q=document.getElementById('miniqr');if(!q)return;
+  let h=7919;const rng=()=>{h=(h*1103515245+12345)&0x7fffffff;return h/0x7fffffff;};
+  const N=11;
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    const corner=(r<3&&c<3)||(r<3&&c>N-4)||(r>N-4&&c<3);
+    const on=corner?((r%2===0)||(c%2===0)?false:true)||(r<3&&c<3&&(r===1&&c===1)):rng()>0.52;
+    const cell=document.createElement('i');
+    if(corner){if(r===0||r===2||c===0||c===2||(r===1&&c===1)||(r<=2&&c<=2&&(r+c)%1===0)){}}
+    // نمط زوايا واضح + نقاط عشوائية للوسط
+    let fill=false;
+    if(corner){fill=(r===0||r===2||c===0||c===2||(r===1&&c===1));}
+    else{fill=rng()>0.5;}
+    if(fill)cell.className='on';
+    q.appendChild(cell);
+  }
+})();
+
+// ظهور عند التمرير
+const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:.15});
+document.querySelectorAll('.reveal').forEach((el,i)=>{el.style.transitionDelay=(i%4*80)+'ms';io.observe(el);});
+</script>
+</body>
+</html>
