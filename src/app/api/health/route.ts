@@ -70,11 +70,27 @@ export async function GET() {
 
   const ok = database.connected && database.schema_ready && adminClientAvailable;
 
+  // تشخيص الأسماء عند نقص الإعداد فقط: يكشف الأخطاء الإملائية في أسماء
+  // المتغيّرات (السبب الأشيع). أسماء فقط — لا تُعرض أي قيمة إطلاقاً.
+  const expected = new Set([
+    'NEXT_PUBLIC_SUPABASE_URL',
+    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'APP_URL',
+  ]);
+  const found_names = ok
+    ? undefined
+    : Object.keys(process.env)
+        .filter((k) => /SUPABASE|^NEXT_PUBLIC_|^APP_URL$/i.test(k))
+        .sort()
+        .map((k) => (expected.has(k) ? k : `${k}  ← اسم غير متوقَّع`));
+
   return NextResponse.json(
     {
       ok,
       database,
       config,
+      found_names,
       whatsapp: metaConfigured ? 'meta' : 'mock',
       checked_at: new Date().toISOString(),
     },
