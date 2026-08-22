@@ -76,7 +76,7 @@ export default async function PackagesPage() {
               </div>
             </div>
             <label className="flex items-center gap-2 text-[13px]">
-              <input type="checkbox" name="active" defaultChecked className="accent-[var(--brand)]" />
+              <input type="checkbox" name="active" defaultChecked className="accent-brand" />
               متاحة للعملاء
             </label>
             <SubmitButton className="btn-primary w-full">حفظ الباقة</SubmitButton>

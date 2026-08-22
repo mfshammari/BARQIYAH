@@ -95,7 +95,7 @@ export default async function AdminTemplatesPage() {
               <p className="hint">التصنيف يؤثر على تسعير Meta لكل رسالة.</p>
             </div>
             <label className="flex items-center gap-2 text-[13px]">
-              <input type="checkbox" name="approved" defaultChecked className="accent-[var(--brand)]" />
+              <input type="checkbox" name="approved" defaultChecked className="accent-brand" />
               اعتماد القالب مباشرة
             </label>
             <SubmitButton className="btn-primary w-full">حفظ القالب</SubmitButton>

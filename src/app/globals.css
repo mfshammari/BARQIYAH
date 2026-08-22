@@ -7,33 +7,34 @@
    لتغيير الهوية لاحقاً: عدّل هذه القيم فقط.
    ============================================================ */
 :root {
+  /* القيم بصيغة قنوات RGB ليدعم Tailwind شفافية الألوان (bg-brand/20) */
   /* أسطح */
-  --bg: #F7F5F0;
-  --surface: #FFFFFF;
-  --panel: #FCFAF4;
+  --bg: 247 245 240;          /* #F7F5F0 */
+  --surface: 255 255 255;     /* #FFFFFF */
+  --panel: 252 250 244;       /* #FCFAF4 */
 
   /* نص */
-  --ink: #1E2A24;
-  --muted: #6E7B74;
-  --line: #E7E2D6;
+  --ink: 30 42 36;            /* #1E2A24 */
+  --muted: 110 123 116;       /* #6E7B74 */
+  --line: 231 226 214;        /* #E7E2D6 */
 
   /* الهوية: أخضر عميق + ذهبي هادئ */
-  --brand: #153A2B;
-  --brand-dark: #0E2A1F;
-  --brand-soft: #E8EFEA;
-  --gold: #B08A47;
-  --gold-soft: #D8BE86;
-  --gold-line: #E3D8BE;
+  --brand: 21 58 43;          /* #153A2B */
+  --brand-dark: 14 42 31;     /* #0E2A1F */
+  --brand-soft: 232 239 234;  /* #E8EFEA */
+  --gold: 176 138 71;         /* #B08A47 */
+  --gold-soft: 216 190 134;   /* #D8BE86 */
+  --gold-line: 227 216 190;   /* #E3D8BE */
 
   /* حالات */
-  --ok: #12805F;
-  --ok-soft: #E3F3ED;
-  --warn: #B77B1B;
-  --warn-soft: #FBF1DE;
-  --danger: #C0392F;
-  --danger-soft: #FBE9E7;
-  --info: #2F5C9E;
-  --info-soft: #E9EFF9;
+  --ok: 18 128 95;            /* #12805F */
+  --ok-soft: 227 243 237;     /* #E3F3ED */
+  --warn: 183 123 27;         /* #B77B1B */
+  --warn-soft: 251 241 222;   /* #FBF1DE */
+  --danger: 192 57 47;        /* #C0392F */
+  --danger-soft: 251 233 231; /* #FBE9E7 */
+  --info: 47 92 158;          /* #2F5C9E */
+  --info-soft: 233 239 249;   /* #E9EFF9 */
 
   /* خطوط */
   --font-body: 'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -48,8 +49,8 @@
 html, body { padding: 0; margin: 0; }
 
 body {
-  background: var(--bg);
-  color: var(--ink);
+  background: rgb(var(--bg));
+  color: rgb(var(--ink));
   font-family: var(--font-body);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -108,7 +109,7 @@ body {
 
 /* شريط تمرير أنيق */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: #DCD6C7; border-radius: 8px; border: 3px solid var(--bg); }
+::-webkit-scrollbar-thumb { background: #DCD6C7; border-radius: 8px; border: 3px solid rgb(var(--bg)); }
 ::-webkit-scrollbar-track { background: transparent; }
 
 @media print {
