@@ -20,8 +20,17 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     .eq('id', user.id)
     .maybeSingle<Profile>();
 
-  if (!profile) return null;
-  return { id: user.id, email: user.email ?? null, profile };
+  if (profile) return { id: user.id, email: user.email ?? null, profile };
+
+  // شبكة أمان: مستخدم بلا ملف شخصي (تريغر لم يعمل مثلاً) يبقى عالقاً
+  // خارج المنصة إلى الأبد. ensure_profile ينشئه بدور owner فقط.
+  const { data: created } = await supabase.rpc('ensure_profile', {
+    p_full_name: (user.user_metadata?.full_name as string | undefined) ?? null,
+  });
+
+  const ensured = (Array.isArray(created) ? created[0] : created) as Profile | null;
+  if (!ensured) return null;
+  return { id: user.id, email: user.email ?? null, profile: ensured };
 }
 
 /** المسار الافتراضي لكل دور بعد تسجيل الدخول. */

@@ -230,4 +230,71 @@ begin
 end $$;
 reset role;
 
+-- ————————————— ٨) منع ترقية الصلاحيات —————————————
+set local role authenticated;
+set local request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+
+do $$
+begin
+  begin
+    update public.profiles set role = 'admin' where id = auth.uid();
+    raise exception 'FAIL — نجحت ترقية المستخدم لنفسه إلى admin';
+  exception when others then
+    if sqlerrm <> 'ROLE_CHANGE_FORBIDDEN' then raise; end if;
+    raise notice 'PASS — منع المستخدم من ترقية نفسه إلى admin';
+  end;
+
+  begin
+    insert into public.profiles (id, role) values (gen_random_uuid(), 'admin');
+    raise exception 'FAIL — نجح إدراج ملف بدور admin';
+  exception when insufficient_privilege then
+    raise notice 'PASS — منع إدراج ملف بدور admin';
+  end;
+end $$;
+
+-- التعديلات المشروعة تبقى شغّالة
+do $$
+begin
+  update public.profiles set full_name = 'اسم محدَّث' where id = auth.uid();
+  perform pg_temp.assert_eq(
+    (select full_name from public.profiles where id = auth.uid()),
+    'اسم محدَّث', 'تعديل الاسم مسموح للمستخدم');
+end $$;
+
+-- الأدمن وحده يغيّر الأدوار
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+begin
+  update public.profiles set role = 'owner' where id = '33333333-3333-3333-3333-333333333333';
+  perform pg_temp.assert_eq(
+    (select role::text from public.profiles where id = '33333333-3333-3333-3333-333333333333'),
+    'owner', 'الأدمن يستطيع تغيير أدوار الآخرين');
+  update public.profiles set role = 'scanner' where id = '33333333-3333-3333-3333-333333333333';
+end $$;
+
+reset role;
+
+-- ————————————— ٩) شبكة أمان الملف الشخصي —————————————
+-- مستخدم بلا profile (تريغر لم يعمل) يجب ألا يبقى عالقاً خارج المنصة
+delete from public.profiles where id = '44444444-4444-4444-4444-444444444444';
+
+set local role authenticated;
+set local request.jwt.claim.sub = '44444444-4444-4444-4444-444444444444';
+do $$
+begin
+  perform pg_temp.assert_eq(
+    (select (public.ensure_profile('مستخدم متعافٍ')).role::text),
+    'owner', 'ensure_profile ينشئ الملف بدور owner');
+end $$;
+
+-- استدعاؤها ثانية لا يغيّر شيئاً على ملف قائم
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+begin
+  perform pg_temp.assert_eq(
+    (select (public.ensure_profile()).role::text),
+    'admin', 'ensure_profile لا تمسّ ملفاً قائماً ولا تُنزّل دوره');
+end $$;
+reset role;
+
 rollback;

@@ -3,12 +3,15 @@
 ## ١) Supabase
 
 1. أنشئ مشروعاً على [supabase.com](https://supabase.com).
-2. من **SQL Editor** شغّل بالترتيب:
-   - `supabase/migrations/0001_init.sql`
-   - `supabase/migrations/0002_rls.sql`
-   - `supabase/migrations/0003_functions.sql`
+2. من **SQL Editor** الصق محتوى `supabase/setup.sql` كاملاً واضغط Run
+   (ملف واحد يحتوي المخطط + RLS + الدوال، وآمن لإعادة التشغيل).
 3. من **Settings → API** انسخ: `Project URL`, `anon key`, `service_role key`.
-4. (اختياري) للبيانات التجريبية: `node scripts/seed-users.mjs` ثم `supabase/seed.sql`.
+4. من **Authentication → Add user** أنشئ حسابك (فعّل Auto Confirm)، ثم اجعله أدمن:
+   ```sql
+   update public.profiles p set role = 'admin'
+   from auth.users u where u.id = p.id and u.email = 'بريدك@هنا';
+   ```
+5. (اختياري) للبيانات التجريبية: `node scripts/seed-users.mjs` ثم `supabase/seed.sql`.
 
 ## ٢) Vercel
 
