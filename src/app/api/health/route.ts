@@ -96,9 +96,11 @@ export async function GET() {
   const values = ok
     ? undefined
     : {
-        NEXT_PUBLIC_SUPABASE_URL: env.supabaseUrl || null,
-        NEXT_PUBLIC_SUPABASE_URL_has_whitespace: env.supabaseUrl !== env.supabaseUrl.trim(),
+        NEXT_PUBLIC_SUPABASE_URL_raw: process.env.NEXT_PUBLIC_SUPABASE_URL || null,
+        NEXT_PUBLIC_SUPABASE_URL_used: env.supabaseUrl || null,
         NEXT_PUBLIC_SUPABASE_ANON_KEY: mask(env.supabaseAnonKey),
+        // خطأ شائع: لصق الرابط في خانة المفتاح
+        NEXT_PUBLIC_SUPABASE_ANON_KEY_looks_like_url: /^https?:\/\//i.test(env.supabaseAnonKey),
         SUPABASE_SERVICE_ROLE_KEY: mask(env.supabaseServiceKey),
         APP_URL: process.env.APP_URL || null,
       };
