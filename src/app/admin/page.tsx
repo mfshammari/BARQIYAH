@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { PageHeader, StatCard, EventStatusBadge, EmptyState } from '@/components/ui';
 import { formatCurrency, formatDate, formatNumber } from '@/lib/format';
 import { metaConfigured } from '@/lib/env';
+import { adminClientAvailable } from '@/lib/supabase/admin';
 import { OCCASION_LABELS, type EventRow } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -30,6 +31,15 @@ export default async function AdminDashboard() {
         title="لوحة المنصة"
         subtitle="نظرة عامة على المناسبات والعملاء والاستهلاك."
       />
+
+      {!adminClientAvailable ? (
+        <div className="mb-5 rounded-xl border border-danger/25 bg-danger-soft text-danger px-4 py-3 text-[13px]">
+          <b>مفتاح service_role غير مضبوط:</b> صفحات المدعو (الرد والباركود) وWebhook واتساب
+          وإنشاء حسابات المسح لن تعمل. أضف
+          <code dir="ltr" className="mx-1">SUPABASE_SERVICE_ROLE_KEY</code>
+          في متغيّرات البيئة ثم أعد النشر.
+        </div>
+      ) : null}
 
       {!metaConfigured ? (
         <div className="mb-5 rounded-xl border border-warn/25 bg-warn-soft text-warn px-4 py-3 text-[13px]">
