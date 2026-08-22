@@ -236,6 +236,30 @@ export async function updateGuest(_prev: ActionState, formData: FormData): Promi
     return { error: 'عدد الأشخاص يجب أن يكون بين ١ و٥٠.' };
   }
 
+  const { data: current } = await supabase
+    .from('guests').select('status, max_seats, confirmed_seats')
+    .eq('id', guestId).eq('event_id', eventId).maybeSingle<Guest>();
+  if (!current) return { error: 'المدعو غير موجود.' };
+
+  // دعوة مُرسلة تحجز max_seats — زيادته تستهلك رصيداً إضافياً، فنتحقق أولاً
+  if (current.status === 'sent' && maxSeats > current.max_seats) {
+    const { data: balance } = await supabase.rpc('event_balance', { p_event_id: eventId });
+    const available = (Array.isArray(balance) ? balance[0] : balance)?.available ?? 0;
+    const extra = maxSeats - current.max_seats;
+    if (extra > available) {
+      return {
+        error: `الرصيد لا يكفي: زيادة ${extra} مقاعد تحتاج رصيداً متاحاً، والمتاح ${available} فقط.`,
+      };
+    }
+  }
+
+  // بعد التأكيد يصبح العدد الفعلي هو المرجع، فلا يجوز أن ينزل الحد الأقصى دونه
+  if (current.confirmed_seats != null && maxSeats < current.confirmed_seats) {
+    return {
+      error: `المدعو أكّد ${current.confirmed_seats} مقاعد — لا يمكن جعل الحد الأقصى أقل منها.`,
+    };
+  }
+
   const { error } = await supabase
     .from('guests')
     .update({ name, max_seats: maxSeats, inviter_id: inviterId })
