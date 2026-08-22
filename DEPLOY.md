@@ -13,6 +13,11 @@
 ## ٢) Vercel
 
 1. من [vercel.com/new](https://vercel.com/new) استورد المستودع — يتعرّف على Next.js تلقائياً.
+
+   > المستودع يحتوي `vercel.json` يثبّت `framework: nextjs`. هذا مقصود:
+   > المشروع أُنشئ سابقاً على إعداد Vite، وكان Vercel يبحث عن مجلد `dist`
+   > فيفشل النشر برسالة `No Output Directory named "dist" found`.
+   > الملف يتجاوز إعداد اللوحة، فلا حاجة لتغيير Framework Preset يدوياً.
 2. أضف متغيّرات البيئة:
 
 ```
