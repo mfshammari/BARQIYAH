@@ -40,6 +40,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // كل المسارات عدا الملفات الثابتة والصور والمسارات العامة للمدعو
-    '/((?!_next/static|_next/image|favicon.ico|landing.html|api/whatsapp|api/health|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|landing.html|api/whatsapp|api/payments|api/health|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 };

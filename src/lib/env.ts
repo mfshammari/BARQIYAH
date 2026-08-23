@@ -27,6 +27,8 @@ export const env = {
   metaAccessToken: process.env.META_ACCESS_TOKEN ?? '',
   metaVerifyToken: process.env.META_WEBHOOK_VERIFY_TOKEN ?? '',
   appUrl: process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+  moyasarSecretKey: process.env.MOYASAR_SECRET_KEY ?? '',
+  moyasarWebhookSecret: process.env.MOYASAR_WEBHOOK_SECRET ?? '',
 };
 
 /** هل إعدادات Supabase مكتملة؟ الواجهة تعرض شاشة إعداد إن لم تكن. */
@@ -34,6 +36,9 @@ export const supabaseConfigured = Boolean(env.supabaseUrl && env.supabaseAnonKey
 
 /** هل مفاتيح Meta مكتملة؟ إن لا → مزوّد واتساب يعمل بوضع Mock. */
 export const metaConfigured = Boolean(env.metaPhoneNumberId && env.metaAccessToken);
+
+/** هل بوابة الدفع مضبوطة؟ إن لا → تفعيل يدوي من الفريق. */
+export const paymentConfigured = Boolean(env.moyasarSecretKey);
 
 export function appUrl(path = ''): string {
   const base = env.appUrl.replace(/\/$/, '');

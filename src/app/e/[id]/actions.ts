@@ -6,7 +6,10 @@ import { createAdminClient, adminClientAvailable } from '@/lib/supabase/admin';
 import { requireUser } from '@/lib/auth';
 import { sendInvitations } from '@/lib/invitations';
 import { normalizePhone, isValidPhone } from '@/lib/format';
-import type { EventRow, Guest, OccasionType, WhatsAppCategory } from '@/lib/types';
+import type { EventRow, Guest, OccasionType, Package, WhatsAppCategory } from '@/lib/types';
+import { getPaymentProvider } from '@/lib/payments';
+import { paymentConfigured, appUrl } from '@/lib/env';
+import { redirect } from 'next/navigation';
 
 export interface ActionState { error?: string; notice?: string }
 
@@ -497,27 +500,57 @@ export async function updateEventInfo(_prev: ActionState, formData: FormData): P
   return { notice: 'تم حفظ البيانات.' };
 }
 
-/** طلب ترقية/شراء رصيد إضافي — يُسجَّل كعملية معلّقة ينفّذها الأدمن. */
+/**
+ * شراء باقة أو ترقية.
+ * مع بوابة مضبوطة: يُنشأ طلب دفع ويُحوَّل العميل للبوابة، والتفعيل
+ * يتم تلقائياً عبر الـwebhook بعد السداد (SPEC §5).
+ * بلا بوابة: يُسجَّل طلب معلّق ينفّذه الفريق يدوياً.
+ */
 export async function requestUpgrade(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const eventId = String(formData.get('event_id') ?? '');
-  const { supabase } = await guardEvent(eventId);
+  const { supabase, event } = await guardEvent(eventId);
 
   const packageId = String(formData.get('package_id') ?? '');
   if (!packageId) return { error: 'اختر الباقة المطلوبة.' };
 
   const { data: pkg } = await supabase
-    .from('packages').select('*').eq('id', packageId).maybeSingle();
+    .from('packages').select('*').eq('id', packageId).maybeSingle<Package>();
   if (!pkg) return { error: 'الباقة غير متاحة.' };
 
-  // TODO: عند اعتماد بوابة الدفع (Moyasar/Tap) يُستبدل هذا بإنشاء عملية دفع
-  // عبر PaymentProvider في src/lib/payments — والتفعيل يصبح تلقائياً بعد السداد.
-  const { error } = await supabase.from('transactions').insert({
-    event_id: eventId, package_id: packageId, amount: pkg.price,
-    type: 'upgrade', status: 'pending', seats_added: pkg.seats,
-    note: 'طلب ترقية من صاحب المناسبة — بانتظار التفعيل اليدوي',
+  if (!paymentConfigured) {
+    const { error } = await supabase.from('transactions').insert({
+      event_id: eventId, package_id: packageId, amount: pkg.price,
+      type: 'upgrade', status: 'pending', method: 'manual', seats_added: pkg.seats,
+      note: 'طلب من صاحب المناسبة — بانتظار التفعيل اليدوي',
+    });
+    if (error) return { error: 'تعذّر تسجيل الطلب.' };
+    revalidatePath(`/e/${eventId}/info`);
+    return { notice: 'سُجّل طلبك. ستتواصل معك الإدارة لإتمام الدفع والتفعيل.' };
+  }
+
+  // عملية معلّقة يعود معرّفها في الـwebhook
+  const { data: txId, error: txError } = await supabase.rpc('create_pending_payment', {
+    p_event_id: eventId,
+    p_package_id: packageId,
+  });
+  if (txError || !txId) return { error: 'تعذّر بدء عملية الدفع.' };
+
+  const provider = getPaymentProvider();
+  const result = await provider.createCheckout({
+    eventId,
+    packageId,
+    transactionId: String(txId),
+    amount: Number(pkg.price),
+    description: `برقية — ${pkg.name} لمناسبة ${event.host_name}`,
+    callbackUrl: appUrl(`/e/${eventId}/info?paid=1`),
   });
 
-  if (error) return { error: 'تعذّر تسجيل الطلب.' };
-  revalidatePath(`/e/${eventId}/info`);
-  return { notice: 'تم تسجيل طلب الترقية. ستتواصل معك الإدارة لإتمام الدفع والتفعيل.' };
+  if (!result.ok || !result.redirectUrl) {
+    await supabase.rpc('fail_payment', {
+      p_transaction_id: txId, p_reason: result.error ?? 'تعذّر إنشاء طلب الدفع',
+    });
+    return { error: result.error ? `تعذّر بدء الدفع: ${result.error}` : 'تعذّر بدء الدفع.' };
+  }
+
+  redirect(result.redirectUrl);
 }

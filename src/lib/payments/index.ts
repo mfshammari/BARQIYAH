@@ -7,6 +7,8 @@
 export interface CheckoutParams {
   eventId: string;
   packageId: string;
+  /** العملية المعلّقة التي يعود معرّفها في الـwebhook */
+  transactionId: string;
   amount: number;
   description: string;
   callbackUrl: string;
@@ -46,7 +48,19 @@ export class ManualPaymentProvider implements PaymentProvider {
   }
 }
 
-// TODO: أضف MoyasarPaymentProvider / TapPaymentProvider عند اعتماد بوابة الدفع.
+/**
+ * المزوّد الفعّال: Moyasar عند توفّر مفتاحها، وإلا التفعيل اليدوي.
+ * غياب المفاتيح لا يوقف المنصة — يبقى الطلب معلّقاً ينفّذه الفريق.
+ */
 export function getPaymentProvider(): PaymentProvider {
+  const key = process.env.MOYASAR_SECRET_KEY;
+  if (key) {
+    // استيراد كسول: كود البوابة لا يُحمَّل في وضع التفعيل اليدوي
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { MoyasarPaymentProvider } = require('./moyasar') as typeof import('./moyasar');
+    return new MoyasarPaymentProvider(key);
+  }
   return new ManualPaymentProvider();
 }
+
+// TODO: أضف TapPaymentProvider عند الحاجة — يطبّق الواجهة نفسها.
