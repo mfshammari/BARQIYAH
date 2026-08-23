@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { verifyScan, type ScanResult } from './actions';
+import { formatNumber } from '@/lib/format';
 
 type CameraState = 'idle' | 'starting' | 'running' | 'denied' | 'unsupported';
 
@@ -215,34 +216,44 @@ export function ScannerScreen({
 
 function ResultCard({ result, onDismiss }: { result: ScanResult; onDismiss: () => void }) {
   const tone = result.ok
-    ? 'bg-white text-ink'
+    ? 'bg-ok-soft text-ok'
     : result.reason === 'CODE_EXHAUSTED'
       ? 'bg-warn-soft text-warn'
       : 'bg-danger-soft text-danger';
 
   return (
-    <div className={`w-full max-w-sm rounded-2xl px-4 py-4 shadow-pop ${tone}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="font-display font-extrabold text-lg leading-tight">
-            {result.ok ? 'حضر ✓' : 'غير مقبول'}
-          </div>
-          <p className="text-[13px] mt-1">{result.message}</p>
-        </div>
-        <button type="button" onClick={onDismiss} className="text-lg leading-none opacity-60 hover:opacity-100">×</button>
+    <div className={`w-full max-w-sm rounded-2xl px-4 py-5 text-center shadow-pop ${tone}`}>
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="إغلاق"
+          className="text-lg leading-none opacity-60 hover:opacity-100"
+        >
+          ×
+        </button>
       </div>
 
-      {result.name ? (
-        <div className="mt-3 pt-3 border-t border-current/15 space-y-1 text-[13px]">
-          <div className="font-semibold">{result.name}</div>
-          {result.inviter ? <div className="opacity-70 text-[12.5px]">الداعي: {result.inviter}</div> : null}
-          {result.seats != null ? (
-            <div className="opacity-80 num">
-              المقاعد: {result.scansUsed ?? 0} / {result.seats}
-              {result.remaining != null && result.remaining > 0 ? ` — متبقٍ ${result.remaining}` : ''}
-            </div>
-          ) : null}
-        </div>
+      {/* علامة كبيرة تُقرأ من بعيد على الباب */}
+      <div
+        aria-hidden
+        className="mx-auto grid h-24 w-24 place-items-center rounded-2xl border-2 border-current text-[44px] leading-none"
+      >
+        {result.ok ? '✓' : '✕'}
+      </div>
+
+      <div className="mt-4 font-ui text-lg font-bold leading-tight">
+        {result.name ?? result.message}
+      </div>
+
+      <div className="mt-1 text-[13px] num">
+        {result.ok && result.seats != null
+          ? `مسح ${formatNumber(result.scansUsed ?? 0)} من ${formatNumber(result.seats)} مقاعد · حضر`
+          : result.message}
+      </div>
+
+      {result.inviter ? (
+        <div className="mt-1 text-[12px] opacity-70">الداعي: {result.inviter}</div>
       ) : null}
     </div>
   );

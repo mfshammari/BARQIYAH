@@ -1,26 +1,62 @@
 import Link from 'next/link';
 import { requireEventAccess } from '@/lib/auth';
 import { fetchEventBalance } from '@/lib/balance';
-import { BalancePanel } from '@/components/BalancePanel';
-import { PageHeader, StatCard, Alert, EventStatusBadge } from '@/components/ui';
-import { formatDate, formatNumber } from '@/lib/format';
+import {
+  PageHeader, Alert, EventStatusBadge, GuestStatusBadge,
+  SecLabel, Countdown, TodoCard, StatTriple, MiniStats, PolicyNote,
+} from '@/components/ui';
+import { formatHijri, formatNumber, formatEventLine } from '@/lib/format';
 import { metaConfigured } from '@/lib/env';
-import { OCCASION_LABELS, type EventRow } from '@/lib/types';
+import { OCCASION_LABELS, type EventRow, type Guest } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
+
+/** الأيام المتبقية حتى المناسبة — صفر إن كانت اليوم أو مضت. */
+function daysUntil(dateStr: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(`${dateStr}T00:00:00`);
+  return Math.max(0, Math.round((target.getTime() - today.getTime()) / 86_400_000));
+}
 
 export default async function EventDashboard({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { event, supabase } = await requireEventAccess(id);
   const e = event as EventRow;
   const balance = await fetchEventBalance(supabase, id);
+  const days = daysUntil(e.event_date);
+
+  // «لم يردّوا» = مُرسل ومضى على إرساله ثلاثة أيام فأكثر
+  const staleBefore = new Date(Date.now() - 3 * 86_400_000).toISOString();
+  const [{ data: latest }, { count: staleCount }] = await Promise.all([
+    supabase
+      .from('guests')
+      .select('id, name, max_seats, confirmed_seats, status')
+      .eq('event_id', id)
+      .order('created_at', { ascending: false })
+      .limit(6)
+      .returns<Guest[]>(),
+    supabase
+      .from('guests')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', id)
+      .eq('status', 'sent')
+      .lt('sent_at', staleBefore),
+  ]);
+
+  const recent = latest ?? [];
 
   return (
     <>
       <PageHeader
         title="لوحة المعلومات"
-        subtitle={`${OCCASION_LABELS[e.occasion_type]} — ${formatDate(e.event_date)}`}
-        action={<EventStatusBadge status={e.status} />}
+        subtitle={`${e.internal_name || OCCASION_LABELS[e.occasion_type]}${e.venue ? ` · ${e.venue}` : ''}`}
+        action={
+          <div className="flex items-center gap-2">
+            <EventStatusBadge status={e.status} />
+            <Link href={`/e/${id}/guests`} className="btn-primary btn-sm">+ إضافة مدعو</Link>
+          </div>
+        }
       />
 
       {e.status === 'pending' ? (
@@ -40,41 +76,101 @@ export default async function EventDashboard({ params }: { params: Promise<{ id:
         </div>
       ) : null}
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_380px] items-start">
-        <div className="space-y-5">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <StatCard label="مُرسل (بانتظار الرد)" value={formatNumber(balance.cnt_sent)} tone="warn" />
-            <StatCard label="أكّد الحضور" value={formatNumber(balance.cnt_accepted)} tone="ok" />
-            <StatCard label="اعتذر" value={formatNumber(balance.cnt_declined)} tone="danger" />
-            <StatCard label="لم يرد" value={formatNumber(balance.cnt_expired)} />
-            <StatCard label="حضر فعلياً" value={formatNumber(balance.cnt_attended)} tone="brand" />
-            <StatCard label="مسودّات" value={formatNumber(balance.cnt_draft)} />
-          </div>
+      <Countdown
+        days={formatNumber(days)}
+        dateLine={
+          formatEventLine({
+            dateGregorian: e.event_date,
+            dateHijri: e.event_date_hijri,
+            weekday: e.event_weekday,
+            time: e.event_time,
+          }) || formatHijri(e.event_date)
+        }
+        note={`${formatNumber(balance.confirmed)} ضيفاً مؤكّداً حتى الآن`}
+        action={
+          <Link href={`/e/${id}/guests?status=accepted`} className="btn-ghost btn-sm">
+            قائمة الحضور
+          </Link>
+        }
+      />
 
-          <div className="card card-pad">
-            <h2 className="sec-title mb-3">الخطوات التالية</h2>
-            <div className="grid sm:grid-cols-2 gap-3">
-              <Link href={`/e/${id}/guests`} className="rounded-xl border border-line p-3.5 hover:bg-panel transition-colors">
-                <div className="font-semibold text-[14px]">إدارة المدعوين</div>
-                <div className="text-[12.5px] text-muted mt-0.5">إضافة يدوية أو رفع Excel، ثم الإرسال.</div>
-              </Link>
-              <Link href={`/e/${id}/template`} className="rounded-xl border border-line p-3.5 hover:bg-panel transition-colors">
-                <div className="font-semibold text-[14px]">قالب الدعوة</div>
-                <div className="text-[12.5px] text-muted mt-0.5">اختر قالباً معتمداً أو اطلب قالباً خاصاً.</div>
-              </Link>
-              <Link href={`/e/${id}/scanners`} className="rounded-xl border border-line p-3.5 hover:bg-panel transition-colors">
-                <div className="font-semibold text-[14px]">حسابات المسح</div>
-                <div className="text-[12.5px] text-muted mt-0.5">أنشئ حساباً لكل بوابة قبل يوم الحفل.</div>
-              </Link>
-              <Link href={`/e/${id}/inviters`} className="rounded-xl border border-line p-3.5 hover:bg-panel transition-colors">
-                <div className="font-semibold text-[14px]">الدعاة</div>
-                <div className="text-[12.5px] text-muted mt-0.5">وزّع الدعوات على الدعاة وتابع نصيب كل واحد.</div>
-              </Link>
-            </div>
-          </div>
+      <SecLabel>ما يحتاج انتباهك</SecLabel>
+      <div className="todo-grid">
+        <TodoCard
+          count={formatNumber(balance.cnt_draft)}
+          label="مسوّدات لم تُرسل"
+          action={<Link href={`/e/${id}/guests?status=draft`} className="btn-primary btn-sm">أرسلها الآن</Link>}
+        />
+        <TodoCard
+          count={formatNumber(staleCount ?? 0)}
+          label="لم يردّوا منذ ٣ أيام"
+          action={<Link href={`/e/${id}/guests?status=sent`} className="btn-ghost btn-sm">ذكّرهم</Link>}
+        />
+        <TodoCard
+          count={formatNumber(balance.available)}
+          label="مقعداً متاحاً"
+          action={<Link href={`/e/${id}/guests`} className="btn-ghost btn-sm">أضف مدعوين</Link>}
+        />
+      </div>
+
+      <SecLabel>
+        الرصيد بالمقاعد — باقة <span className="num">{formatNumber(balance.seats_quota)}</span> مقعد
+      </SecLabel>
+      <StatTriple
+        items={[
+          { tone: 'g', label: 'متاح', value: formatNumber(balance.available) },
+          { tone: 'd', label: 'محجوز (بانتظار الرد)', value: formatNumber(balance.held) },
+          { tone: 'n', label: 'مؤكّد', value: formatNumber(balance.confirmed) },
+        ]}
+      />
+
+      <div className="mt-4">
+        <MiniStats
+          items={[
+            { label: 'مُرسل', value: formatNumber(balance.cnt_sent) },
+            { label: 'أكّد', value: formatNumber(balance.cnt_accepted) },
+            { label: 'اعتذر', value: formatNumber(balance.cnt_declined) },
+            { label: 'لم يرد', value: formatNumber(balance.cnt_expired) },
+            { label: 'حضر', value: formatNumber(balance.cnt_attended) },
+            { label: 'مسوّدة', value: formatNumber(balance.cnt_draft) },
+          ]}
+        />
+      </div>
+
+      <div className="card card-pad mt-4">
+        <div className="mb-2 flex items-baseline justify-between gap-3">
+          <SecLabel>أحدث المدعوين</SecLabel>
+          <Link href={`/e/${id}/guests`} className="text-[12.5px] font-semibold text-brand hover:underline">
+            الكل ←
+          </Link>
         </div>
+        {recent.length === 0 ? (
+          <p className="py-4 text-center text-[13px] text-muted">
+            لم يُضَف أي مدعو بعد — ابدأ من صفحة المدعوين.
+          </p>
+        ) : (
+          <div className="divide-y divide-line/70">
+            {recent.map((g) => (
+              <div key={g.id} className="flex items-center justify-between gap-3 py-2.5">
+                <div className="min-w-0">
+                  <span className="text-[14px] text-ink">{g.name}</span>
+                  <span className="me-2 text-[11px] text-muted num">
+                    {' · '}
+                    {formatNumber(g.confirmed_seats || g.max_seats)} مقاعد
+                  </span>
+                </div>
+                <GuestStatusBadge status={g.status} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-        <BalancePanel balance={balance} />
+      <div className="mt-4">
+        <PolicyNote>
+          أرقام مدعويك بيانات أمانة — تُستخدم لإيصال دعوتك وحدها، ولا تُصدَّر ولا تُشارك،
+          التزاماً بنظام حماية البيانات الشخصية وشروط واتساب.
+        </PolicyNote>
       </div>
     </>
   );

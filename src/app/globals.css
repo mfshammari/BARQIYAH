@@ -151,6 +151,143 @@ body {
   .page-title { @apply font-display font-extrabold text-xl sm:text-2xl text-ink; }
   .page-sub   { @apply text-[13.5px] text-muted mt-1; }
   .sec-title  { @apply font-display font-bold text-base text-ink; }
+  .sec-label  { @apply mb-2.5 text-[12px] text-muted; }
+
+  /* ————— لغة الشاشات الداخلية (مطابقة النموذج) ————— */
+
+  /* شريط العدّ التنازلي أعلى لوحة المناسبة */
+  .countdown {
+    @apply mb-5 flex flex-wrap items-center gap-4 rounded-2xl bg-brand-soft px-[18px] py-4;
+  }
+  .cd-n { @apply border-s border-brand/20 pe-0 ps-4 text-center; }
+  .cd-n b { @apply block font-ui text-[32px] font-bold leading-none text-brand; }
+  .cd-n span { @apply text-[11.5px] text-brand/80; }
+  .cd-t { @apply min-w-[150px] flex-1; }
+  .cd-t b { @apply block text-[15px] font-semibold text-brand; }
+  .cd-t span { @apply text-[12.5px] text-brand/80; }
+
+  /* بطاقات «ما يحتاج انتباهك» */
+  .todo-grid { @apply mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3; }
+  .todo { @apply rounded-2xl border border-line bg-surface p-[15px]; }
+  .td-n { @apply font-ui text-[26px] font-bold leading-tight text-brand; }
+  .td-l { @apply mb-3 text-[13px] text-muted; }
+
+  /* الأرقام الثلاثة الكبيرة: متاح / محجوز / مؤكّد */
+  .grid3 { @apply grid grid-cols-1 gap-3.5 sm:grid-cols-3; }
+  .stat { @apply rounded-2xl p-4; }
+  .stat .l { @apply text-[12px]; }
+  .stat .v { @apply mt-1 font-ui text-[30px] font-bold leading-none; }
+  .stat-g { @apply stat bg-brand-soft; }
+  .stat-g .l { @apply text-brand/85; }
+  .stat-g .v { @apply text-brand; }
+  .stat-d { @apply stat bg-warn-soft; }
+  .stat-d .l, .stat-d .v { @apply text-warn; }
+  .stat-n { @apply stat bg-panel; }
+  .stat-n .l { @apply text-muted; }
+  .stat-n .v { @apply text-ink; }
+
+  /* أرقام مصغّرة في صف واحد */
+  .mini { @apply rounded-xl border border-line bg-surface px-2 py-3.5 text-center; }
+  .mini .v { @apply font-ui text-[24px] font-bold leading-none text-brand; }
+  .mini .l { @apply mt-1 block text-[11px] text-muted; }
+
+  /* شريط توزيع الحصص */
+  .quota-bar { @apply mb-3.5 rounded-2xl border border-line bg-surface px-[18px] py-4; }
+  .qb-l { @apply mb-2.5 text-[13px] text-muted; }
+  .qb-l b { @apply font-ui text-[19px] text-brand; }
+  .qb-track { @apply mb-2.5 flex h-3 overflow-hidden rounded-full bg-panel; }
+  .qb-track i { @apply block h-full; }
+  .qb-key { @apply flex flex-wrap gap-4 text-[12px] text-muted; }
+  .qb-key span { @apply flex items-center gap-1.5; }
+  .qb-key i { @apply block h-2.5 w-2.5 rounded-[3px]; }
+
+  /* بطاقة داعٍ */
+  .inv-card { @apply mb-3 overflow-hidden rounded-2xl border border-line bg-surface; }
+  .inv-top {
+    @apply flex flex-wrap items-start justify-between gap-3
+           border-b border-line px-[18px] py-[15px];
+  }
+  .inv-name { @apply flex flex-wrap items-center gap-2 text-[15.5px] font-bold text-brand; }
+  .inv-sub { @apply mt-0.5 text-[12.5px] text-muted; }
+  .inv-seats { @apply rounded-xl bg-brand-soft px-4 py-2 text-center; }
+  .inv-seats b { @apply block font-ui text-[22px] font-bold leading-tight text-brand; }
+  .inv-seats span { @apply text-[11px] text-brand/80; }
+  .inv-body { @apply px-[18px] py-[15px]; }
+  .inv-lbl { @apply mb-1.5 text-[11.5px] text-muted; }
+  .inv-text {
+    @apply rounded-xl bg-paper px-3.5 py-3 font-display text-[15px]
+           leading-loose text-brand;
+  }
+  .inv-text b { @apply text-warn; }
+  .inv-row { @apply mt-2.5 flex flex-wrap gap-4 text-[12.5px] text-muted; }
+  .inv-row b { @apply text-brand; }
+  .inv-stats {
+    @apply mt-2.5 flex flex-wrap gap-4 border-t border-line pt-2.5
+           text-[12.5px] text-muted;
+  }
+  .inv-acts { @apply flex flex-wrap gap-2 px-[18px] pb-[15px]; }
+  .inv-pending { @apply rounded-xl bg-warn-soft px-3.5 py-3 text-[13px] leading-loose text-warn; }
+
+  /* بطاقة مناسبة أفقية بشريط جانبي */
+  .evc {
+    @apply flex overflow-hidden rounded-2xl border border-line bg-surface
+           transition hover:-translate-y-0.5 hover:border-gold;
+  }
+  .evc-side { @apply w-[5px] flex-shrink-0 bg-line; }
+  .evc-side-live { @apply evc-side bg-brand; }
+  .evc-side-warn { @apply evc-side bg-gold; }
+  .evc-side-done { @apply evc-side bg-line; }
+  .evc-side-gold { @apply evc-side bg-gold; }
+  .evc-main { @apply min-w-0 flex-1 px-[18px] py-4; }
+  .evc-top { @apply mb-2 flex flex-wrap items-center gap-2.5; }
+  .evc-when { @apply text-[12px] text-muted; }
+  .evc-main h4 { @apply mb-0.5 text-[17px] font-bold text-brand; }
+  .evc-meta { @apply mb-2.5 text-[12.5px] text-muted; }
+  .evc-bar { @apply mb-2 flex h-[7px] overflow-hidden rounded-full bg-panel; }
+  .evc-bar i { @apply block h-full; }
+  .evc-nums { @apply flex flex-wrap gap-3.5 text-[12px] text-muted; }
+  .evc-draft { @apply inline-block rounded-lg bg-warn-soft px-3 py-2 text-[12.5px] text-warn; }
+  .evc-go { @apply flex flex-shrink-0 items-center px-[18px] text-[13px] font-semibold text-brand; }
+
+  /* فتات المسار */
+  .crumb { @apply mb-2.5 text-[12.5px] text-muted; }
+  .crumb a { @apply text-brand hover:underline; }
+  .crumb b { @apply font-semibold text-brand; }
+
+  /* هيكل اللوحات: شريط جانبي كما في النموذج */
+  .side-panel {
+    @apply w-full flex-shrink-0 rounded-2xl bg-brand-soft p-4
+           lg:sticky lg:top-[68px] lg:w-[216px];
+  }
+  .nav-group {
+    @apply px-2.5 pb-1.5 pt-3.5 text-[11px] font-semibold tracking-wider text-muted;
+  }
+  .nav-i {
+    @apply flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5
+           text-[14px] font-medium text-brand/85 transition
+           hover:bg-brand/5;
+  }
+  .nav-i-on { @apply nav-i bg-brand font-semibold text-white hover:bg-brand; }
+  .nav-i .ic { @apply w-5 shrink-0 text-center text-[17px] text-brand/60; }
+  .nav-i-on .ic { @apply text-gold-soft; }
+  .nav-pill {
+    @apply ms-auto rounded-full bg-brand px-2 py-px text-[11px] font-semibold text-white;
+  }
+  .nav-i-on .nav-pill { @apply bg-white text-brand; }
+  .side-host { @apply mb-3.5 rounded-xl bg-surface p-3; }
+  .side-host .l { @apply text-[11px] tracking-wider text-muted; }
+  .side-host .h { @apply text-[16px] font-bold text-brand; }
+  .side-host .o { @apply text-[12px] text-muted; }
+  .back-acct {
+    @apply block w-full px-2 pb-3.5 pt-1.5 text-start text-[13px]
+           font-semibold text-brand/80 hover:text-brand;
+  }
+
+  /* ملاحظة سياسة البيانات */
+  .policy-note {
+    @apply rounded-xl border border-gold-line bg-paper px-3.5 py-3
+           text-[12.5px] leading-relaxed text-muted;
+  }
 }
 
 /* شريط تمرير أنيق */

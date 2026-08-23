@@ -132,3 +132,124 @@ export function Logo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
     <span className={`font-cerem font-bold text-brand ${sizes[size]}`}>برقية</span>
   );
 }
+
+/* ============================================================
+   لبنات الشاشات الداخلية — مطابقة لبنية النموذج
+   ============================================================ */
+
+/** عنوان قسم صغير فوق شبكة أو بطاقة. */
+export function SecLabel({ children }: { children: ReactNode }) {
+  return <div className="sec-label">{children}</div>;
+}
+
+/** فتات المسار: مناسباتي ← الوجهة الحالية. */
+export function Crumb({ trail, current }: { trail: { href: string; label: string }[]; current: string }) {
+  return (
+    <div className="crumb">
+      {trail.map((t) => (
+        <span key={t.href}>
+          <Link href={t.href}>{t.label}</Link>
+          {' ← '}
+        </span>
+      ))}
+      <b>{current}</b>
+    </div>
+  );
+}
+
+/** شريط العدّ التنازلي: كم بقي على المناسبة وكم أكّد. */
+export function Countdown({
+  days, dateLine, note, action,
+}: { days: ReactNode; dateLine: string; note?: string; action?: ReactNode }) {
+  return (
+    <div className="countdown">
+      <div className="cd-n">
+        <b className="num">{days}</b>
+        <span>يوماً متبقياً</span>
+      </div>
+      <div className="cd-t">
+        <b>{dateLine}</b>
+        {note ? <span className="block">{note}</span> : null}
+      </div>
+      {action}
+    </div>
+  );
+}
+
+/** بطاقة عمل مطلوب: رقم + وصف + زر. */
+export function TodoCard({
+  count, label, action,
+}: { count: ReactNode; label: string; action?: ReactNode }) {
+  return (
+    <div className="todo">
+      <div className="td-n num">{count}</div>
+      <div className="td-l">{label}</div>
+      {action}
+    </div>
+  );
+}
+
+/** الأرقام الثلاثة الكبيرة للرصيد: متاح / محجوز / مؤكّد. */
+export function StatTriple({
+  items,
+}: { items: { tone: 'g' | 'd' | 'n'; label: string; value: ReactNode }[] }) {
+  return (
+    <div className="grid3">
+      {items.map((it) => (
+        <div key={it.label} className={`stat-${it.tone}`}>
+          <div className="l">{it.label}</div>
+          <div className="v num">{it.value}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** صف أرقام مصغّرة (مُرسل، أكّد، اعتذر…). */
+export function MiniStats({ items }: { items: { label: string; value: ReactNode }[] }) {
+  return (
+    <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+      {items.map((it) => (
+        <div key={it.label} className="mini">
+          <span className="v num">{it.value}</span>
+          <span className="l">{it.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** شريط توزيع المقاعد بمفتاح ألوان. */
+export function QuotaBar({
+  total, totalLabel, segments,
+}: {
+  total: ReactNode;
+  totalLabel: string;
+  segments: { label: string; value: number; pct: number; color: string }[];
+}) {
+  return (
+    <div className="quota-bar">
+      <div className="qb-l">
+        <b className="num">{total}</b> {totalLabel}
+      </div>
+      <div className="qb-track">
+        {segments.map((s) => (
+          <i key={s.label} style={{ width: `${s.pct}%`, background: s.color }} />
+        ))}
+      </div>
+      <div className="qb-key">
+        {segments.map((s) => (
+          <span key={s.label}>
+            <i style={{ background: s.color }} />
+            {s.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** ملاحظة سياسة البيانات — تظهر أسفل أي شاشة تعرض أرقام المدعوين. */
+export function PolicyNote({ children }: { children: ReactNode }) {
+  return <div className="policy-note">{children}</div>;
+}

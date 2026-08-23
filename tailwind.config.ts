@@ -14,6 +14,7 @@ const config: Config = {
         red: { DEFAULT: 'rgb(var(--red) / <alpha-value>)', soft: 'rgb(var(--red-soft) / <alpha-value>)' },
         surface: 'rgb(var(--surface) / <alpha-value>)',
         panel: 'rgb(var(--panel) / <alpha-value>)',
+        paper: 'rgb(var(--paper) / <alpha-value>)',
         ink: 'rgb(var(--ink) / <alpha-value>)',
         muted: 'rgb(var(--muted) / <alpha-value>)',
         line: 'rgb(var(--line) / <alpha-value>)',

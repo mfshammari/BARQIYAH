@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { requireUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { PageHeader, EmptyState, EventStatusBadge, StatCard } from '@/components/ui';
-import { formatDate, formatHijri, formatNumber } from '@/lib/format';
+import { PageHeader, EmptyState, EventStatusBadge, PolicyNote } from '@/components/ui';
+import { formatHijri, formatNumber } from '@/lib/format';
 import { computeBalance } from '@/lib/balance';
 import { OCCASION_LABELS, type EventRow, type Guest, type Inviter } from '@/lib/types';
 
@@ -12,59 +12,52 @@ interface EventWithGuests extends EventRow {
   guests: Pick<Guest, 'status' | 'max_seats' | 'confirmed_seats'>[];
 }
 
-/** بطاقة مناسبة يملكها العميل — بشريط تقدّم المقاعد وأرقامها الثلاثة. */
+/** بطاقة مناسبة يملكها العميل — أفقية بشريط جانبي يدل على حالتها. */
 function OwnedEventCard({ event }: { event: EventWithGuests }) {
   const balance = computeBalance(event.guests as Guest[], event.seats_quota);
   const used = balance.confirmed + balance.held;
   const pct = event.seats_quota ? Math.min(100, Math.round((used / event.seats_quota) * 100)) : 0;
+  const isDraft = event.status === 'unpaid' || event.status === 'pending';
+  const isPast = event.status === 'closed';
+  const side = isPast ? 'evc-side-done' : isDraft ? 'evc-side-warn' : 'evc-side-live';
 
   return (
-    <Link href={`/e/${event.id}`} className="card card-pad transition-shadow hover:shadow-pop">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="font-ui font-bold text-ink">
-            {event.internal_name || event.host_name}
-          </div>
-          <div className="mt-0.5 text-[12.5px] text-muted">
-            {OCCASION_LABELS[event.occasion_type]}
-          </div>
+    <Link href={`/e/${event.id}`} className={`evc ${isPast ? 'opacity-[.86]' : ''}`}>
+      <div className={side} />
+      <div className="evc-main">
+        <div className="evc-top">
+          <EventStatusBadge status={event.status} />
+          <span className="evc-when num">{formatHijri(event.event_date)}</span>
         </div>
-        <EventStatusBadge status={event.status} />
-      </div>
+        <h4>{event.internal_name || event.host_name}</h4>
+        <div className="evc-meta">
+          {[event.venue, OCCASION_LABELS[event.occasion_type]].filter(Boolean).join(' · ')}
+        </div>
 
-      <div className="mt-3 space-y-0.5 text-[12.5px] text-muted">
-        <div className="num">{formatHijri(event.event_date)}</div>
-        <div className="num">{formatDate(event.event_date)}</div>
-        {event.venue ? <div>{event.venue}</div> : null}
+        {isDraft ? (
+          <div className="evc-draft">أكمل التجهيز لتتمكن من الإرسال</div>
+        ) : (
+          <>
+            <div className="evc-bar">
+              <i
+                className="bg-ok"
+                style={{ width: `${event.seats_quota ? (balance.confirmed / event.seats_quota) * 100 : 0}%` }}
+              />
+              <i
+                className="bg-warn"
+                style={{ width: `${event.seats_quota ? (balance.held / event.seats_quota) * 100 : 0}%` }}
+              />
+            </div>
+            <div className="evc-nums num">
+              <span>{formatNumber(balance.confirmed)} مؤكّد</span>
+              <span>{formatNumber(balance.held)} محجوز</span>
+              <span>{formatNumber(balance.available)} متاح</span>
+              <span className="text-muted/70">استُهلك {formatNumber(pct)}٪</span>
+            </div>
+          </>
+        )}
       </div>
-
-      <div className="mt-4 h-2 overflow-hidden rounded-full border border-line bg-panel">
-        <div className="flex h-full">
-          <div className="h-full bg-ok" style={{ width: `${event.seats_quota ? (balance.confirmed / event.seats_quota) * 100 : 0}%` }} />
-          <div className="h-full bg-warn" style={{ width: `${event.seats_quota ? (balance.held / event.seats_quota) * 100 : 0}%` }} />
-        </div>
-      </div>
-
-      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-        <div>
-          <div className="font-ui text-[15px] font-bold text-ok num">{formatNumber(balance.confirmed)}</div>
-          <div className="text-[11px] text-muted">مؤكّد</div>
-        </div>
-        <div>
-          <div className="font-ui text-[15px] font-bold text-warn num">{formatNumber(balance.held)}</div>
-          <div className="text-[11px] text-muted">محجوز</div>
-        </div>
-        <div>
-          <div className={`font-ui text-[15px] font-bold num ${balance.available > 0 ? 'text-brand' : 'text-danger'}`}>
-            {formatNumber(balance.available)}
-          </div>
-          <div className="text-[11px] text-muted">متاح</div>
-        </div>
-      </div>
-
-      <div className="mt-3 border-t border-line pt-2 text-[11.5px] text-muted num">
-        استُهلك {pct}٪ من {formatNumber(event.seats_quota)} مقعد
-      </div>
+      <div className="evc-go">{isDraft ? 'أكمل ←' : 'فتح ←'}</div>
     </Link>
   );
 }
@@ -78,43 +71,36 @@ function InvitedEventCard({ row, mySeats }: { row: InviterRow; mySeats: { held: 
   const e = row.events;
   if (!e) return null;
   const available = row.seats_quota - mySeats.held - mySeats.confirmed;
+  const pctConfirmed = row.seats_quota ? (mySeats.confirmed / row.seats_quota) * 100 : 0;
+  const pctHeld = row.seats_quota ? (mySeats.held / row.seats_quota) * 100 : 0;
 
   return (
-    <Link href={`/inviter/${row.id}`} className="card card-pad transition-shadow hover:shadow-pop">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="font-ui font-bold text-ink">{e.host_name}</div>
-          <div className="mt-0.5 text-[12.5px] text-muted">
-            {OCCASION_LABELS[e.occasion_type]}
-            {row.side_label ? ` · ${row.side_label}` : ''}
-          </div>
+    <Link href={`/inviter/${row.id}`} className="evc bg-paper">
+      <div className="evc-side-gold" />
+      <div className="evc-main">
+        <div className="evc-top">
+          <span className="badge bg-warn-soft text-warn">داعٍ</span>
+          <span className="evc-when num">{formatHijri(e.event_date)}</span>
         </div>
-        <span className="badge bg-gold-soft/50 text-warn">داعٍ</span>
-      </div>
-
-      <div className="mt-3 space-y-0.5 text-[12.5px] text-muted">
-        <div className="num">{formatHijri(e.event_date)}</div>
-        {e.venue ? <div>{e.venue}</div> : null}
-      </div>
-
-      <div className="mt-3 grid grid-cols-3 gap-2 border-t border-line pt-3 text-center">
-        <div>
-          <div className="font-ui text-[15px] font-bold text-ok num">{formatNumber(mySeats.confirmed)}</div>
-          <div className="text-[11px] text-muted">مؤكّد</div>
+        <h4>{e.host_name}</h4>
+        <div className="evc-meta num">
+          {[
+            e.venue,
+            row.side_label,
+            `حصتك ${formatNumber(row.seats_quota)} مقعداً`,
+          ].filter(Boolean).join(' · ')}
         </div>
-        <div>
-          <div className="font-ui text-[15px] font-bold text-warn num">{formatNumber(mySeats.held)}</div>
-          <div className="text-[11px] text-muted">محجوز</div>
+        <div className="evc-bar">
+          <i className="bg-ok" style={{ width: `${pctConfirmed}%` }} />
+          <i className="bg-warn" style={{ width: `${pctHeld}%` }} />
         </div>
-        <div>
-          <div className={`font-ui text-[15px] font-bold num ${available > 0 ? 'text-brand' : 'text-danger'}`}>
-            {formatNumber(available)}
-          </div>
-          <div className="text-[11px] text-muted">متاح لك</div>
+        <div className="evc-nums num">
+          <span>{formatNumber(mySeats.confirmed)} مؤكّد</span>
+          <span>{formatNumber(mySeats.held)} محجوز</span>
+          <span>{formatNumber(available)} متاح لك</span>
         </div>
       </div>
-
-      <div className="mt-2 text-[11.5px] text-muted num">حصتك {formatNumber(row.seats_quota)} مقعداً</div>
+      <div className="evc-go">فتح ←</div>
     </Link>
   );
 }
@@ -181,14 +167,21 @@ export default async function MyEventsPage() {
         action={<Link href="/app/events/new" className="btn-primary">+ مناسبة جديدة</Link>}
       />
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="مناسباتي" value={formatNumber(owned.length)} />
-        <StatCard label="داعٍ فيها" value={formatNumber(invited.length)} tone="warn" />
-        <StatCard label="إجمالي التأكيدات" value={formatNumber(totalConfirmed)} tone="ok" />
-        <StatCard label="دفتر العناوين" value={formatNumber(contactCount?.length ?? 0)} sub="جهة محفوظة" />
+      <div className="mb-6 grid grid-cols-3 gap-3">
+        <div className="stat-g">
+          <div className="l">مناسبات</div>
+          <div className="v num">{formatNumber(owned.length + invited.length)}</div>
+        </div>
+        <div className="stat-n">
+          <div className="l">في دفتر العناوين</div>
+          <div className="v num">{formatNumber(contactCount?.length ?? 0)}</div>
+        </div>
+        <div className="stat-d">
+          <div className="l">إجمالي التأكيدات</div>
+          <div className="v num">{formatNumber(totalConfirmed)}</div>
+        </div>
       </div>
 
-      <h2 className="sec-title mb-3">مناسبات أملكها</h2>
       {owned.length === 0 ? (
         <EmptyState
           title="لا توجد مناسبات بعد"
@@ -196,15 +189,20 @@ export default async function MyEventsPage() {
           action={<Link href="/app/events/new" className="btn-primary">إنشاء مناسبة</Link>}
         />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3">
           {owned.map((e) => <OwnedEventCard key={e.id} event={e} />)}
         </div>
       )}
 
       {invited.length > 0 ? (
         <>
-          <h2 className="sec-title mb-3 mt-9">مناسبات أنا داعٍ فيها</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-8 mb-3 border-t border-line pt-6">
+            <h2 className="sec-title">مناسبات أنا داعٍ فيها</h2>
+            <p className="mt-1 text-[13px] text-muted">
+              دعاكَ أصحابها للمشاركة في الدعوة — لكل واحدة حصتك ونصّك.
+            </p>
+          </div>
+          <div className="grid gap-3">
             {invited.map((r) => (
               <InvitedEventCard
                 key={r.id}
@@ -215,6 +213,23 @@ export default async function MyEventsPage() {
           </div>
         </>
       ) : null}
+
+      <Link
+        href="/app/contacts"
+        className="mt-8 block rounded-2xl border border-line bg-surface p-4 transition hover:border-gold"
+      >
+        <b className="block text-[15px] font-bold text-brand">دفتر العناوين</b>
+        <span className="mt-1 block text-[12.5px] text-muted num">
+          {formatNumber(contactCount?.length ?? 0)} جهة محفوظة — تستخدمها في كل مناسباتك،
+          سواءً كنت مالكاً أو داعياً.
+        </span>
+      </Link>
+
+      <div className="mt-4">
+        <PolicyNote>
+          جهاتك وأرقام مدعويك خاصة بك — لا تُستخدم لأي غرض غير إرسال دعواتك.
+        </PolicyNote>
+      </div>
     </>
   );
 }

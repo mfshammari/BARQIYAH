@@ -5,7 +5,9 @@ import { createClient } from '@/lib/supabase/server';
 import { supabaseConfigured, appUrl } from '@/lib/env';
 import { SetupNotice } from '@/components/SetupNotice';
 import { AppShell } from '@/components/AppShell';
-import { PageHeader, Alert } from '@/components/ui';
+import {
+  PageHeader, Alert, SecLabel, QuotaBar, StatTriple, TodoCard, PolicyNote,
+} from '@/components/ui';
 import { InviteEditor } from './InviteEditor';
 import { InviterGuests } from './InviterGuests';
 import { formatDate, formatEventLine, formatHijri, formatNumber, formatTime } from '@/lib/format';
@@ -83,12 +85,17 @@ export default async function InviterWorkspace({
   return (
     <AppShell
       nav={[
-        { href: `/inviter/${id}?tab=invite`, label: 'دعوتي' },
-        { href: `/inviter/${id}?tab=guests`, label: 'مدعوّوي' },
+        { href: `/inviter/${id}?tab=invite`, label: 'دعوتي', icon: '✎' },
+        { href: `/inviter/${id}?tab=guests`, label: 'مدعوّوي', icon: '☰' },
       ]}
       active={`/inviter/${id}?tab=${active}`}
       userName={inviter.name}
       userSub={inviter.side_label ?? 'داعٍ'}
+      host={{
+        label: 'صفتك هنا: داعٍ',
+        name: inviter.name,
+        sub: `${event.host_name} · ${formatHijri(event.event_date)}`,
+      }}
       backHref="/app"
       backLabel="كل مناسباتي"
     >
@@ -126,57 +133,87 @@ export default async function InviterWorkspace({
         <p className="hint mt-2">هذه البيانات من صاحب المناسبة — للقراءة فقط.</p>
       </div>
 
-      {/* حصته بثلاث حالات */}
-      <div className="card card-pad mb-5">
-        <div className="mb-3 flex items-baseline justify-between gap-3">
-          <h2 className="sec-title">حصتي من المقاعد</h2>
-          <span className="text-[12.5px] text-muted">
-            من أصل <b className="text-ink num">{formatNumber(balance.seats_quota)}</b> مقعد
-          </span>
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-xl bg-ok-soft px-3 py-3">
-            <div className="font-ui text-xl font-extrabold text-ok num leading-none">{formatNumber(balance.confirmed)}</div>
-            <div className="mt-1.5 text-[11.5px] text-ok/80">مؤكّد</div>
-          </div>
-          <div className="rounded-xl bg-warn-soft px-3 py-3">
-            <div className="font-ui text-xl font-extrabold text-warn num leading-none">{formatNumber(balance.held)}</div>
-            <div className="mt-1.5 text-[11.5px] text-warn/80">بانتظار الرد</div>
-          </div>
-          <div className={`rounded-xl px-3 py-3 ${balance.available > 0 ? 'bg-brand-soft' : 'bg-danger-soft'}`}>
-            <div className={`font-ui text-xl font-extrabold num leading-none ${balance.available > 0 ? 'text-brand' : 'text-danger'}`}>
-              {formatNumber(balance.available)}
-            </div>
-            <div className={`mt-1.5 text-[11.5px] ${balance.available > 0 ? 'text-brand/70' : 'text-danger/80'}`}>متاح لي</div>
-          </div>
-        </div>
-        <div className="mt-3 flex h-2 overflow-hidden rounded-full border border-line bg-panel">
-          <div className="h-full bg-ok" style={{ width: `${balance.seats_quota ? (balance.confirmed / balance.seats_quota) * 100 : 0}%` }} />
-          <div className="h-full bg-warn" style={{ width: `${balance.seats_quota ? (balance.held / balance.seats_quota) * 100 : 0}%` }} />
-        </div>
-        {balance.available <= 0 ? (
-          <p className="mt-3 rounded-xl bg-danger-soft px-3 py-2.5 text-[12.5px] text-danger">
-            نفدت حصتك — راجع صاحب المناسبة لزيادتها. المالك وحده يوزّع الحصص.
-          </p>
-        ) : null}
-      </div>
+      {/* حصته بثلاث حالات — الأرقام الخاصة به وحده */}
+      <SecLabel>حصتي من المقاعد</SecLabel>
+      <QuotaBar
+        total={formatNumber(balance.seats_quota)}
+        totalLabel="مقعداً منحك إياها صاحب المناسبة"
+        segments={[
+          {
+            label: `مؤكّد ${formatNumber(balance.confirmed)}`,
+            value: balance.confirmed,
+            pct: balance.seats_quota ? (balance.confirmed / balance.seats_quota) * 100 : 0,
+            color: 'rgb(var(--ok))',
+          },
+          {
+            label: `محجوز ${formatNumber(balance.held)}`,
+            value: balance.held,
+            pct: balance.seats_quota ? (balance.held / balance.seats_quota) * 100 : 0,
+            color: 'rgb(var(--warn))',
+          },
+          {
+            label: `متاح لك ${formatNumber(Math.max(0, balance.available))}`,
+            value: balance.available,
+            pct: balance.seats_quota ? (Math.max(0, balance.available) / balance.seats_quota) * 100 : 0,
+            color: 'rgb(var(--line))',
+          },
+        ]}
+      />
+      <StatTriple
+        items={[
+          { tone: 'g', label: 'متاح لك', value: formatNumber(balance.available) },
+          { tone: 'd', label: 'محجوز بانتظار الرد', value: formatNumber(balance.held) },
+          { tone: 'n', label: 'مؤكّد', value: formatNumber(balance.confirmed) },
+        ]}
+      />
+      <p className="mt-3 text-[12.5px] text-muted">
+        لا ترى إجمالي المناسبة ولا مقاعد بقية الدعاة ولا مدعوّيهم.
+      </p>
+
+      {balance.available <= 0 ? (
+        <p className="mt-3 rounded-xl bg-danger-soft px-3 py-2.5 text-[12.5px] text-danger">
+          نفدت حصتك — راجع صاحب المناسبة لزيادتها. المالك وحده يوزّع الحصص.
+        </p>
+      ) : null}
 
       {/* ما يحتاج انتباهك */}
-      {(drafts > 0 || noResponse > 0 || !ready) ? (
+      <div className="mt-5">
+        <SecLabel>ما يحتاج انتباهك</SecLabel>
+        <div className="todo-grid">
+          <TodoCard
+            count={formatNumber(drafts)}
+            label="مسوّدات لم تُرسل"
+            action={
+              <Link href={`/inviter/${id}?tab=guests`} className="btn-primary btn-sm">
+                أرسلها الآن
+              </Link>
+            }
+          />
+          <TodoCard
+            count={formatNumber(noResponse)}
+            label="لم يردّوا بعد"
+            action={
+              <Link href={`/inviter/${id}?tab=guests`} className="btn-ghost btn-sm">
+                تابعهم
+              </Link>
+            }
+          />
+          <TodoCard
+            count={formatNumber(Math.max(0, balance.available))}
+            label="مقعداً متاحاً لك"
+            action={
+              <Link href={`/inviter/${id}?tab=guests`} className="btn-ghost btn-sm">
+                أضف مدعوين
+              </Link>
+            }
+          />
+        </div>
+      </div>
+
+      {!ready ? (
         <div className="mb-5">
-          <Alert tone="warn" title="ما يحتاج انتباهك">
-            <ul className="mt-1 space-y-1">
-              {!ready ? <li>· لم تكتب نصّ دعوتك بعد — ابدأ من تبويب «دعوتي».</li> : null}
-              {drafts > 0 ? (
-                <li>
-                  · <span className="num">{formatNumber(drafts)}</span> مسودة لم تُرسل —{' '}
-                  <Link href={`/inviter/${id}?tab=guests`} className="underline">أرسلها</Link>
-                </li>
-              ) : null}
-              {noResponse > 0 ? (
-                <li>· <span className="num">{formatNumber(noResponse)}</span> مدعواً لم يردّوا بعد.</li>
-              ) : null}
-            </ul>
+          <Alert tone="warn" title="لم تكتب نصّ دعوتك بعد">
+            اختر قالبك واكتب كلماتك من تبويب «دعوتي» قبل أن ترسل لأي مدعو.
           </Alert>
         </div>
       ) : null}
@@ -212,6 +249,13 @@ export default async function InviterWorkspace({
           appUrl={appUrl()}
         />
       )}
+
+      <div className="mt-5">
+        <PolicyNote>
+          لو احتجت مقاعد إضافية، اطلبها من <b className="text-brand">{event.host_name}</b> —
+          الحصص تُوزَّع من صاحب المناسبة. وأرقام مدعويك بيانات أمانة لا تُستخدم لغير إيصال دعوتك.
+        </PolicyNote>
+      </div>
     </AppShell>
   );
 }
