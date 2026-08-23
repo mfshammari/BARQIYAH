@@ -70,7 +70,7 @@ function OwnedEventCard({ event }: { event: EventWithGuests }) {
 }
 
 interface InviterRow extends Inviter {
-  events: Pick<EventRow, 'id' | 'host_name' | 'internal_name' | 'occasion_type' | 'event_date' | 'venue' | 'status'> | null;
+  events: Pick<EventRow, 'id' | 'host_name' | 'occasion_type' | 'event_date' | 'venue' | 'status'> | null;
 }
 
 /** بطاقة مناسبة العميل داعٍ فيها — حصته وحدها لا إجمالي المناسبة. */
@@ -123,19 +123,31 @@ export default async function MyEventsPage() {
   const user = await requireUser();
   const supabase = await createClient();
 
-  const [{ data: ownedData }, { data: invitedData }, { data: contactCount }] = await Promise.all([
-    supabase
-      .from('events')
-      .select('*, guests (status, max_seats, confirmed_seats)')
-      .eq('owner_id', user.id)
-      .order('event_date', { ascending: true })
-      .returns<EventWithGuests[]>(),
-    supabase
-      .from('inviters')
-      .select('*, events:event_id (id, host_name, internal_name, occasion_type, event_date, venue, status)')
-      .eq('profile_id', user.id)
-      .returns<InviterRow[]>(),
-    supabase.from('contacts').select('id', { count: 'exact', head: true }),
+  // الاستعلامات الاختيارية تُغلَّف: مخطط لم يُرحَّل بعد يجب ألا يُسقط الصفحة
+  const safe = async <T,>(run: () => PromiseLike<{ data: T | null }>): Promise<T | null> => {
+    try {
+      const { data } = await run();
+      return data;
+    } catch {
+      return null;
+    }
+  };
+
+  const [ownedData, invitedData, contactCount] = await Promise.all([
+    safe<EventWithGuests[]>(() =>
+      supabase
+        .from('events')
+        .select('*, guests (status, max_seats, confirmed_seats)')
+        .eq('owner_id', user.id)
+        .order('created_at', { ascending: false })
+        .returns<EventWithGuests[]>()),
+    safe<InviterRow[]>(() =>
+      supabase
+        .from('inviters')
+        .select('*, events:event_id (id, host_name, occasion_type, event_date, venue, status)')
+        .eq('profile_id', user.id)
+        .returns<InviterRow[]>()),
+    safe<{ id: string }[]>(() => supabase.from('contacts').select('id')),
   ]);
 
   const owned = ownedData ?? [];
@@ -143,10 +155,11 @@ export default async function MyEventsPage() {
 
   // مقاعد الداعي محسوبة داخل حصته فقط (SPEC §8.4)
   const inviterIds = invited.map((r) => r.id);
-  const { data: myGuests } = inviterIds.length
-    ? await supabase.from('guests').select('inviter_id, status, max_seats, confirmed_seats')
-        .in('inviter_id', inviterIds).returns<Guest[]>()
-    : { data: [] as Guest[] };
+  const myGuests = inviterIds.length
+    ? await safe<Guest[]>(() =>
+        supabase.from('guests').select('inviter_id, status, max_seats, confirmed_seats')
+          .in('inviter_id', inviterIds).returns<Guest[]>())
+    : [];
 
   const seatsByInviter = new Map<string, { held: number; confirmed: number }>();
   for (const g of myGuests ?? []) {
