@@ -879,6 +879,435 @@ create trigger profiles_guard_role
   for each row execute function public.guard_profile_role();
 
 
+-- ==========================================================
+-- ملف: 0005_v2_schema.sql
+-- ==========================================================
+
+-- ============================================================
+-- برقية v2 — توسيع المخطط حسب SPEC.md
+--
+-- إضافي بالكامل: لا يحذف جدولاً ولا عموداً قائماً، ولا يفقد بيانات.
+-- آمن لإعادة التشغيل.
+-- ============================================================
+
+-- ---------- ١) أدوار الأدمن الأربعة ----------
+-- user يحل محل owner (حساب واحد للعميل، وكونه مالكاً أو داعياً صفة تُشتق
+-- من علاقته بالمناسبة لا من الدور).
+do $$ begin
+  alter type user_role add value if not exists 'admin_owner';
+  alter type user_role add value if not exists 'admin_support';
+  alter type user_role add value if not exists 'admin_reviewer';
+  alter type user_role add value if not exists 'admin_finance';
+  alter type user_role add value if not exists 'user';
+exception when others then null; end $$;
+
+alter table public.profiles add column if not exists is_active boolean not null default true;
+
+-- ---------- ٢) أنواع جديدة ----------
+do $$ begin
+  create type payment_method as enum ('gateway', 'bank_transfer', 'manual');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type message_direction as enum ('outbound', 'inbound');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  alter type occasion_type add value if not exists 'engagement_contract';  -- عقد قران
+  alter type occasion_type add value if not exists 'newborn';              -- مولود جديد
+  alter type occasion_type add value if not exists 'official';             -- مناسبة رسمية
+exception when others then null; end $$;
+
+do $$ begin
+  alter type event_status add value if not exists 'unpaid';
+exception when others then null; end $$;
+
+do $$ begin
+  alter type guest_status add value if not exists 'failed';
+exception when others then null; end $$;
+
+-- ---------- ٣) توسيع events ----------
+alter table public.events
+  add column if not exists internal_name        text,
+  add column if not exists celebrant_primary    text,
+  add column if not exists celebrant_secondary  text,
+  add column if not exists event_date_hijri     text,
+  add column if not exists event_weekday        text,
+  add column if not exists event_time           time,
+  add column if not exists venue                text,
+  add column if not exists activated_at         timestamptz,
+  add column if not exists activated_by         uuid references public.profiles(id) on delete set null;
+
+-- event_date الحالي هو الميلادي — نبقيه ونضيف اسماً واضحاً كعرض
+comment on column public.events.event_date is 'التاريخ الميلادي (event_date_gregorian في SPEC)';
+
+create index if not exists events_date_idx on public.events(event_date);
+
+-- ---------- ٤) توسيع inviters: الداعي حساب وحصة ونصّ ----------
+alter table public.inviters
+  add column if not exists profile_id   uuid references public.profiles(id) on delete set null,
+  add column if not exists phone        text,
+  add column if not exists side_label   text,
+  add column if not exists seats_quota  integer not null default 0 check (seats_quota >= 0),
+  add column if not exists template_id  uuid references public.templates(id) on delete set null,
+  add column if not exists invite_vars  jsonb not null default '{}'::jsonb,
+  add column if not exists image_url    text,
+  add column if not exists invite_token uuid not null default gen_random_uuid(),
+  add column if not exists joined_at    timestamptz;
+
+create unique index if not exists inviters_invite_token_key on public.inviters(invite_token);
+create index if not exists inviters_profile_idx on public.inviters(profile_id);
+create unique index if not exists inviters_event_phone_key
+  on public.inviters(event_id, phone) where phone is not null;
+
+-- ---------- ٥) توسيع guests ----------
+alter table public.guests
+  add column if not exists failure_reason text,
+  add column if not exists contact_id     uuid;
+
+-- ---------- ٦) توسيع templates ----------
+alter table public.templates
+  add column if not exists meta_status text;
+
+-- ---------- ٧) توسيع transactions ----------
+alter table public.transactions
+  add column if not exists method      payment_method not null default 'manual',
+  add column if not exists gateway_ref text,
+  add column if not exists paid_at     timestamptz;
+
+create unique index if not exists transactions_gateway_ref_key
+  on public.transactions(gateway_ref) where gateway_ref is not null;
+
+-- ---------- ٨) توسيع message_logs ----------
+alter table public.message_logs
+  add column if not exists direction       message_direction not null default 'outbound',
+  add column if not exists inviter_id      uuid references public.inviters(id) on delete set null,
+  add column if not exists template_name   text,
+  add column if not exists meta_message_id text,
+  add column if not exists error_code      text,
+  add column if not exists cost            numeric(10,4);
+
+-- ---------- ٩) دفتر العناوين الدائم ----------
+create table if not exists public.contact_groups (
+  id          uuid primary key default gen_random_uuid(),
+  owner_id    uuid not null references public.profiles(id) on delete cascade,
+  name        text not null,
+  created_at  timestamptz not null default now(),
+  constraint contact_groups_owner_name_key unique (owner_id, name)
+);
+create index if not exists contact_groups_owner_idx on public.contact_groups(owner_id);
+
+create table if not exists public.contacts (
+  id           uuid primary key default gen_random_uuid(),
+  owner_id     uuid not null references public.profiles(id) on delete cascade,
+  name         text not null,
+  phone        text not null,
+  group_label  text,
+  notes        text,
+  created_at   timestamptz not null default now(),
+  constraint contacts_owner_phone_key unique (owner_id, phone)
+);
+create index if not exists contacts_owner_idx on public.contacts(owner_id);
+create index if not exists contacts_group_idx on public.contacts(owner_id, group_label);
+
+do $$ begin
+  alter table public.guests
+    add constraint guests_contact_fk foreign key (contact_id)
+    references public.contacts(id) on delete set null;
+exception when duplicate_object then null; end $$;
+
+-- ---------- ١٠) سجل النشاط ----------
+-- actor_id فارغ = النظام (مثل التفعيل التلقائي بعد الدفع)
+create table if not exists public.activity_logs (
+  id           uuid primary key default gen_random_uuid(),
+  actor_id     uuid references public.profiles(id) on delete set null,
+  action       text not null,
+  target_type  text,
+  target_id    uuid,
+  metadata     jsonb not null default '{}'::jsonb,
+  created_at   timestamptz not null default now()
+);
+create index if not exists activity_logs_actor_idx  on public.activity_logs(actor_id);
+create index if not exists activity_logs_target_idx on public.activity_logs(target_type, target_id);
+create index if not exists activity_logs_time_idx   on public.activity_logs(created_at desc);
+
+-- ---------- ١١) موافقات التسويق ----------
+-- الجدول الوحيد المسموح استخدامه للتسويق (سياسة البيانات §7)
+create table if not exists public.marketing_optins (
+  id            uuid primary key default gen_random_uuid(),
+  phone         text not null,
+  source        text not null,
+  event_id      uuid references public.events(id) on delete set null,
+  consented_at  timestamptz not null default now(),
+  constraint marketing_optins_phone_source_key unique (phone, source)
+);
+
+-- ---------- ١٢) إعدادات المنصة ----------
+-- امتداد لـ integration_settings: مفاتيح الدفع وإعدادات عامة
+create table if not exists public.platform_settings (
+  id                     uuid primary key default gen_random_uuid(),
+  payment_provider       text not null default 'manual',
+  moyasar_publishable_key text,
+  payment_webhook_secret text,
+  sending_paused         boolean not null default false,
+  updated_at             timestamptz not null default now(),
+  singleton              boolean not null default true,
+  constraint platform_settings_singleton_key unique (singleton)
+);
+
+-- إيقاف إرسال عميل مؤقتاً (حماية الرقم المشترك §6)
+alter table public.profiles
+  add column if not exists sending_paused boolean not null default false,
+  add column if not exists paused_reason  text;
+
+
+-- ==========================================================
+-- ملف: 0006_v2_rls.sql
+-- ==========================================================
+
+-- ============================================================
+-- برقية v2 — صلاحيات الأدوار الجديدة وعزل الدعاة
+--
+-- «تسريب مقاعد أو مدعوّي طرف لطرف آخر خطأ جسيم — خصوصاً بين أهل
+-- العريس وأهل العروس» (SPEC §8.4). العزل هنا على مستوى قاعدة
+-- البيانات لا الواجهة.
+-- ============================================================
+
+-- ---------- ١) توسيع is_admin لتشمل أدوار الأدمن الأربعة ----------
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid()
+      and role in ('admin', 'admin_owner', 'admin_support', 'admin_reviewer', 'admin_finance')
+      and is_active
+  );
+$$;
+
+/** فحص صلاحية محددة حسب مصفوفة الصلاحيات (SPEC §10). */
+create or replace function public.has_permission(p_permission text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.is_active and (
+      p.role in ('admin', 'admin_owner')                                     -- المدير يملك كل شيء
+      or (p_permission = 'manual_activation' and p.role = 'admin_support')
+      or (p_permission = 'review_templates'  and p.role = 'admin_reviewer')
+      or (p_permission = 'impersonate'       and p.role = 'admin_support')
+      or (p_permission = 'finance'           and p.role = 'admin_finance')
+    )
+  );
+$$;
+
+/** صفّ الداعي الخاص بالمستخدم الحالي في مناسبة ما (أو null). */
+create or replace function public.my_inviter_id(p_event_id uuid)
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select id from public.inviters
+  where event_id = p_event_id and profile_id = auth.uid()
+  limit 1;
+$$;
+
+/** هل المستخدم الحالي داعٍ في هذه المناسبة؟ */
+create or replace function public.is_inviter_in(p_event_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.inviters
+    where event_id = p_event_id and profile_id = auth.uid()
+  );
+$$;
+
+-- ---------- ٢) events: الداعي يرى المناسبة لكن لا يعدّلها ----------
+drop policy if exists events_read on public.events;
+create policy events_read on public.events for select to authenticated
+  using (
+    owner_id = auth.uid()
+    or public.is_admin()
+    or public.scans_event(id)
+    or public.is_inviter_in(id)
+  );
+
+-- ---------- ٣) inviters ----------
+drop policy if exists inviters_owner_all on public.inviters;
+create policy inviters_owner_all on public.inviters for all to authenticated
+  using (public.owns_event(event_id) or public.is_admin())
+  with check (public.owns_event(event_id) or public.is_admin());
+
+drop policy if exists inviters_self_read on public.inviters;
+create policy inviters_self_read on public.inviters for select to authenticated
+  using (profile_id = auth.uid());
+
+-- الداعي يعدّل صفّه (قالبه ونصّه وصورته) — والحصة محميّة بتريغر أدناه
+drop policy if exists inviters_self_update on public.inviters;
+create policy inviters_self_update on public.inviters for update to authenticated
+  using (profile_id = auth.uid())
+  with check (profile_id = auth.uid());
+
+/**
+ * الحصة يوزّعها المالك وحده، والنص يملكه الداعي وحده (SPEC §8.2, §8.4).
+ * RLS لا تقيّد عموداً بعينه، فنحرس الحقول الحسّاسة بتريغر.
+ */
+create or replace function public.guard_inviter_fields()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_is_owner boolean;
+begin
+  if auth.uid() is null then
+    return new;  -- كود خادم موثوق
+  end if;
+
+  select (e.owner_id = auth.uid()) into v_is_owner
+  from public.events e where e.id = new.event_id;
+
+  if coalesce(v_is_owner, false) or public.is_admin() then
+    -- المالك لا يملك نصّ الداعي ولا قالبه ولا صورته
+    if new.template_id is distinct from old.template_id
+       or new.invite_vars is distinct from old.invite_vars
+       or new.image_url is distinct from old.image_url then
+      raise exception 'INVITER_CONTENT_IS_OWNED_BY_INVITER'
+        using hint = 'نص الداعي وقالبه وصورته يملكها الداعي وحده.';
+    end if;
+    return new;
+  end if;
+
+  -- الداعي نفسه: يملك نصّه، ولا يملك حصته ولا صفته
+  if new.profile_id = auth.uid() then
+    if new.seats_quota is distinct from old.seats_quota then
+      raise exception 'SEATS_QUOTA_IS_OWNED_BY_EVENT_OWNER'
+        using hint = 'الحصة يوزّعها صاحب المناسبة وحده.';
+    end if;
+    if new.event_id is distinct from old.event_id
+       or new.profile_id is distinct from old.profile_id
+       or new.role_label is distinct from old.role_label then
+      raise exception 'FORBIDDEN_FIELD_CHANGE';
+    end if;
+    return new;
+  end if;
+
+  raise exception 'FORBIDDEN';
+end;
+$$;
+
+drop trigger if exists inviters_guard_fields on public.inviters;
+create trigger inviters_guard_fields
+  before update on public.inviters
+  for each row execute function public.guard_inviter_fields();
+
+/** مجموع حصص الدعاة ≤ رصيد المناسبة (SPEC §3). */
+create or replace function public.guard_inviter_quota()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_quota integer;
+  v_sum   integer;
+begin
+  select seats_quota into v_quota from public.events where id = new.event_id;
+  select coalesce(sum(seats_quota), 0) into v_sum
+  from public.inviters where event_id = new.event_id and id <> new.id;
+
+  if v_sum + new.seats_quota > coalesce(v_quota, 0) then
+    raise exception 'QUOTA_EXCEEDS_EVENT_SEATS'
+      using hint = format('المتاح للتوزيع %s مقعداً فقط.', coalesce(v_quota,0) - v_sum);
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists inviters_guard_quota on public.inviters;
+create trigger inviters_guard_quota
+  before insert or update of seats_quota on public.inviters
+  for each row execute function public.guard_inviter_quota();
+
+-- ---------- ٤) guests: الداعي يرى مدعوّيه فقط ----------
+drop policy if exists guests_owner_all on public.guests;
+create policy guests_owner_all on public.guests for all to authenticated
+  using (public.owns_event(event_id) or public.is_admin())
+  with check (public.owns_event(event_id) or public.is_admin());
+
+drop policy if exists guests_scanner_read on public.guests;
+create policy guests_scanner_read on public.guests for select to authenticated
+  using (public.scans_event(event_id));
+
+-- العزل الحاسم: مقيّد بـ inviter_id الخاص بالداعي
+drop policy if exists guests_inviter_all on public.guests;
+create policy guests_inviter_all on public.guests for all to authenticated
+  using (inviter_id is not null and inviter_id = public.my_inviter_id(event_id))
+  with check (inviter_id is not null and inviter_id = public.my_inviter_id(event_id));
+
+-- ---------- ٥) دفتر العناوين: لمالكه وحده، ولا يظهر للأدمن ----------
+alter table public.contacts       enable row level security;
+alter table public.contact_groups enable row level security;
+
+drop policy if exists contacts_owner_all on public.contacts;
+create policy contacts_owner_all on public.contacts for all to authenticated
+  using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+
+drop policy if exists contact_groups_owner_all on public.contact_groups;
+create policy contact_groups_owner_all on public.contact_groups for all to authenticated
+  using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+
+-- ---------- ٦) سجل النشاط: قراءة للأدمن، وكتابة من الخادم ----------
+alter table public.activity_logs enable row level security;
+
+drop policy if exists activity_logs_admin_read on public.activity_logs;
+create policy activity_logs_admin_read on public.activity_logs for select to authenticated
+  using (public.is_admin());
+
+drop policy if exists activity_logs_insert on public.activity_logs;
+create policy activity_logs_insert on public.activity_logs for insert to authenticated
+  with check (actor_id = auth.uid() or public.is_admin());
+
+-- ---------- ٧) موافقات التسويق: الأدمن فقط ----------
+alter table public.marketing_optins enable row level security;
+
+drop policy if exists marketing_optins_admin on public.marketing_optins;
+create policy marketing_optins_admin on public.marketing_optins for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+-- ---------- ٨) إعدادات المنصة: المدير وحده ----------
+alter table public.platform_settings enable row level security;
+
+drop policy if exists platform_settings_admin on public.platform_settings;
+create policy platform_settings_admin on public.platform_settings for all to authenticated
+  using (public.has_permission('whatsapp_settings'))
+  with check (public.has_permission('whatsapp_settings'));
+
+-- ---------- ٩) الملف الشخصي: الدور الافتراضي صار user ----------
+drop policy if exists profiles_insert_self on public.profiles;
+create policy profiles_insert_self on public.profiles for insert to authenticated
+  with check (id = auth.uid() and role in ('user', 'owner'));
+
+grant execute on function public.has_permission(text) to authenticated, service_role;
+grant execute on function public.my_inviter_id(uuid)  to authenticated, service_role;
+grant execute on function public.is_inviter_in(uuid)  to authenticated, service_role;
+
+
 -- ============================================================
 -- تم. الخطوة التالية:
 --   ١) أنشئ مستخدماً من Authentication ← Add user
