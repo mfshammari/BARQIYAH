@@ -82,7 +82,7 @@ export function InviteEditor({
             <label className="label" htmlFor="host">من الداعي؟</label>
             <input
               id="host" name="host" className="field" value={host} maxLength={MAX_VAR_LENGTH + 20}
-              onChange={(e) => setHost(e.target.value)} placeholder="أم حمودي"
+              onChange={(e) => setHost(e.target.value)} placeholder="أم عبدالله الفالح"
             />
             <div className="flex justify-between gap-3">
               <p className={`hint ${issueFor('host') && touched ? 'text-danger' : ''}`}>
@@ -98,7 +98,7 @@ export function InviteEditor({
             <label className="label" htmlFor="occasion">ما المناسبة؟</label>
             <input
               id="occasion" name="occasion" className="field" value={occasion} maxLength={MAX_VAR_LENGTH + 20}
-              onChange={(e) => setOccasion(e.target.value)} placeholder="زواج ابني حمودي"
+              onChange={(e) => setOccasion(e.target.value)} placeholder="زواج ابني محمد"
             />
             <div className="flex justify-between gap-3">
               <p className={`hint ${issueFor('occasion') && touched ? 'text-danger' : ''}`}>

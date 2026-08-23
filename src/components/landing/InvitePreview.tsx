@@ -4,11 +4,17 @@
  * وباركود مصغّر أسفلها.
  */
 export function InvitePreview({
-  hostLine = 'تتشرّف أم حمودي بدعوتكم',
-  occasionLine = 'لحضور حفل زواج ابنها حمودي',
-  dateLine = 'الجمعة ٢٦ شوال ١٤٤٨ هـ · قصر ٣٣ · ٠٩:٠٠ مساءً',
+  kicker = 'بمناسبة حفل الزفاف',
+  hostLine = 'تتشرّف',
+  hostName = 'أسرة العبدالله',
+  bodyLine = 'بدعوتكم لمشاركتهم فرحتهم',
+  occasionLine = 'وليمة العُرس',
+  dateLine = 'مساء الخميس · ١٤ شوال',
 }: {
+  kicker?: string;
   hostLine?: string;
+  hostName?: string;
+  bodyLine?: string;
   occasionLine?: string;
   dateLine?: string;
 }) {
@@ -28,13 +34,17 @@ export function InvitePreview({
           ب
         </div>
 
-        <p className="mt-4 text-[11px] tracking-[3px] text-gold-soft">دعوة</p>
+        <p className="mt-4 text-[11px] tracking-[3px] text-gold-soft">{kicker}</p>
 
         <h3 className="mt-4 font-display text-[15px] font-normal leading-[2] text-[#F5EEDC]">
           {hostLine}
           <br />
-          {occasionLine}
+          <span className="font-cerem text-[26px] text-white">{hostName}</span>
+          <br />
+          {bodyLine}
         </h3>
+
+        <p className="mt-3 font-display text-[17px] text-gold-soft">{occasionLine}</p>
 
         <div className="my-5 flex items-center justify-center gap-2.5" aria-hidden>
           <span className="h-px w-12" style={{ background: 'linear-gradient(90deg,transparent,#D8BE86)' }} />

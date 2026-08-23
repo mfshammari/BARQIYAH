@@ -91,13 +91,13 @@ export function NewEventForm({
             <div>
               <label className="label" htmlFor="c1">{two ? 'العريس' : celebrantLabel}</label>
               <input id="c1" name="celebrant_primary" className="field" required
-                value={celebrant1} onChange={(e) => setCelebrant1(e.target.value)} placeholder="حمودي" />
+                value={celebrant1} onChange={(e) => setCelebrant1(e.target.value)} placeholder="محمد" />
             </div>
             {two ? (
               <div>
                 <label className="label" htmlFor="c2">العروس <span className="text-muted font-normal">(اختياري)</span></label>
                 <input id="c2" name="celebrant_secondary" className="field"
-                  value={celebrant2} onChange={(e) => setCelebrant2(e.target.value)} placeholder="سوسو" />
+                  value={celebrant2} onChange={(e) => setCelebrant2(e.target.value)} placeholder="عريب" />
               </div>
             ) : null}
           </div>
@@ -131,7 +131,7 @@ export function NewEventForm({
 
           <div>
             <label className="label" htmlFor="iname">اسم المناسبة الداخلي <span className="text-muted font-normal">(اختياري)</span></label>
-            <input id="iname" name="internal_name" className="field" placeholder="زواج حمودي" />
+            <input id="iname" name="internal_name" className="field" placeholder="زواج محمد" />
             <p className="hint">يميّزها في قائمة مناسباتك ولا يظهر للمدعوين.</p>
           </div>
 

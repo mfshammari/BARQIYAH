@@ -168,7 +168,7 @@ export default async function InvitersPage({ params }: { params: Promise<{ id: s
               <input type="hidden" name="event_id" value={id} />
               <div>
                 <label className="label" htmlFor="i-name">الاسم كما يظهر في الدعوة</label>
-                <input id="i-name" name="name" className="field" placeholder="أم حمودي" required />
+                <input id="i-name" name="name" className="field" placeholder="أم عبدالله الفالح" required />
               </div>
               <div>
                 <label className="label" htmlFor="i-phone">جوال الداعي</label>
