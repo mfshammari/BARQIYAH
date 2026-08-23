@@ -6,42 +6,65 @@
    design tokens — الهوية اللونية والخطوط في مكان واحد
    لتغيير الهوية لاحقاً: عدّل هذه القيم فقط.
    ============================================================ */
+/* ============================================================
+   هوية واحدة بنبرتين (SPEC §2):
+     formal → صفحة الهبوط وكل ما يراه الزائر: أخضر غامق، ذهبي بارز،
+              حواف حادة (2px)، مساحات واسعة. إحساس بطاقة زواج مطبوعة.
+     soft   → الداخل (صاحب المناسبة، الأدمن، الداعي، الماسح): نفس
+              العائلة بدرجات أفتح، زوايا مستديرة، مساحة عمل مريحة.
+   القيم بصيغة قنوات RGB ليدعم Tailwind شفافية الألوان.
+   ============================================================ */
 :root {
-  /* القيم بصيغة قنوات RGB ليدعم Tailwind شفافية الألوان (bg-brand/20) */
-  /* أسطح */
-  --bg: 247 245 240;          /* #F7F5F0 */
-  --surface: 255 255 255;     /* #FFFFFF */
-  --panel: 252 250 244;       /* #FCFAF4 */
+  /* ————— مشترك بين الطبقتين ————— */
+  --ivory: 251 250 246;       /* #FBFAF6 */
+  --paper: 252 250 244;       /* #FCFAF4 */
+  --ink: 40 38 33;            /* #282621 */
+  --muted: 110 105 92;        /* #6E695C */
+  --line: 230 223 206;        /* #E6DFCE */
+  --red: 163 56 42;           /* #A3382A */
+  --red-soft: 246 228 224;    /* #F6E4E0 */
 
-  /* نص */
-  --ink: 30 42 36;            /* #1E2A24 */
-  --muted: 110 123 116;       /* #6E7B74 */
-  --line: 231 226 214;        /* #E7E2D6 */
+  --bg: var(--ivory);
+  --surface: 255 255 255;
+  --panel: var(--paper);
 
-  /* الهوية: أخضر عميق + ذهبي هادئ */
-  --brand: 21 58 43;          /* #153A2B */
-  --brand-dark: 14 42 31;     /* #0E2A1F */
-  --brand-soft: 232 239 234;  /* #E8EFEA */
+  /* ————— طبقة formal (الافتراضية) ————— */
+  --brand: 21 58 43;          /* #153A2B أخضر غامق */
+  --brand-dark: 30 76 57;     /* #1E4C39 */
+  --brand-soft: 237 243 239;  /* #EDF3EF */
   --gold: 176 138 71;         /* #B08A47 */
   --gold-soft: 216 190 134;   /* #D8BE86 */
   --gold-line: 227 216 190;   /* #E3D8BE */
+  --radius: 2px;              /* حواف رسمية */
+  --section-gap: 104px;
 
-  /* حالات */
+  /* ————— حالات ————— */
   --ok: 18 128 95;            /* #12805F */
   --ok-soft: 227 243 237;     /* #E3F3ED */
-  --warn: 183 123 27;         /* #B77B1B */
-  --warn-soft: 251 241 222;   /* #FBF1DE */
-  --danger: 192 57 47;        /* #C0392F */
-  --danger-soft: 251 233 231; /* #FBE9E7 */
+  --warn: 138 109 31;         /* #8A6D1F gold-deep */
+  --warn-soft: 247 240 220;   /* #F7F0DC gold-tint */
+  --danger: var(--red);
+  --danger-soft: var(--red-soft);
   --info: 47 92 158;          /* #2F5C9E */
   --info-soft: 233 239 249;   /* #E9EFF9 */
 
-  /* خطوط */
-  --font-body: 'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display: 'Tajawal', var(--font-body);
-  --font-cerem: 'Aref Ruqaa', 'Amiri', serif;
+  /* ————— خطوط ————— */
+  --font-cerem: 'Aref Ruqaa', serif;          /* الشعار «برقية» فقط */
+  --font-display: 'Amiri', serif;             /* عناوين الهبوط الاحتفالية */
+  --font-body: 'IBM Plex Sans Arabic', system-ui, sans-serif;  /* نصوص الهبوط */
+  --font-ui: 'Tajawal', var(--font-body);     /* كل واجهات الداخل */
+}
 
-  --radius: 14px;
+/* طبقة soft — تُفعَّل بإضافة data-layer="soft" على العنصر الجذر للوحات */
+[data-layer='soft'] {
+  --brand: 35 75 58;          /* #234B3A */
+  --brand-dark: 21 58 43;     /* #153A2B */
+  --brand-soft: 237 243 239;  /* #EDF3EF green-tint */
+  --gold: 201 169 78;         /* #C9A94E */
+  --gold-soft: 247 240 220;   /* #F7F0DC gold-tint */
+  --gold-line: 227 216 190;   /* #E3D8BE */
+  --panel: 241 239 233;       /* #F1EFE9 gray-tint */
+  --radius: 12px;             /* زوايا ناعمة */
 }
 
 * { box-sizing: border-box; }
@@ -56,8 +79,31 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* الأرقام دائماً LTR داخل النص العربي */
-.num { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+[data-layer='soft'] { font-family: var(--font-ui); }
+
+/* الأرقام: عربية هندية في العرض (SPEC §0)، معزولة اتجاهياً */
+.num { unicode-bidi: isolate; }
+
+/* المسطرة الذهبية — فاصل عناوين الأقسام (عنصر signature) */
+.rule {
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; margin: 14px 0 26px;
+}
+.rule::before, .rule::after {
+  content: ''; height: 1px; width: 64px; flex-shrink: 0;
+}
+.rule::before { background: linear-gradient(90deg, transparent, rgb(var(--gold-soft))); }
+.rule::after  { background: linear-gradient(90deg, rgb(var(--gold-soft)), transparent); }
+.rule span {
+  color: rgb(var(--gold)); font-size: 8px; line-height: 1;
+  transform: rotate(45deg); display: inline-block; flex-shrink: 0;
+}
+
+/* شارة فوق العنوان */
+.eyebrow {
+  font-size: 12.5px; letter-spacing: 3px; color: rgb(var(--gold));
+  font-weight: 600; text-align: center;
+}
 
 /* ============================================================
    مكوّنات مشتركة

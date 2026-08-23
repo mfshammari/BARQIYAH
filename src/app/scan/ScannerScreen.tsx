@@ -105,7 +105,7 @@ export function ScannerScreen({
   useEffect(() => () => stopCamera(), [stopCamera]);
 
   return (
-    <div className="min-h-screen bg-brand text-white flex flex-col">
+    <div className="min-h-screen bg-brand text-white flex flex-col" data-layer="soft">
       <header className="px-4 py-3 flex items-center justify-between border-b border-white/10">
         <div className="min-w-0">
           <div className="font-cerem text-lg leading-tight">برقية</div>

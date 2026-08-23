@@ -17,7 +17,7 @@ export function AppShell({
   backLabel?: string;
 }) {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col" data-layer="soft">
       <header className="bg-brand text-white sticky top-0 z-30">
         <div className="mx-auto max-w-6xl px-4 h-14 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
