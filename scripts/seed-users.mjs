@@ -37,8 +37,10 @@ if (!url || !serviceKey) {
 
 const PASSWORD = process.env.SEED_PASSWORD ?? 'Barqiyah#2026';
 
+const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? 'admin@barqiyah.sa';
+
 const USERS = [
-  { email: 'admin@barqiyah.sa',   role: 'admin',   full_name: 'مدير المنصة' },
+  { email: ADMIN_EMAIL, role: 'admin_owner', full_name: 'مدير المنصة' },
   { email: 'owner@barqiyah.sa',   role: 'owner',   full_name: 'محمد العبدالله', phone: '0555123456' },
   { email: 'scanner@barqiyah.sa', role: 'scanner', full_name: 'ماسح البوابة الرئيسية' },
 ];
@@ -52,7 +54,8 @@ for (const user of USERS) {
     email: user.email,
     password: PASSWORD,
     email_confirm: true,
-    user_metadata: { role: user.role, full_name: user.full_name, phone: user.phone ?? null },
+    // الدور لا يُمرَّر في بيانات المستخدم — المُشغِّل يتجاهله عمداً (منع رفع الصلاحية)
+    user_metadata: { full_name: user.full_name, phone: user.phone ?? null },
   });
 
   let id = data?.user?.id;
@@ -79,4 +82,5 @@ for (const user of USERS) {
 }
 
 console.log(`\nكلمة المرور للجميع: ${PASSWORD}`);
+console.log(`حساب الأدمن: ${ADMIN_EMAIL} — الدور admin_owner (كل الصلاحيات).`);
 console.log('الخطوة التالية: شغّل supabase/seed.sql في SQL Editor لإنشاء البيانات التجريبية.');
