@@ -8,7 +8,7 @@ import { sendInvitations } from '@/lib/invitations';
 import { normalizePhone, isValidPhone } from '@/lib/format';
 import type { EventRow, Guest, OccasionType, Package, WhatsAppCategory } from '@/lib/types';
 import { getPaymentProvider } from '@/lib/payments';
-import { paymentConfigured, appUrl } from '@/lib/env';
+import { appUrl } from '@/lib/env';
 import { redirect } from 'next/navigation';
 
 export interface ActionState { error?: string; notice?: string }
@@ -517,18 +517,7 @@ export async function requestUpgrade(_prev: ActionState, formData: FormData): Pr
     .from('packages').select('*').eq('id', packageId).maybeSingle<Package>();
   if (!pkg) return { error: 'الباقة غير متاحة.' };
 
-  if (!paymentConfigured) {
-    const { error } = await supabase.from('transactions').insert({
-      event_id: eventId, package_id: packageId, amount: pkg.price,
-      type: 'upgrade', status: 'pending', method: 'manual', seats_added: pkg.seats,
-      note: 'طلب من صاحب المناسبة — بانتظار التفعيل اليدوي',
-    });
-    if (error) return { error: 'تعذّر تسجيل الطلب.' };
-    revalidatePath(`/e/${eventId}/info`);
-    return { notice: 'سُجّل طلبك. ستتواصل معك الإدارة لإتمام الدفع والتفعيل.' };
-  }
-
-  // عملية معلّقة يعود معرّفها في الـwebhook
+  // عملية معلّقة يعود معرّفها في الـwebhook (أو في المحاكاة)
   const { data: txId, error: txError } = await supabase.rpc('create_pending_payment', {
     p_event_id: eventId,
     p_package_id: packageId,
