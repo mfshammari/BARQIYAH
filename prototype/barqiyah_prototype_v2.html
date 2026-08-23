@@ -1,0 +1,1947 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>برقية · النموذج الكامل (نسخة محدّثة)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Aref+Ruqaa:wght@400;700&family=Tajawal:wght@400;500;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap');
+
+:root{
+  --ivory:#FBFAF6; --paper:#FCFAF4; --green:#153A2B; --green-2:#1E4C39;
+  --gold:#B08A47; --gold-soft:#D8BE86; --gold-line:#E3D8BE;
+  --ink:#282621; --muted:#6E695C; --line:#E6DFCE;
+  --red:#A3382A; --red-soft:#F6E4E0;
+  --cerem:'Aref Ruqaa',serif; --disp:'Amiri',serif; --body:'IBM Plex Sans Arabic',system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:var(--body);background:var(--ivory);color:var(--ink);line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+.wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+
+.rule{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 auto}
+.rule::before,.rule::after{content:"";height:1px;width:64px;flex-shrink:0;background:linear-gradient(90deg,transparent,var(--gold-soft))}
+.rule::after{background:linear-gradient(90deg,var(--gold-soft),transparent)}
+.rule span{color:var(--gold);font-size:8px;transform:rotate(45deg);display:inline-block;flex-shrink:0;line-height:1}
+.eyebrow{font-size:12.5px;letter-spacing:3px;color:var(--gold);font-weight:600;text-align:center;margin-bottom:14px}
+.sec-title{font-family:var(--disp);font-weight:700;font-size:clamp(28px,4vw,44px);text-align:center;color:var(--green);line-height:1.3}
+.sec-head{margin-bottom:56px}.sec-head .rule{margin-top:18px}
+.sec-sub{text-align:center;font-size:16px;color:var(--muted);max-width:520px;margin:22px auto 0;line-height:1.9}
+
+.btn{display:inline-flex;align-items:center;gap:8px;font-family:var(--body);font-weight:600;font-size:15px;padding:13px 28px;border-radius:2px;border:1px solid transparent;cursor:pointer;transition:.25s;letter-spacing:.3px}
+.btn-sm{padding:9px 18px;font-size:13.5px}
+.btn-primary{background:var(--green);color:var(--ivory)}
+.btn-primary:hover{background:var(--green-2)}
+.btn-ghost{background:transparent;color:var(--green);border-color:var(--gold-line)}
+.btn-ghost:hover{border-color:var(--gold);background:#fff}
+.btn-gold{background:var(--gold);color:#fff}
+.btn-gold:hover{background:#9C7A3C}
+
+/* preview chrome */
+.pbar{position:sticky;top:0;z-index:80;background:var(--green);display:flex;align-items:center;justify-content:space-between;padding:10px 22px;flex-wrap:wrap;gap:8px}
+.pbar .brand{font-family:var(--cerem);font-size:26px;color:var(--gold-soft)}
+.ptabs{display:flex;gap:6px;flex-wrap:wrap}
+.ptab{font-size:13px;padding:7px 15px;border-radius:2px;color:rgba(245,241,232,.75);transition:.15s;letter-spacing:.3px}
+.ptab.on{background:var(--gold);color:var(--green);font-weight:600}
+.ptab:hover:not(.on){background:rgba(255,255,255,.08)}
+.screen{display:none}.screen.on{display:block}
+
+/* ===================== LANDING ===================== */
+header{position:sticky;top:52px;z-index:50;background:rgba(251,250,246,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:72px}
+.brand{font-family:var(--cerem);font-size:30px;color:var(--green);font-weight:700}
+.brand .dot{color:var(--gold)}
+.nav-links{display:flex;align-items:center;gap:32px}
+.nav-links a{font-size:15px;font-weight:500;transition:.2s}
+.nav-links a:hover{color:var(--gold)}
+.nav-cta{display:flex;align-items:center;gap:12px}
+.hero{position:relative;padding:64px 0 82px;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 80% 0%,rgba(176,138,71,.08),transparent),radial-gradient(ellipse 50% 40% at 10% 100%,rgba(21,58,43,.05),transparent);pointer-events:none}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:52px;align-items:center;position:relative}
+.hero-eyebrow{font-size:13px;letter-spacing:4px;color:var(--gold);font-weight:600;margin-bottom:20px}
+.hero h1{font-family:var(--disp);font-weight:700;font-size:clamp(34px,5vw,54px);line-height:1.35;color:var(--green);margin-bottom:22px}
+.hero h1 em{font-style:normal;color:var(--gold)}
+.hero p.lead{font-size:18px;color:var(--muted);max-width:520px;margin-bottom:34px;line-height:1.9}
+.hero-actions{display:flex;gap:14px;flex-wrap:wrap}
+.hero-trust{margin-top:32px;display:flex;gap:26px;flex-wrap:wrap;font-size:13.5px;color:var(--muted)}
+.hero-trust b{color:var(--green);font-family:var(--disp);font-size:22px;font-weight:700;display:block}
+.invite{justify-self:center;width:330px;max-width:100%;transition:transform .5s}
+.invite:hover{transform:rotate(-1deg) translateY(-4px)}
+.invite-card{background:linear-gradient(160deg,#1A4433,#123528);border-radius:3px;padding:14px;box-shadow:0 30px 60px -20px rgba(21,58,43,.5);position:relative}
+.invite-frame{border:1px solid rgba(216,190,134,.45);padding:34px 26px 26px;text-align:center;position:relative}
+.invite-frame::before{content:"";position:absolute;inset:5px;border:1px solid rgba(216,190,134,.18)}
+.monogram{width:52px;height:52px;border-radius:50%;border:1px solid var(--gold-soft);color:var(--gold-soft);font-family:var(--cerem);font-size:26px;display:grid;place-items:center;margin:0 auto 18px;position:relative;z-index:1}
+.invite-kicker{color:var(--gold-soft);font-size:11px;letter-spacing:3px;margin-bottom:16px}
+.invite-frame h3{font-family:var(--disp);color:#F5EEDC;font-size:15px;font-weight:400;line-height:2;position:relative;z-index:1}
+.invite-frame h3 .var{color:var(--gold-soft);border-bottom:1px dashed rgba(216,190,134,.5)}
+.invite-name{font-family:var(--cerem);color:#fff;font-size:26px;margin:10px 0 6px}
+.invite-date{color:rgba(245,238,220,.7);font-size:12px;letter-spacing:1px;margin-top:14px}
+.invite-foot{display:flex;align-items:center;justify-content:space-between;margin-top:22px;padding-top:16px;border-top:1px solid rgba(216,190,134,.2)}
+.invite-seal{font-family:var(--cerem);color:var(--gold-soft);font-size:15px}
+#miniqr{width:46px;height:46px;display:grid;grid-template-columns:repeat(11,1fr);gap:1px;background:#fff;padding:4px;border-radius:2px}
+#miniqr i.on{background:#123528}
+.invite-badge{position:absolute;top:-14px;left:-14px;background:var(--gold);color:#fff;font-size:11px;font-weight:600;padding:6px 12px;border-radius:2px;box-shadow:0 8px 18px -6px rgba(176,138,71,.6)}
+.strip{background:var(--green);padding:16px 0}
+.strip-in{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;font-size:13.5px;color:rgba(245,241,232,.85);letter-spacing:.3px}
+.strip-in i{color:var(--gold-soft);font-size:7px;font-style:normal}
+.how{padding:104px 0;background:var(--paper);border-block:1px solid var(--line)}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;position:relative}
+.step{text-align:center;padding:0 8px}
+.step-num{font-family:var(--disp);font-size:15px;color:var(--gold);font-weight:700;letter-spacing:2px;margin-bottom:14px}
+.step-ic{width:68px;height:68px;margin:0 auto 20px;border:1px solid var(--gold-line);border-radius:50%;display:grid;place-items:center;color:var(--green);background:#fff;position:relative;z-index:2;transition:.3s}
+.step:hover .step-ic{border-color:var(--gold);background:var(--paper)}
+.step-ic svg{width:28px;height:28px;stroke-width:1.4}
+.step h4{font-family:var(--disp);font-size:21px;color:var(--green);margin-bottom:9px;font-weight:700}
+.step p{font-size:14px;color:var(--muted);line-height:1.85;max-width:210px;margin:0 auto}
+.steps::before{content:"";position:absolute;top:63px;right:14%;left:14%;height:1px;background:repeating-linear-gradient(90deg,var(--gold-line) 0 5px,transparent 5px 11px);z-index:1}
+.occasions{padding:104px 0;background:var(--paper);border-block:1px solid var(--line)}
+.occ-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.occ{background:var(--paper);border:1px solid var(--line);padding:34px 24px 0;text-align:center;transition:.3s;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.occ::before{content:"";position:absolute;top:0;right:0;left:0;height:2px;background:var(--gold);transform:scaleX(0);transition:.3s;transform-origin:right}
+.occ:hover{border-color:var(--gold-line);transform:translateY(-3px)}.occ:hover::before{transform:scaleX(1)}
+.occ-ic{width:54px;height:54px;margin:0 auto 16px;border:1px solid var(--gold-line);border-radius:50%;display:grid;place-items:center;color:var(--gold);background:#fff;transition:.3s}
+.occ-ic svg{width:24px;height:24px}
+.occ:hover .occ-ic{border-color:var(--gold);color:var(--green)}
+.occ h4{font-family:var(--disp);font-size:21px;color:var(--green);margin-bottom:8px;font-weight:700}
+.occ p{font-size:13.5px;color:var(--muted);line-height:1.8;margin-bottom:20px;flex:1}
+.occ-meta{font-size:11.5px;letter-spacing:1px;color:var(--gold);border-top:1px solid var(--line);padding:12px 0;font-weight:600}
+.occ-foot{text-align:center;font-size:14px;color:var(--muted);margin-top:34px}
+.pricing{padding:108px 0;background:var(--green);color:var(--ivory)}
+.pricing-foot{text-align:center;color:rgba(245,241,232,.6);font-size:14px;margin-top:36px}
+.pricing .eyebrow{color:var(--gold-soft)}.pricing .sec-title{color:#fff}
+.pricing .rule::before{background:linear-gradient(90deg,transparent,rgba(216,190,134,.6))}
+.pricing .rule::after{background:linear-gradient(90deg,rgba(216,190,134,.6),transparent)}
+.price-note{text-align:center;color:rgba(245,241,232,.75);font-size:15px;margin:-32px auto 44px;max-width:520px}
+.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;align-items:stretch}
+.plan{background:rgba(255,255,255,.04);border:1px solid rgba(216,190,134,.22);padding:34px 30px;display:flex;flex-direction:column;transition:.3s}
+.plan:hover{border-color:var(--gold-soft);transform:translateY(-4px)}
+.plan.featured{background:var(--ivory);color:var(--ink);position:relative;box-shadow:0 30px 60px -24px rgba(0,0,0,.5)}
+.plan-tag{position:absolute;top:-13px;right:50%;transform:translateX(50%);background:var(--gold);color:#fff;font-size:12px;font-weight:600;padding:6px 18px;white-space:nowrap}
+.plan-name{font-family:var(--disp);font-size:26px;font-weight:700;margin-bottom:6px}
+.plan.featured .plan-name{color:var(--green)}
+.plan-desc{font-size:13.5px;opacity:.8;min-height:42px;margin-bottom:20px}
+.plan-price{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+.plan-price b{font-family:var(--disp);font-size:44px;font-weight:700;line-height:1}
+.plan-price span{font-size:16px;opacity:.8}
+.plan-seats{font-size:14px;color:var(--gold-soft);margin-bottom:24px;font-weight:600}
+.plan.featured .plan-seats{color:var(--gold)}
+.plan ul{list-style:none;margin-bottom:28px;flex:1}
+.plan li{font-size:14px;padding:9px 0;border-bottom:1px solid rgba(216,190,134,.14);display:flex;align-items:center;gap:10px}
+.plan.featured li{border-color:var(--line)}
+.plan li::before{content:"◆";color:var(--gold);font-size:8px}
+.plan .btn{width:100%;justify-content:center}
+.plan:not(.featured) .btn-ghost{color:var(--ivory);border-color:rgba(216,190,134,.35)}
+.features{padding:104px 0}
+.feat{padding:4px 0}
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px 40px}
+.feat{display:flex;gap:16px;align-items:flex-start}
+.feat-ic{flex-shrink:0;width:44px;height:44px;border:1px solid var(--gold-line);border-radius:50%;display:grid;place-items:center;color:var(--gold)}
+.feat-ic svg{width:20px;height:20px}
+.feat h4{font-family:var(--disp);font-size:19px;color:var(--green);margin-bottom:3px;font-weight:700}
+.feat p{font-size:14px;color:var(--muted)}
+.faq{padding:104px 0}
+.faq-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 40px}
+.qa{padding:22px 0;border-top:1px solid var(--line)}
+.qa h4{font-family:var(--disp);font-size:19px;color:var(--green);margin-bottom:8px;font-weight:700}
+.qa p{font-size:14.5px;color:var(--muted);line-height:1.85}
+.trial{margin-top:22px;display:inline-flex;align-items:center;gap:10px;background:var(--paper);border:1px solid var(--gold-line);border-radius:2px;padding:11px 16px;font-size:14px;color:var(--ink);max-width:100%}
+.trial b{color:var(--green);font-weight:600}
+.trial-ic{flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--gold);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700}
+.contact-sec{padding:70px 0;background:var(--ivory);border-top:1px solid var(--line);text-align:center}
+.ct-line{font-family:var(--disp);font-size:26px;color:var(--green);font-weight:700;line-height:1.4;margin-bottom:10px}
+.ct-p{font-size:15px;color:var(--muted);line-height:1.9;margin:0 auto 26px;max-width:460px}
+.ct-btn{display:inline-block;vertical-align:top;width:250px;max-width:100%;background:#fff;border:1px solid var(--gold-line);border-radius:2px;padding:15px 20px;margin:0 5px 10px;text-align:right;transition:.25s}
+.ct-btn:hover{border-color:var(--gold)}
+.ct-btn.wa{background:var(--green);border-color:var(--green)}
+.ct-btn.wa .ct-l,.ct-btn.wa .ct-v{color:var(--ivory)}
+.ct-l{display:block;font-size:14px;font-weight:600;color:var(--green);line-height:1.5}
+.ct-v{display:block;font-size:13px;color:var(--muted);line-height:1.5}
+.ct-note{font-size:13px;color:var(--muted);margin-top:16px}
+@media(max-width:900px){.trial{font-size:13.5px;align-items:flex-start}}
+.cta{padding:104px 0;text-align:center;background:var(--paper);border-top:1px solid var(--line)}
+.cta h2{font-family:var(--disp);font-size:clamp(30px,4.5vw,44px);color:var(--green);margin-bottom:18px;font-weight:700}
+.cta p{font-size:17px;color:var(--muted);margin-bottom:32px;max-width:480px;margin-inline:auto}
+footer{background:var(--green);color:rgba(245,241,232,.7);padding:52px 0 28px}
+.foot-top{display:flex;justify-content:space-between;flex-wrap:wrap;gap:30px;padding-bottom:32px;border-bottom:1px solid rgba(216,190,134,.18)}
+.foot-brand{font-family:var(--cerem);font-size:32px;color:#fff}
+.foot-brand .dot{color:var(--gold-soft)}
+.foot-brand p{font-size:14px;margin-top:8px;max-width:280px;color:rgba(245,241,232,.6);font-family:var(--body)}
+.foot-cols{display:flex;gap:56px;flex-wrap:wrap}
+.foot-col h5{color:var(--gold-soft);font-size:13px;margin-bottom:12px;font-weight:600}
+.foot-col a{display:block;font-size:14px;padding:5px 0;color:rgba(245,241,232,.7)}
+.foot-bottom{text-align:center;padding-top:24px;font-size:13px;color:rgba(245,241,232,.45)}
+
+/* ===================== APP (interior) ===================== */
+#s-owner,#s-admin,#s-scanner,#s-guest{--green:#234B3A;--gold:#C9A94E;font-family:'Tajawal',sans-serif}
+#s-owner .btn,#s-admin .btn,#s-scanner .btn,#s-guest .btn{border-radius:10px}
+.app{display:flex;gap:20px;max-width:1120px;margin:0 auto;padding:26px 22px;align-items:flex-start}
+.side{width:216px;flex-shrink:0;background:#EDF3EF;border-radius:16px;padding:16px;position:sticky;top:78px}
+.side .logo{font-family:var(--cerem);font-size:24px;color:var(--green);padding:2px 8px 12px}
+.side .logo .dot{color:var(--gold)}
+.side .host{background:#fff;border-radius:12px;padding:12px;margin-bottom:14px}
+.side .host .l{font-size:11px;color:var(--muted);letter-spacing:1px}
+.side .host .h{font-size:16px;font-weight:700;color:var(--green)}
+.side .host .o{font-size:12px;color:var(--muted)}
+.nav-i{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;font-size:14px;color:#41544A;width:100%;text-align:right;transition:.15s;font-weight:500}
+.nav-i .ic{font-size:17px;width:20px;text-align:center;color:var(--green-2)}
+.nav-i.on{background:var(--green);color:var(--ivory);font-weight:600}
+.nav-i.on .ic{color:var(--gold-soft)}
+.nav-i:hover:not(.on){background:rgba(21,58,43,.05)}
+.main{flex:1;min-width:0}
+.subscreen{display:none}.subscreen.on{display:block}
+.head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;flex-wrap:wrap;gap:12px}
+.head h2{font-size:23px;font-weight:700;color:var(--green)}
+.head .sub{font-size:13px;color:var(--muted);margin-top:2px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px}
+.sec-label{font-size:12px;color:var(--muted);margin-bottom:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.stat{border-radius:14px;padding:16px}
+.stat .l{font-size:12px}
+.stat .v{font-size:30px;font-weight:700;margin-top:3px}
+.stat.g{background:#EDF3EF}.stat.g .l{color:#3B6D57}.stat.g .v{color:var(--green)}
+.stat.d{background:#F7F0DC}.stat.d .l{color:#8A6D1F}.stat.d .v{color:#8A6D1F}
+.stat.n{background:#F1EFE9}.stat.n .l{color:#5F5E5A}.stat.n .v{color:#2C2C2A}
+.mini{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 8px;text-align:center}
+.mini .v{font-size:24px;font-weight:700;color:var(--green)}
+.mini .l{font-size:11px;color:var(--muted)}
+.badge{font-size:12px;padding:3px 11px;border-radius:20px;display:inline-block;font-weight:500}
+.b-green{background:#E9F0EA;color:#1E4C39} .b-gold{background:#F7F0DC;color:#8A6D1F}
+.b-gray{background:#EFEBDF;color:#6E695C} .b-red{background:var(--red-soft);color:var(--red)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:right;font-weight:600;color:var(--muted);font-size:12px;letter-spacing:.5px;padding:11px 14px;border-bottom:1px solid var(--line)}
+td{padding:12px 14px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:none}
+.field{margin-bottom:15px}
+.field label{display:block;font-size:13px;color:var(--green);margin-bottom:6px;font-weight:600}
+.field input,.field select{width:100%;font-family:inherit;font-size:14px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+.field input:focus,.field select:focus{outline:none;border-color:var(--gold)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.toggle{display:flex;gap:8px}
+.toggle .t{flex:1;text-align:center;font-size:13px;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--muted)}
+.toggle .t.on{background:var(--green);color:var(--ivory);border-color:var(--green)}
+.tpl{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff}
+.tpl.sel{border:2px solid var(--gold)}
+.tpl .prev{height:92px;border-radius:8px;background:#EDF3EF;display:flex;align-items:center;justify-content:center;color:var(--green);font-family:var(--disp);margin-bottom:10px}
+.center-narrow{max-width:460px;margin:0 auto}
+
+/* phone */
+.phone-wrap{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;padding:30px 20px}
+.phone{width:296px;background:#0b0b0b;border-radius:34px;padding:10px;flex-shrink:0}
+.phone .scr{background:var(--ivory);border-radius:26px;overflow:hidden;min-height:520px}
+.wa{background:#E5DDD5;min-height:520px;display:flex;flex-direction:column}
+.wa-top{background:#075E54;color:#fff;padding:12px 14px;display:flex;align-items:center;gap:10px;font-size:14px}
+.wa-body{flex:1;padding:14px;display:flex;flex-direction:column;gap:10px}
+.bubble{background:#fff;border-radius:10px;padding:12px;font-size:13px;max-width:88%;box-shadow:0 1px 1px rgba(0,0,0,.08)}
+.bubble .img{height:96px;border-radius:6px;background:linear-gradient(0deg,#EDF3EF,#F7F0DC);display:flex;align-items:center;justify-content:center;font-family:var(--disp);color:var(--green);margin-bottom:8px;font-size:18px}
+.wa-btn{border-top:1px solid #eee;text-align:center;color:#075E54;font-size:14px;padding:9px;font-weight:600}
+.scan-scr{padding:22px;text-align:center;display:flex;flex-direction:column;min-height:520px}
+.scan-title{font-family:var(--cerem);font-size:24px;color:var(--green)}
+.scan-box{flex:1;border:2px dashed var(--green);border-radius:14px;margin:16px 0;display:flex;align-items:center;justify-content:center;color:var(--green);font-size:58px;background:#EDF3EF}
+.result{border-radius:14px;padding:16px;font-size:16px;font-weight:600}
+.r-ok{background:#E9F0EA;color:var(--green)} .r-bad{background:var(--red-soft);color:var(--red)}
+
+@media(max-width:900px){
+  .hero-grid{grid-template-columns:1fr;gap:44px}.invite{order:-1}
+  .steps{grid-template-columns:repeat(2,1fr)}.steps::before{display:none}
+  .occ-grid,.plans,.feat-grid,.faq-grid,.grid5,.grid3{grid-template-columns:1fr}
+  .strip-in{gap:12px;font-size:12.5px}
+  .plan.featured{order:-1}
+  .app{flex-direction:column}.side{width:100%;position:static}
+  .nav-links{display:none}
+}
+
+#s-admin .nav-group{font-size:11px;color:var(--muted);letter-spacing:1px;padding:14px 10px 6px;font-weight:600}
+#s-admin .pill{margin-right:auto;background:var(--green);color:#fff;font-size:11px;padding:1px 8px;border-radius:20px;font-weight:600}
+#s-admin .nav-i.on .pill{background:#fff;color:var(--green)}
+#s-admin .dot-warn{margin-right:auto;width:8px;height:8px;border-radius:50%;background:#C9A94E}
+.alert{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:12px;margin-bottom:22px}
+.alert.warn{background:#F7F0DC}
+.alert .a-ic{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:#C9A94E;color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
+.alert b{color:#6E5417;font-size:14px}
+.alert .a-sub{font-size:13px;color:#8A6D1F;margin-top:2px;line-height:1.7}
+.alert .btn{margin-right:auto;flex-shrink:0}
+.task-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.task{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px}
+.task .t-n{font-size:30px;font-weight:700;color:var(--green);line-height:1.2}
+.task .t-l{font-size:13.5px;font-weight:600;color:var(--green);margin-bottom:2px}
+.task .t-m{font-size:12px;color:var(--muted);margin-bottom:12px}
+.two-col{display:grid;grid-template-columns:1.25fr .75fr;gap:14px;align-items:start}
+.pulse{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--muted)}
+.pulse:last-child{border-bottom:none}
+.pulse b{color:var(--green);font-size:16px;font-weight:700}
+.pulse b.bad{color:#A3382A}
+.acct-me.menu{position:relative;cursor:pointer;padding:6px 8px;border-radius:10px}
+.acct-me.menu:hover{background:#F1EFE9}
+.chev{color:var(--muted);font-size:13px;margin-right:2px}
+.acct-drop{display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 34px -16px rgba(21,58,43,.35);min-width:210px;padding:6px;z-index:40}
+.acct-me.menu:hover .acct-drop,.acct-me.menu:focus-within .acct-drop{display:block}
+.acct-drop a{display:block;padding:10px 12px;font-size:13.5px;color:var(--ink);border-radius:8px}
+.acct-drop a:hover{background:#EDF3EF;color:var(--green)}
+.acct-drop i{display:block;height:1px;background:var(--line);margin:5px 8px}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hint{font-weight:400;color:var(--muted);font-size:11.5px}
+.prev-note{background:#EDF3EF;border-radius:12px;padding:14px 16px;margin:6px 0 16px}
+.pn-l{display:block;font-size:11.5px;color:#3B6D57;margin-bottom:6px;font-weight:600}
+.pn-b{font-family:var(--disp);font-size:14.5px;color:#234B3A;line-height:2}
+.pn-b b{color:#8A6D1F}
+@media(max-width:900px){.split{grid-template-columns:1fr}}
+.tpl-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tp{cursor:pointer;display:block}
+.tp input{display:none}
+.tp-b{display:block;border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center;transition:.2s}
+.tp input:checked + .tp-b{border-color:#C9A94E;border-width:2px;padding:9px;background:#FCFAF4}
+.tp-prev{display:flex;align-items:center;justify-content:center;height:70px;border-radius:8px;font-family:var(--disp);font-size:14px;margin-bottom:8px}
+.tp-prev.cls{background:linear-gradient(160deg,#1A4433,#123528);color:#D8BE86}
+.tp-prev.smp{background:#fff;border:1px solid var(--line);color:#234B3A}
+.tp-prev.mdn{background:#F1EFE9;color:#5F5E5A}
+.tp-b b{display:block;font-size:13px;color:var(--green);font-weight:600}
+.tp-b i{font-size:11.5px;color:var(--muted);font-style:normal}
+.var-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.wa-prev{background:#fff;border-radius:10px;padding:12px;max-width:330px}
+.wp-img{height:70px;border-radius:6px;background:linear-gradient(160deg,#1A4433,#123528);color:#D8BE86;display:flex;align-items:center;justify-content:center;font-size:12px;margin-bottom:9px}
+.wp-txt{font-size:13.5px;color:#282621;line-height:1.9}
+.wp-txt b{color:#234B3A}
+.wp-btns{display:flex;gap:8px;margin-top:10px;border-top:1px solid var(--line);padding-top:9px}
+.wp-btns span{flex:1;text-align:center;font-size:12.5px;color:#075E54;font-weight:600}
+@media(max-width:900px){.tpl-pick,.var-row{grid-template-columns:1fr}}
+.ro{font-size:10.5px;background:#F1EFE9;color:#5F5E5A;padding:2px 8px;border-radius:20px;font-weight:600}
+.ro-text{opacity:.92;border:1px dashed var(--line)}
+.inv-pending{font-size:13px;color:#8A6D1F;background:#F7F0DC;border-radius:10px;padding:12px 14px;line-height:1.75}
+.sec-split{margin:30px 0 12px;padding-top:22px;border-top:1px solid var(--line)}
+.ss-h{font-size:18px;font-weight:700;color:var(--green)}
+.ss-s{font-size:13px;color:var(--muted);margin-top:3px}
+.evc-side.gold{background:#C9A94E}
+.evc.guest-ev{background:#FCFAF4}
+.ev-fixed{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:20px}
+.ef-head{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:16px 18px;background:#EDF3EF;flex-wrap:wrap}
+.ef-t{font-family:var(--disp);font-size:21px;font-weight:700;color:#234B3A}
+.ef-s{font-size:12.5px;color:#3B6D57;margin-top:2px}
+.ef-s b{color:#234B3A}
+.ef-cd{text-align:center;background:#fff;border-radius:12px;padding:8px 16px}
+.ef-cd b{display:block;font-size:24px;font-weight:700;color:#234B3A;line-height:1.1}
+.ef-cd span{font-size:10.5px;color:#3B6D57}
+.ef-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line)}
+.ef-i{background:#fff;padding:13px 14px}
+.ef-i span{display:block;font-size:11px;color:var(--muted);margin-bottom:3px}
+.ef-i b{font-size:13.5px;color:var(--green);font-weight:600}
+.ef-note{font-size:12px;color:var(--muted);padding:11px 18px;border-top:1px solid var(--line);line-height:1.7}
+.inv-step{display:flex;align-items:center;gap:11px}
+.istep{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:#F1EFE9;color:var(--muted);display:grid;place-items:center;font-size:12px;font-weight:700}
+.istep.done{background:#234B3A;color:#F5EFE1}
+.inv-step b{display:block;font-size:14.5px;color:var(--green);font-weight:600}
+.inv-step i{font-size:12px;color:var(--muted);font-style:normal}
+.locked-row{display:flex;align-items:center;gap:10px;background:#F1EFE9;border-radius:10px;padding:12px 14px;flex-wrap:wrap;margin-top:4px}
+.lk{font-size:11.5px;color:var(--muted)}
+.locked-row b{font-size:13.5px;color:var(--green)}
+.locked-row i{font-size:11.5px;color:var(--muted);font-style:normal;margin-right:auto}
+.fixed-v{color:#5F5E5A!important}
+@media(max-width:900px){.ef-grid{grid-template-columns:1fr 1fr}}
+.quota-bar{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:14px}
+.qb-l{font-size:13px;color:var(--muted);margin-bottom:10px}
+.qb-l b{font-size:19px;color:var(--green)}
+.qb-track{height:12px;background:#F1EFE9;border-radius:20px;overflow:hidden;display:flex;margin-bottom:10px}
+.qb-track i{display:block;height:100%}
+.q1{background:#234B3A}.q2{background:#C9A94E}
+.qb-key{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.qb-key span{display:flex;align-items:center;gap:5px}
+.qb-key i{width:9px;height:9px;border-radius:3px;display:block}
+.k1{background:#234B3A}.k2{background:#C9A94E}.k3{background:#F1EFE9;border:1px solid var(--line)}
+.inv-card{background:#fff;border:1px solid var(--line);border-radius:14px;margin-bottom:12px;overflow:hidden}
+.inv-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:15px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.inv-name{font-size:15.5px;font-weight:700;color:var(--green);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.inv-sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+.inv-seats{text-align:center;background:#EDF3EF;border-radius:12px;padding:8px 16px}
+.inv-seats b{display:block;font-size:22px;font-weight:700;color:#234B3A;line-height:1.1}
+.inv-seats span{font-size:11px;color:#3B6D57}
+.inv-body{padding:15px 18px}
+.inv-lbl{font-size:11.5px;color:var(--muted);margin-bottom:6px}
+.inv-text{font-family:var(--disp);font-size:15px;color:#234B3A;line-height:2;background:#FCFAF4;border-radius:10px;padding:12px 14px}
+.inv-text b{color:#8A6D1F}
+.inv-row{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-top:10px}
+.inv-row b{color:var(--green)}
+.inv-stats{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.inv-acts{display:flex;gap:8px;padding:0 18px 15px;flex-wrap:wrap}
+.tpl-hint{background:#EDF3EF;border-radius:10px;padding:11px 13px;font-size:12.5px;color:#3B6D57;line-height:1.75;margin-bottom:14px}
+.inviter-banner{background:linear-gradient(160deg,#1A4433,#123528);border-radius:14px;padding:16px 18px;margin-bottom:20px}
+.inviter-banner b{display:block;font-family:var(--disp);font-size:19px;color:#F5EEDC}
+.inviter-banner span{font-size:12.5px;color:rgba(216,190,134,.9)}
+.inviter-note{font-size:12.5px;color:var(--muted);background:#FCFAF4;border-radius:10px;padding:11px 13px;line-height:1.75}
+.inviter-warn{font-size:12.5px;color:#8A6D1F;background:#F7F0DC;border-radius:10px;padding:12px 14px;margin-top:16px;line-height:1.75}
+.countdown{display:flex;align-items:center;gap:16px;background:#EDF3EF;border-radius:14px;padding:16px 18px;margin-bottom:20px;flex-wrap:wrap}
+.cd-n{text-align:center;padding-left:16px;border-left:1px solid #C5DACD}
+.cd-n b{display:block;font-size:32px;font-weight:700;color:#234B3A;line-height:1}
+.cd-n span{font-size:11.5px;color:#3B6D57}
+.cd-t{flex:1;min-width:150px}
+.cd-t b{display:block;font-size:15px;color:#234B3A;font-weight:600}
+.cd-t span{font-size:12.5px;color:#3B6D57}
+.todo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.todo{background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px}
+.td-n{font-size:26px;font-weight:700;color:var(--green);line-height:1.2}
+.td-l{font-size:13px;color:var(--muted);margin-bottom:11px}
+.ev-status{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
+.es-item{background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px 13px}
+.es-item span{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
+.es-item b{font-size:13.5px;color:var(--green);font-weight:600}
+.es-item b.ok{color:#1E4C39}
+.es-item b.warn{color:#8A6D1F}
+.qa-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.qa-btn{background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px;text-align:right;transition:.2s;width:100%}
+.qa-btn:hover{border-color:#C9A94E;background:#FCFAF4}
+.qa-btn b{display:block;font-size:13.5px;color:var(--green);font-weight:600}
+.qa-btn span{font-size:11.5px;color:var(--muted)}
+@media(max-width:900px){.todo-grid,.ev-status,.qa-row{grid-template-columns:1fr}.countdown{gap:12px}}
+.cal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.cal-month{font-size:17px;font-weight:700;color:var(--green)}
+.cal-key{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.cal-key span{display:flex;align-items:center;gap:5px}
+.cal-key i{width:9px;height:9px;border-radius:3px;display:block}
+.k-ok{background:#3B6D57}.k-warn{background:#C9A94E}.k-bad{background:#A3382A}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal-dow{font-size:11.5px;color:var(--muted);text-align:center;padding:6px 0;font-weight:600}
+.cd{background:#fff;border:1px solid var(--line);border-radius:10px;min-height:92px;padding:7px 6px;display:flex;flex-direction:column;gap:3px}
+.cd.out{background:transparent;border-color:transparent}
+.cd.out .dn{color:#C3BFB2}
+.cd.today{border-color:var(--green);border-width:1.5px}
+.cd.busy{background:#F7F0DC;border-color:#E8D9AE}
+.dn{font-size:12.5px;color:var(--muted);font-weight:600}
+.cd.today .dn{color:var(--green)}
+.td{font-size:10px;color:var(--green);font-weight:600}
+.ev{font-size:10.5px;padding:3px 6px;border-radius:5px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.ev.ok{background:#EDF3EF;color:#1E4C39}
+.ev.warn{background:#F4E7C4;color:#8A6D1F}
+.ev.bad{background:#F6E4E0;color:#A3382A}
+.more{font-size:10px;color:var(--muted);padding-right:4px}
+@media(max-width:900px){.cal{gap:4px}.cd{min-height:72px;padding:5px 4px}.ev{font-size:9.5px;padding:2px 4px}.cal-dow{font-size:10px}}
+.tabs-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.tab{font-size:13px;padding:7px 14px;border-radius:20px;border:1px solid var(--line);color:var(--muted);cursor:pointer}
+.tab.on{background:var(--green);color:#fff;border-color:var(--green);font-weight:600}
+.tpl-preview{background:#EDF3EF;border-radius:10px;padding:18px;font-family:var(--disp);color:var(--green);text-align:center;font-size:17px}
+@media(max-width:900px){.task-grid,.two-col{grid-template-columns:1fr}}
+
+.acct-body{min-width:0}
+#s-owner .acct{max-width:1000px;margin:0 auto;padding:0 22px 40px}
+.acct-top{display:flex;align-items:center;justify-content:space-between;padding:18px 0;border-bottom:1px solid var(--line);margin-bottom:26px;flex-wrap:wrap;gap:12px}
+.acct-brand{font-family:var(--cerem);font-size:26px;color:var(--green)}
+.acct-brand .dot{color:var(--gold)}
+.acct-me{display:flex;align-items:center;gap:10px}
+.acct-av{width:38px;height:38px;border-radius:50%;background:#EDF3EF;color:#234B3A;display:grid;place-items:center;font-weight:700;font-size:15px}
+.acct-n{font-size:14px;font-weight:600;color:var(--green)}
+.acct-s{font-size:12px;color:var(--muted)}
+.acct-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+.acct-h{font-size:24px;font-weight:700;color:var(--green)}
+.acct-sub{font-size:13.5px;color:var(--muted);margin-top:3px;max-width:520px;line-height:1.8}
+.acct-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.as{background:#EDF3EF;border-radius:14px;padding:14px 16px}
+.as b{display:block;font-size:26px;font-weight:700;color:#234B3A;line-height:1.2}
+.as span{font-size:12px;color:#3B6D57}
+.ev-cards{display:grid;gap:12px;margin-top:16px}
+.evc{display:flex;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;transition:.2s}
+.evc:hover{border-color:#C9A94E;transform:translateY(-2px)}
+.evc-side{width:5px;background:#C3BFB2;flex-shrink:0}
+.evc.live .evc-side{background:#234B3A}
+.evc-side.warn{background:#C9A94E}
+.evc-side.done{background:#D6D2C6}
+.evc-main{flex:1;min-width:0;padding:16px 18px}
+.evc-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.evc-when{font-size:12px;color:var(--muted)}
+.evc-main h4{font-size:17px;font-weight:700;color:var(--green);margin-bottom:3px}
+.evc-meta{font-size:12.5px;color:var(--muted);margin-bottom:10px}
+.evc-bar{height:7px;background:#F1EFE9;border-radius:20px;overflow:hidden;margin-bottom:8px}
+.evc-bar i{display:block;height:100%;background:#3B6D57;border-radius:20px}
+.evc-nums{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.evc-draft{font-size:12.5px;color:#8A6D1F;background:#F7F0DC;border-radius:8px;padding:8px 11px;display:inline-block}
+.evc-go{display:flex;align-items:center;padding:0 18px;font-size:13px;color:#3B6D57;font-weight:600;flex-shrink:0}
+.evc.past{opacity:.86}
+.acct-links{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:26px}
+.acct-link{background:#FCFAF4;border:1px solid var(--line);border-radius:14px;padding:16px;text-align:right;transition:.2s;width:100%}
+.acct-link:hover{border-color:#C9A94E}
+.acct-link b{display:block;font-size:14px;color:var(--green);font-weight:600;margin-bottom:3px}
+.acct-link span{font-size:12px;color:var(--muted);line-height:1.7}
+.bk-tools{margin-bottom:14px}
+.bk-search{display:block;background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 14px;font-size:13.5px;color:var(--muted);margin-bottom:12px}
+.bk-tags{display:flex;gap:8px;flex-wrap:wrap}
+.tag{font-size:12.5px;padding:6px 13px;border-radius:20px;border:1px solid var(--line);color:var(--muted);cursor:pointer;background:#fff}
+.tag.on{background:#234B3A;color:#F5EFE1;border-color:#234B3A;font-weight:600}
+.tag.sm{font-size:11px;padding:2px 9px;cursor:default}
+.bk-note{font-size:12.5px;color:var(--muted);margin-top:14px;text-align:center}
+.steps-line{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.sl{font-size:12.5px;padding:8px 14px;border-radius:20px;background:#F1EFE9;color:var(--muted)}
+.sl.on{background:#234B3A;color:#F5EFE1;font-weight:600}
+.back-acct{font-size:13px;color:#3B6D57;font-weight:600;padding:6px 8px 14px;width:100%;text-align:right}
+.back-acct:hover{color:#234B3A}
+@media(max-width:900px){.acct-stats,.acct-links{grid-template-columns:1fr}.evc-go{padding:0 12px;font-size:12px}}
+#s-admin .adm-search{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--muted);cursor:pointer;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+#s-admin .adm-search kbd{margin-right:auto;font-size:10px;background:#EDF3EF;border-radius:4px;padding:2px 5px;font-family:inherit;color:#3B6D57}
+.crumb{font-size:12.5px;color:var(--muted);margin-bottom:10px}
+.crumb span{cursor:pointer;color:#3B6D57}
+.crumb span:hover{text-decoration:underline}
+.crumb b{color:var(--green);font-weight:600}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font-size:12.5px;padding:5px 12px;border-radius:20px;background:#F1EFE9;color:#5F5E5A}
+.chip.ok{background:#EDF3EF;color:#1E4C39}
+.chip.warn{background:#F7F0DC;color:#8A6D1F}
+.ev-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;border-bottom:1px solid var(--line);padding-bottom:12px}
+.table-foot{font-size:12.5px;color:var(--muted);padding-top:12px;border-top:1px solid var(--line);margin-top:4px}
+.lnk{color:#3B6D57;cursor:pointer;font-weight:600}
+.alert.info{background:#EDF3EF}
+.alert.info b{color:#1E4C39}
+.alert.info .a-sub{color:#3B6D57}
+.alert .a-ic.i{background:#3B6D57}
+.bar{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:13px;color:var(--muted)}
+.bar span{width:64px;flex-shrink:0}
+.bar .bt{flex:1;height:8px;background:#F1EFE9;border-radius:20px;overflow:hidden}
+.bar .bt i{display:block;height:100%;background:#3B6D57;border-radius:20px}
+.bar b{width:36px;text-align:left;color:var(--green);font-size:13px}
+.opp{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--line);font-size:13.5px;flex-wrap:wrap}
+.opp:last-child{border-bottom:none}
+.opp b{color:var(--green)}
+.opp .o-s{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.65}
+.opp .btn{margin-right:auto}
+
+.showcase{padding:104px 0;background:var(--paper);border-block:1px solid var(--line)}
+.sc-row{display:grid;grid-template-columns:1fr 1fr;gap:52px;align-items:center;margin-bottom:72px}
+.sc-row:last-child{margin-bottom:0}
+.sc-row.rev .sc-text{order:2}
+.sc-n{font-size:12px;letter-spacing:3px;color:var(--gold);font-weight:600;margin-bottom:12px}
+.sc-text h3{font-family:var(--disp);font-size:27px;color:var(--green);line-height:1.45;margin-bottom:14px;font-weight:700}
+.sc-text p{font-size:15.5px;color:var(--muted);line-height:1.9;margin-bottom:18px}
+.sc-list{list-style:none}
+.sc-list li{font-size:14.5px;color:var(--ink);padding:6px 0;display:flex;gap:10px;align-items:center}
+.sc-list li::before{content:"◆";color:var(--gold);font-size:8px}
+.sc-shot{background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:0 24px 48px -28px rgba(21,58,43,.4)}
+.shot-bar{background:#F1EFE9;padding:9px 12px;display:flex;gap:6px}
+.shot-bar i{width:9px;height:9px;border-radius:50%;background:#D6D2C6}
+.shot-body{padding:18px}
+.shot-title{font-size:14px;font-weight:600;color:#234B3A;margin-bottom:14px}
+.shot-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px}
+.ss{border-radius:12px;padding:13px 11px}
+.ss span{font-size:11px;display:block}
+.ss b{font-size:24px;font-weight:700;display:block;margin-top:2px}
+.ss.g{background:#EDF3EF}.ss.g span{color:#3B6D57}.ss.g b{color:#234B3A}
+.ss.d{background:#F7F0DC}.ss.d span{color:#8A6D1F}.ss.d b{color:#8A6D1F}
+.ss.n{background:#F1EFE9}.ss.n span{color:#5F5E5A}.ss.n b{color:#2C2C2A}
+.shot-mini{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.shot-mini div{border:1px solid var(--line);border-radius:10px;padding:10px 4px;text-align:center}
+.shot-mini b{display:block;font-size:19px;font-weight:700;color:#234B3A}
+.shot-mini span{font-size:10.5px;color:var(--muted)}
+.shot-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.shot-head .shot-title{margin-bottom:0}
+.shot-btn{background:#234B3A;color:#F5EFE1;font-size:11.5px;font-weight:600;padding:6px 12px;border-radius:8px}
+.bdg.draft{background:#F1EFE9;color:#5F5E5A}
+.shot-tbl{font-size:13px}
+.str{display:grid;grid-template-columns:1.6fr .6fr 1fr;gap:8px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--line)}
+.str:last-child{border-bottom:none}
+.str.head{font-size:11px;color:var(--muted);font-weight:600}
+.bdg{font-size:11px;padding:3px 10px;border-radius:20px;text-align:center}
+.bdg.ok{background:#EDF3EF;color:#1E4C39}
+.bdg.wait{background:#F7F0DC;color:#8A6D1F}
+.bdg.no{background:#F6E4E0;color:#A3382A}
+.seats-flow{display:flex;flex-direction:column;gap:6px}
+.sf-step{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.sf-step.done{border-color:var(--gold-line);background:var(--paper)}
+.sf-h{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+.sf-n{font-size:11px;letter-spacing:1.5px;color:var(--gold);font-weight:700}
+.sf-h b{font-size:14.5px;color:var(--green);font-weight:600}
+.sf-seats{display:flex;gap:7px;margin-bottom:10px}
+.sf-seats i{width:34px;height:34px;border-radius:9px;display:block;position:relative}
+.sf-seats i.held{background:#F7F0DC;border:1px solid #E8D9AE}
+.sf-seats i.conf{background:#EDF3EF;border:1px solid #C5DACD}
+.sf-seats i.back{background:#fff;border:1px dashed #C9C4B4}
+.sf-seats i.held::after{content:"◔";position:absolute;inset:0;display:grid;place-items:center;color:#8A6D1F;font-size:15px}
+.sf-seats i.conf::after{content:"✓";position:absolute;inset:0;display:grid;place-items:center;color:#3B6D57;font-size:15px}
+.sf-seats i.back::after{content:"↩";position:absolute;inset:0;display:grid;place-items:center;color:#9A9484;font-size:14px}
+.sf-cap{font-size:12.5px;color:var(--muted)}
+.held-t{color:#8A6D1F;font-weight:600}
+.conf-t{color:#3B6D57;font-weight:600}
+.back-t{color:var(--green);font-weight:600}
+.sf-wa{background:#EDF3EF;border-radius:12px;border-top-right-radius:3px;padding:12px 14px;font-size:13.5px;color:var(--green);margin-bottom:10px;display:inline-block}
+.sf-wa b{font-size:16px;color:#234B3A}
+.sf-arrow{text-align:center;color:var(--gold);font-size:15px;line-height:1}
+.phone-shot{background:none;border:none;box-shadow:none;display:flex;justify-content:center}
+.ph{width:232px;background:#0b0b0b;border-radius:30px;padding:9px;box-shadow:0 24px 48px -24px rgba(21,58,43,.5)}
+.ph-in{background:#FBFAF6;border-radius:23px;padding:20px 16px;text-align:center;min-height:330px;display:flex;flex-direction:column}
+.ph-t{font-size:12.5px;color:var(--muted);margin-bottom:12px}
+.ph-box{flex:1;border:2px solid #234B3A;border-radius:14px;background:#EDF3EF;color:#234B3A;font-size:52px;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.ph-res{background:#EDF3EF;border-radius:12px;padding:13px;font-size:14.5px;font-weight:600;color:#234B3A}
+.ph-res span{display:block;font-size:12px;font-weight:400;color:#3B6D57;margin-top:3px}
+@media(max-width:900px){.sc-row{grid-template-columns:1fr;gap:30px;margin-bottom:56px}.sc-row.rev .sc-text{order:0}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+.seats-row{align-items:flex-start}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+</style>
+</head>
+<body>
+
+<div class="pbar">
+  <span class="brand">برقية</span>
+  <div class="ptabs">
+    <button class="ptab on" data-role="landing">الواجهة</button>
+    <button class="ptab" data-role="owner">صاحب المناسبة</button>
+    <button class="ptab" data-role="admin">الأدمن</button>
+    <button class="ptab" data-role="scanner">الماسح</button>
+    <button class="ptab" data-role="guest">المدعو</button>
+  </div>
+</div>
+
+<!-- ============= LANDING ============= -->
+<section class="screen on" id="s-landing">
+  <header>
+    <div class="wrap nav">
+      <a href="#" class="brand">برقية<span class="dot">.</span></a>
+      <nav class="nav-links">
+        <a href="#how">كيف تعمل</a><a href="#features">المميزات</a><a href="#platform">داخل المنصة</a><a href="#occasions">المناسبات</a><a href="#pricing">الباقات</a><a href="#faq">أسئلة</a>
+      </nav>
+      <div class="nav-cta">
+        <a href="#" class="btn btn-ghost btn-sm">تسجيل الدخول</a>
+        <a href="#pricing" class="btn btn-primary btn-sm">ابدأ الآن</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="hero-eyebrow">منصة الدعوات الرقمية</div>
+        <h1>ادعُ ضيوفك <em>ببرقية</em><br>وتابع حضورهم حتى الباب</h1>
+        <p class="lead">أنشئ مناسبتك، اختر قالب دعوتك، وأرسلها عبر واتساب. لكل مدعوٍّ بطاقة دخول بباركود تُمسح عند الوصول — وأنت تتابع من أكّد ومن حضر لحظةً بلحظة.</p>
+        <div class="hero-actions">
+          <a href="#pricing" class="btn btn-primary">أنشئ مناسبتك</a>
+          <a href="#how" class="btn btn-ghost">شاهد كيف تعمل</a>
+        </div>
+        <div class="trial">
+          <span class="trial-ic">✓</span>
+          <span><b>جرّبها مجاناً</b> — خمس دعوات تجريبية قبل أن تدفع، بلا بطاقة ولا التزام.</span>
+        </div>
+        <div class="hero-trust">
+          <div><b>واتساب</b>وصولٌ مباشر لكل مدعو</div>
+          <div><b>باركود</b>بطاقة دخول لكل ضيف</div>
+          <div><b>لحظياً</b>تقارير حضورٍ فورية</div>
+        </div>
+      </div>
+      <div class="invite">
+        <div class="invite-card">
+          <div class="invite-badge">دعوة بباركود</div>
+          <div class="invite-frame">
+            <div class="monogram">ب</div>
+            <div class="invite-kicker">بمناسبة حفل الزفاف</div>
+            <h3>تتشرّف <span class="var">أسرة العبدالله</span><br>بدعوتكم لمشاركتهم فرحتهم</h3>
+            <div class="invite-name">وليمة العُرس</div>
+            <div class="invite-date">مساء الخميس · ١٤ شوال</div>
+            <div class="invite-foot">
+              <div class="invite-seal">برقية</div>
+              <div id="miniqr" aria-hidden="true"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="strip">
+    <div class="wrap strip-in">
+      <span>دعواتٌ تصل مباشرةً على واتساب</span><i>◆</i>
+      <span>باركود فريد لكل بطاقة</span><i>◆</i>
+      <span>تأكيدٌ بضغطة زر</span><i>◆</i>
+      <span>مسحٌ فوري عند الباب</span>
+    </div>
+  </div>
+
+  <section class="how" id="how">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">تجربة الاستخدام</div><h2 class="sec-title">من الدعوة إلى باب الحفل</h2><div class="rule"><span>◆</span></div><p class="sec-sub">أربع خطواتٍ تفصلك عن مناسبةٍ منظّمة، بلا جداول ولا مكالمات تأكيد.</p></div>
+      <div class="steps">
+        <div class="step"><div class="step-num">٠١</div><div class="step-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg></div><h4>أنشئ مناسبتك</h4><p>اختر نوع المناسبة وتاريخها، والباقة المناسبة بعدد المقاعد.</p></div>
+        <div class="step"><div class="step-num">٠٢</div><div class="step-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div><h4>جهّز دعوتك</h4><p>اختر قالباً معتمداً لنوع مناسبتك، وأضف صورة الدعوة الخاصة بك.</p></div>
+        <div class="step"><div class="step-num">٠٣</div><div class="step-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 11.5a8.4 8.4 0 01-11.9 7.6L3 21l1.9-6A8.5 8.5 0 1121 11.5z"/></svg></div><h4>أرسلها عبر واتساب</h4><p>أرسل لمدعوٍّ واحد، أو احفظ القائمة كاملةً كمسودة وأطلقها دفعةً واحدة.</p></div>
+        <div class="step"><div class="step-num">٠٤</div><div class="step-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3"/><rect x="9" y="9" width="6" height="6"/></svg></div><h4>استقبل ضيوفك</h4><p>يُمسح باركود كل مدعوٍّ عند الباب، وتتابع الحضور من لوحتك.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">المميزات</div><h2 class="sec-title">كل ما تحتاجه لإدارة الحضور</h2><div class="rule"><span>◆</span></div></div>
+      <div class="feat-grid">
+        <div class="feat"><div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3"/><rect x="9" y="9" width="6" height="6"/></svg></div><div><h4>باركود لكل مدعو</h4><p>بطاقة دخول فريدة بعدد مقاعدها، تمنع تكرار الدخول.</p></div></div>
+        <div class="feat"><div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6L9 17l-5-5"/></svg></div><div><h4>تأكيد فوري</h4><p>يؤكّد المدعو حضوره وعدد مرافقيه بضغطةٍ من الواتساب.</p></div></div>
+        <div class="feat"><div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0112 0M16 6a3 3 0 010 6M18 20a6 6 0 00-3-5"/></svg></div><div><h4>إدارة الدعاة</h4><p>أضف دعاةً يوزّعون قوائمهم، ويظهر لكل مدعوٍّ اسم داعيه.</p></div></div>
+        <div class="feat"><div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 9h18"/></svg></div><div><h4>رصيد بالمقاعد</h4><p>تابع المتاح والمحجوز والمؤكّد، مع استرداد المقاعد الملغاة.</p></div></div>
+        <div class="feat"><div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l2.4 7.4H22l-6 4.5 2.3 7.1L12 16.5 5.7 21l2.3-7.1-6-4.5h7.6z"/></svg></div><div><h4>قوالب لكل مناسبة</h4><p>مكتبة قوالب مصنّفة، أو اطلب تصميماً خاصاً باسمك.</p></div></div>
+        <div class="feat"><div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></div><div><h4>تقارير الحضور</h4><p>من قبِل، ومن اعتذر، ومن حضر — أرقامٌ واضحة لحظياً.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="showcase" id="platform">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">داخل المنصة</div><h2 class="sec-title">لوحةٌ تُريك كل شيء</h2><div class="rule"><span>◆</span></div><p class="sec-sub">لا جداول إكسل ولا مكالمات تأكيد — كل مدعوٍّ وحالته أمامك في شاشةٍ واحدة.</p></div>
+
+      <div class="sc-row">
+        <div class="sc-text">
+          <div class="sc-n">لوحة المتابعة</div>
+          <h3>رصيدك بثلاث حالات، لحظةً بلحظة</h3>
+          <p>تعرف كم مقعداً بقي لك، وكم محجوزٌ بانتظار ردّ المدعو، وكم تأكّد فعلياً. وتحتها من أكّد ومن اعتذر ومن حضر — بأرقامٍ تتحدّث نفسها.</p>
+          <ul class="sc-list"><li>تنبيهٌ قبل نفاد المقاعد</li><li>المقاعد الملغاة تعود لرصيدك</li><li>تقرير حضورٍ كامل بعد الحفل</li></ul>
+        </div>
+        <div class="sc-shot">
+          <div class="shot-bar"><i></i><i></i><i></i></div>
+          <div class="shot-body">
+            <div class="shot-title">لوحة المعلومات</div>
+            <div class="shot-stats">
+              <div class="ss g"><span>متاح</span><b>٢٨٤</b></div>
+              <div class="ss d"><span>محجوز</span><b>١٣</b></div>
+              <div class="ss n"><span>مؤكّد</span><b>٣</b></div>
+            </div>
+            <div class="shot-mini"><div><b>٥</b><span>مُرسل</span></div><div><b>٢</b><span>أكّد</span></div><div><b>١</b><span>اعتذر</span></div><div><b>١</b><span>حضر</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sc-row rev">
+        <div class="sc-text">
+          <div class="sc-n">إدارة المدعوين</div>
+          <h3>جهّز قائمتك كاملة، ثم أطلقها بضغطة</h3>
+          <p>أضِف مدعوّيك واحداً واحداً أو ارفعهم من ملف إكسل، واحفظهم جميعاً كمسودة. راجع الأسماء والمقاعد على مهلك، وحين تجهز أرسل الدعوات كلها دفعةً واحدة.</p>
+          <ul class="sc-list"><li>حفظ الجميع كمسودة والإرسال في وقتٍ واحد</li><li>رفع قائمة من ملف إكسل</li><li>إعادة إرسال لمن لم تصله الدعوة</li></ul>
+        </div>
+        <div class="sc-shot">
+          <div class="shot-bar"><i></i><i></i><i></i></div>
+          <div class="shot-body">
+            <div class="shot-head"><span class="shot-title">المدعوون · ١٨٧</span><span class="shot-btn">إرسال ٣ مسودات ➤</span></div>
+            <div class="shot-tbl">
+              <div class="str head"><span>الاسم</span><span>المقاعد</span><span>الحالة</span></div>
+              <div class="str"><span>تركي الدوسري</span><span>٥</span><span class="bdg draft">مسودة</span></div>
+              <div class="str"><span>منصور العنزي</span><span>٦</span><span class="bdg draft">مسودة</span></div>
+              <div class="str"><span>خالد الفهد</span><span>٤</span><span class="bdg ok">أكّد</span></div>
+              <div class="str"><span>فيصل المطيري</span><span>٧</span><span class="bdg wait">بانتظار</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sc-row seats-row">
+        <div class="sc-text">
+          <div class="sc-n">رصيدٌ ذكي</div>
+          <h3>لا تدفع مقابل مقاعد لم تُشغَل</h3>
+          <p>ترسل الدعوة بحدٍّ أقصى للمقاعد، فتُحجز احتياطاً حتى يرد المدعو. وحين يختار عدداً أقل، يعود الفارق إلى رصيدك في اللحظة نفسها — فتدعو به غيره.</p>
+          <ul class="sc-list"><li>الحجز يحميك من تجاوز سعة القاعة</li><li>الفارق يعود فوراً بلا تدخّل منك</li><li>الاعتذار يُرجع المقاعد كاملة</li></ul>
+        </div>
+        <div class="seats-flow">
+          <div class="sf-step">
+            <div class="sf-h"><span class="sf-n">٠١</span><b>أرسلت الدعوة</b></div>
+            <div class="sf-seats">
+              <i class="held"></i><i class="held"></i><i class="held"></i><i class="held"></i><i class="held"></i>
+            </div>
+            <div class="sf-cap">٥ مقاعد <span class="held-t">محجوزة</span> بانتظار الرد</div>
+          </div>
+
+          <div class="sf-arrow">↓</div>
+
+          <div class="sf-step">
+            <div class="sf-h"><span class="sf-n">٠٢</span><b>ردّ المدعو</b></div>
+            <div class="sf-wa">
+              <span>سنحضر <b>٢</b> من الأشخاص</span>
+            </div>
+            <div class="sf-cap">اختار عدداً أقل من الحد الأقصى</div>
+          </div>
+
+          <div class="sf-arrow">↓</div>
+
+          <div class="sf-step done">
+            <div class="sf-h"><span class="sf-n">٠٣</span><b>عاد الفارق لرصيدك</b></div>
+            <div class="sf-seats">
+              <i class="conf"></i><i class="conf"></i><i class="back"></i><i class="back"></i><i class="back"></i>
+            </div>
+            <div class="sf-cap"><span class="conf-t">٢ مؤكّدة</span> · <span class="back-t">٣ عادت لك</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sc-row rev">
+        <div class="sc-text">
+          <div class="sc-n">المسح عند الباب</div>
+          <h3>ماسحٌ لكل بوابة، والحضور يظهر فوراً</h3>
+          <p>أنشئ حساب مسحٍ لكل باب — بوابة الرجال، بوابة النساء — يفتحه المنظّم على جواله ويمسح الباركود. المقاعد تُخصم مع كل مسحة، والكود المستهلك يُرفض تلقائياً.</p>
+          <ul class="sc-list"><li>حسابات مسح متعددة بلا تعارض</li><li>يمنع دخول كودٍ مستخدم أو غير صالح</li><li>عدّاد الحضور يتحدّث لحظياً في لوحتك</li></ul>
+        </div>
+        <div class="sc-shot phone-shot">
+          <div class="ph">
+            <div class="ph-in">
+              <div class="ph-t">بوابة الرجال</div>
+              <div class="ph-box">✓</div>
+              <div class="ph-res">خالد الفهد<span>مسح ٢ من ٤ · حضر</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="occasions" id="occasions">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">لكل مناسبةٍ برقيّتها</div><h2 class="sec-title">أنواع الاحتفالات</h2><div class="rule"><span>◆</span></div></div>
+      <div class="occ-grid">
+        <div class="occ">
+          <div class="occ-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M12 20s-7-4.5-7-9a3.6 3.6 0 017-1.4A3.6 3.6 0 0119 11c0 4.5-7 9-7 9z"/></svg></div>
+          <h4>حفل زفاف</h4><p>قوالب فخمة تليق بليلة العمر.</p>
+          <div class="occ-meta">الأكثر استخداماً</div>
+        </div>
+        <div class="occ">
+          <div class="occ-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="12" cy="14" r="5"/><path d="M9.5 9L12 4l2.5 5"/></svg></div>
+          <h4>خطوبة وملكة</h4><p>دعواتٌ راقية لبداية الفرح.</p>
+          <div class="occ-meta">قوائم متوسطة</div>
+        </div>
+        <div class="occ">
+          <div class="occ-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h4"/></svg></div>
+          <h4>عقد قران</h4><p>مناسبةٌ خاصة بحضورٍ منتقى.</p>
+          <div class="occ-meta">قوائم مختصرة</div>
+        </div>
+        <div class="occ">
+          <div class="occ-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 8l10-4 10 4-10 4z"/><path d="M6 10.5V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-5.5"/></svg></div>
+          <h4>حفل تخرّج</h4><p>احتفِ بالإنجاز مع من تحب.</p>
+          <div class="occ-meta">موسم الصيف</div>
+        </div>
+        <div class="occ">
+          <div class="occ-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M7 20c0-3.9 2.2-7 5-7s5 3.1 5 7"/><circle cx="12" cy="7" r="3.2"/></svg></div>
+          <h4>مولودٌ جديد</h4><p>شارك بشرى الفرح الصغير.</p>
+          <div class="occ-meta">دعواتٌ مصغّرة</div>
+        </div>
+        <div class="occ">
+          <div class="occ-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6"/></svg></div>
+          <h4>مناسبات رسمية</h4><p>حفلاتٌ ومؤتمرات بتنظيمٍ دقيق.</p>
+          <div class="occ-meta">قوائم كبيرة</div>
+        </div>
+      </div>
+      <p class="occ-foot">لكل نوعٍ قوالبه المعتمدة — تختارها عند إنشاء مناسبتك.</p>
+    </div>
+  </section>
+
+  <section class="pricing" id="pricing">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">الأسعار</div><h2 class="sec-title">باقاتٌ بعدد المقاعد</h2><div class="rule"><span>◆</span></div></div>
+      <p class="price-note">ادفع مرةً واحدة لكل مناسبة — لا اشتراكات. المقعد الواحد = ضيفٌ واحد يدخل الحفل، وكل باقة مستقلة لمناسبتها.</p>
+      <div class="plans">
+        <div class="plan">
+          <div class="plan-name">أساسية</div><div class="plan-desc">مثالية للمناسبات العائلية والقوائم الصغيرة.</div>
+          <div class="plan-price"><b>٢٩٩</b><span>﷼</span></div><div class="plan-seats">١٠٠ مقعد</div>
+          <ul><li>قوالب دعوات معتمدة</li><li>إرسال عبر واتساب</li><li>باركود لكل مدعو</li><li>٥ رسائل تجريبية مجانية</li></ul>
+          <a href="#" class="btn btn-ghost">اختر الأساسية</a>
+        </div>
+        <div class="plan featured">
+          <div class="plan-tag">الأكثر طلباً</div><div class="plan-name">قياسية</div><div class="plan-desc">الخيار الأنسب لأغلب حفلات الزفاف.</div>
+          <div class="plan-price"><b>٦٩٩</b><span>﷼</span></div><div class="plan-seats">٣٠٠ مقعد</div>
+          <ul><li>كل مزايا الباقة الأساسية</li><li>إدارة الدعاة وتوزيع القوائم</li><li>حسابات مسح متعددة للأبواب</li><li>تقارير حضورٍ لحظية</li><li>طلب قالبٍ خاص بك</li></ul>
+          <a href="#" class="btn btn-primary">اختر القياسية</a>
+        </div>
+        <div class="plan">
+          <div class="plan-name">مميزة</div><div class="plan-desc">للحفلات الكبيرة والقوائم الطويلة.</div>
+          <div class="plan-price"><b>١١٩٩</b><span>﷼</span></div><div class="plan-seats">٦٠٠ مقعد</div>
+          <ul><li>كل مزايا الباقة القياسية</li><li>أولوية في اعتماد القوالب</li><li>حدٌّ أعلى للدعاة والماسحين</li><li>دعمٌ مخصّص طوال المناسبة</li></ul>
+          <a href="#" class="btn btn-ghost">اختر المميزة</a>
+        </div>
+      </div>
+      <p class="pricing-foot">تحتاج مقاعد إضافية بعد الشراء؟ تقدر ترقّي باقتك في أي وقت قبل المناسبة.</p>
+    </div>
+  </section>
+
+  <section class="faq" id="faq">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">قبل أن تبدأ</div><h2 class="sec-title">أسئلة يسألها الجميع</h2><div class="rule"><span>◆</span></div></div>
+      <div class="faq-grid">
+        <div class="qa"><h4>هل يحتاج المدعو تطبيقاً أو حساباً؟</h4><p>لا. تصله الدعوة على واتساب، ويؤكّد بضغطة زر — بلا تحميل ولا تسجيل.</p></div>
+        <div class="qa"><h4>هل بيانات مدعوّيّ محفوظة؟</h4><p>أرقام ضيوفك تُستخدم لإرسال دعوتك فقط — لا تُشارك ولا تُستخدم لأي تسويق.</p></div>
+        <div class="qa"><h4>هل أستطيع تخصيص تصميم الدعوة؟</h4><p>اختر من مكتبة القوالب المعتمدة، أو اطلب قالباً خاصاً باسمك ونعتمده لك.</p></div>
+        <div class="qa"><h4>هل الاشتراك متكرر؟</h4><p>لا. تدفع لكل مناسبة مرةً واحدة، والباقة مستقلة بمقاعدها.</p></div>
+        <div class="qa"><h4>كم شخصاً يمكنه المسح على الباب؟</h4><p>أنشئ حسابات مسح متعددة — لكل بوابة حسابها، والحضور يظهر لحظياً.</p></div>
+        <div class="qa"><h4>ماذا لو لم يردّ المدعو؟</h4><p>مقاعده تبقى محجوزة وتظهر في لوحتك بوضوح، وتقدر تحرّرها متى شئت.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="wrap">
+      <div class="rule" style="margin-bottom:26px"><span>◆</span></div>
+      <h2>ابدأ أولى مناسباتك مع برقية</h2>
+      <p>جهّز دعوتك خلال دقائق، وجرّبها مجاناً بخمس رسائل قبل الإطلاق.</p>
+      <a href="#pricing" class="btn btn-gold">أنشئ حسابك الآن</a>
+    </div>
+  </section>
+
+  <section class="contact-sec">
+    <div class="wrap">
+      <div class="eyebrow">تواصل</div>
+      <h3 class="ct-line">لديك سؤال قبل أن تبدأ؟</h3>
+      <p class="ct-p">نجيبك على أي استفسار — عن الباقات، أو القوالب، أو تجهيز مناسبتك.</p>
+      <a href="#" class="ct-btn wa"><span class="ct-l">واتساب</span><span class="ct-v" dir="ltr">0500000000</span></a><a href="#" class="ct-btn"><span class="ct-l">البريد</span><span class="ct-v" dir="ltr">hello@barqiyah.sa</span></a>
+      <div class="ct-note">نردّ خلال ساعات العمل · السبت إلى الخميس</div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <div class="foot-top">
+        <div class="foot-brand">برقية<span class="dot">.</span><p>منصةٌ سعودية لإدارة دعوات المناسبات، من الإرسال إلى باب الحفل.</p></div>
+        <div class="foot-cols">
+          <div class="foot-col"><h5>المنصة</h5><a href="#how">كيف تعمل</a><a href="#features">المميزات</a><a href="#pricing">الباقات</a><a href="#occasions">المناسبات</a></div>
+          <div class="foot-col"><h5>الحساب</h5><a href="#">تسجيل الدخول</a><a href="#">إنشاء حساب</a><a href="#">لوحة التحكم</a></div>
+          <div class="foot-col"><h5>تواصل</h5><a href="#">الدعم</a><a href="#">واتساب</a><a href="#faq">الأسئلة الشائعة</a><a href="#">الشروط والخصوصية</a></div>
+        </div>
+      </div>
+      <div class="foot-bottom">© ٢٠٢٦ برقية — جميع الحقوق محفوظة</div>
+    </div>
+  </footer>
+</section>
+<!-- ============= OWNER ============= -->
+<section class="screen" id="s-owner">
+
+  <!-- المستوى الأول: الحساب -->
+  <div class="acct" id="o-account">
+    <div class="acct-top">
+      <div class="acct-brand">برقية<span class="dot">.</span></div>
+      <div class="acct-me menu">
+        <div class="acct-av">م</div>
+        <div><div class="acct-n">محمد العبدالله</div><div class="acct-s">حساب شخصي · منذ ٢٠٢٤</div></div>
+        <span class="chev">⌄</span>
+        <div class="acct-drop"><a href="#">حسابي</a><a href="#">المدفوعات والفواتير</a><a href="#" data-owner="book">دفتر العناوين</a><i></i><a href="#">تسجيل الخروج</a></div>
+      </div>
+    </div>
+
+    <div class="acct-body">
+      <div class="acct-head">
+        <div>
+          <h2 class="acct-h">مناسباتي</h2>
+          <div class="acct-sub">كل مناسباتك في مكان واحد — نشطة وسابقة ومسوّدات.</div>
+        </div>
+        <button class="btn btn-primary btn-sm" data-owner="new">＋ مناسبة جديدة</button>
+      </div>
+
+      <div class="acct-stats">
+        <div class="as"><b>٤</b><span>مناسبات</span></div>
+        <div class="as"><b>١٨٧</b><span>في دفتر العناوين</span></div>
+        <div class="as"><b>٧٤٪</b><span>متوسط التأكيد</span></div>
+      </div>
+
+      <div class="ev-tabs" style="margin-top:22px"><span class="tab on">الكل</span><span class="tab">نشطة ١</span><span class="tab">قادمة ١</span><span class="tab">سابقة ٢</span></div>
+
+      <div class="ev-cards">
+        <div class="evc live" data-owner="event">
+          <div class="evc-side"></div>
+          <div class="evc-main">
+            <div class="evc-top"><span class="badge b-green">نشطة</span><span class="evc-when">غداً · الخميس ١٤ شوال</span></div>
+            <h4>زواج خالد</h4>
+            <div class="evc-meta">قاعة الماسة · باقة قياسية</div>
+            <div class="evc-bar"><i style="width:82%"></i></div>
+            <div class="evc-nums"><span>٢٤٥ مؤكّد</span><span>٤٢ محجوز</span><span>١٣ متاح</span></div>
+          </div>
+          <div class="evc-go">فتح ←</div>
+        </div>
+
+        <div class="evc" data-owner="event">
+          <div class="evc-side warn"></div>
+          <div class="evc-main">
+            <div class="evc-top"><span class="badge b-gold">مسودة</span><span class="evc-when">لم تُحدَّد</span></div>
+            <h4>خطوبة سارة</h4>
+            <div class="evc-meta">لم تُختَر الباقة بعد</div>
+            <div class="evc-draft">أكمل التجهيز لتتمكن من الإرسال</div>
+          </div>
+          <div class="evc-go">أكمل ←</div>
+        </div>
+
+        <div class="evc past" data-owner="event">
+          <div class="evc-side done"></div>
+          <div class="evc-main">
+            <div class="evc-top"><span class="badge b-gray">منتهية</span><span class="evc-when">قبل ٧ أشهر</span></div>
+            <h4>زواج عبدالعزيز</h4>
+            <div class="evc-meta">قاعة اللؤلؤة · باقة مميزة</div>
+            <div class="evc-nums"><span>٥٢٠ حضروا من ٥٦٠</span><span class="lnk">التقرير</span></div>
+          </div>
+          <div class="evc-go">عرض ←</div>
+        </div>
+
+        <div class="evc past" data-owner="event">
+          <div class="evc-side done"></div>
+          <div class="evc-main">
+            <div class="evc-top"><span class="badge b-gray">منتهية</span><span class="evc-when">قبل سنة</span></div>
+            <h4>تخرّج نورة</h4>
+            <div class="evc-meta">استراحة الروضة · باقة أساسية</div>
+            <div class="evc-nums"><span>٨٨ حضروا من ١٠٠</span><span class="lnk">التقرير</span></div>
+          </div>
+          <div class="evc-go">عرض ←</div>
+        </div>
+      </div>
+
+      <div class="sec-split">
+        <h3 class="ss-h">مناسبات أنا داعٍ فيها</h3>
+        <div class="ss-s">دعاكَ أصحابها للمشاركة في الدعوة — لكل واحدة حصتك ونصّك.</div>
+      </div>
+
+      <div class="ev-cards">
+        <div class="evc guest-ev" data-owner="inviterview">
+          <div class="evc-side gold"></div>
+          <div class="evc-main">
+            <div class="evc-top"><span class="badge b-gold">داعٍ</span><span class="evc-when">بعد ١٢ يوماً · الجمعة ٢٦ شوال</span></div>
+            <h4>زواج ابن خالي</h4>
+            <div class="evc-meta">صاحب المناسبة: أبو فيصل العتيبي · حصتك ٨٠ مقعداً</div>
+            <div class="evc-bar"><i style="width:34%"></i></div>
+            <div class="evc-nums"><span>٢٧ مؤكّد</span><span>٥٣ متاح لك</span></div>
+          </div>
+          <div class="evc-go">فتح ←</div>
+        </div>
+      </div>
+
+      <div class="acct-links">
+        <button class="acct-link" data-owner="book"><b>دفتر العناوين</b><span>١٨٧ جهة محفوظة — تستخدمها في كل مناسباتك، سواءً كنت مالكاً أو داعياً</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- دفتر العناوين -->
+  <div class="acct" id="o-book" style="display:none">
+    <div class="acct-top">
+      <div class="acct-brand">برقية<span class="dot">.</span></div>
+      <div class="acct-me menu"><div class="acct-av">م</div><div><div class="acct-n">محمد العبدالله</div><div class="acct-s">حساب شخصي</div></div><span class="chev">⌄</span>
+        <div class="acct-drop"><a href="#">حسابي</a><a href="#">المدفوعات والفواتير</a><a href="#" data-owner="book">دفتر العناوين</a><i></i><a href="#">تسجيل الخروج</a></div>
+      </div>
+    </div>
+    <div class="acct-body">
+      <div class="crumb"><span data-owner="account">مناسباتي</span> ← <b>دفتر العناوين</b></div>
+      <div class="acct-head">
+        <div><h2 class="acct-h">دفتر العناوين</h2><div class="acct-sub">جهاتك المحفوظة — تختار منهم عند إنشاء أي مناسبة، ولستَ مضطراً لدعوة الجميع.</div></div>
+        <div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm">⬆ استيراد</button><button class="btn btn-primary btn-sm">＋ إضافة جهة</button></div>
+      </div>
+
+      <div class="bk-tools">
+        <span class="bk-search">⌕ ابحث بالاسم أو الجوال</span>
+        <div class="bk-tags"><span class="tag on">الكل ١٨٧</span><span class="tag">العائلة ٤٢</span><span class="tag">الأصدقاء ٦٥</span><span class="tag">العمل ٣٨</span><span class="tag">الجيران ٤٢</span></div>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <tr><th>الجهة</th><th>الجوال</th><th>المجموعة</th><th>آخر دعوة</th><th>الاستجابة</th></tr>
+          <tr><td>خالد الفهد</td><td dir="ltr">0551000001</td><td><span class="tag sm">العائلة</span></td><td>زواج خالد</td><td><span class="badge b-green">يرد دائماً</span></td></tr>
+          <tr><td>نايف السالم</td><td dir="ltr">0551000002</td><td><span class="tag sm">الأصدقاء</span></td><td>زواج خالد</td><td><span class="badge b-green">يرد دائماً</span></td></tr>
+          <tr><td>فيصل المطيري</td><td dir="ltr">0551000003</td><td><span class="tag sm">العمل</span></td><td>زواج خالد</td><td><span class="badge b-gold">يتأخر</span></td></tr>
+          <tr><td>عبدالله القحطاني</td><td dir="ltr">0551000004</td><td><span class="tag sm">الجيران</span></td><td>تخرّج نورة</td><td><span class="badge b-gray">نادراً</span></td></tr>
+          <tr><td>منصور العنزي</td><td dir="ltr">0551000006</td><td><span class="tag sm">العائلة</span></td><td>زواج عبدالعزيز</td><td><span class="badge b-green">يرد دائماً</span></td></tr>
+        </table>
+        <div class="table-foot" style="padding:12px 14px">عرض ٥ من ١٨٧ · <span class="lnk">التالي</span></div>
+      </div>
+
+      <div class="bk-note">دفترك خاص بك — أرقام جهاتك لا تُستخدم لأي غرض غير إرسال دعواتك.</div>
+    </div>
+  </div>
+
+
+  <!-- عرض: أنا داعٍ في مناسبة غيري -->
+  <div class="acct" id="o-inviterview" style="display:none">
+    <div class="acct-top">
+      <div class="acct-brand">برقية<span class="dot">.</span></div>
+      <div class="acct-me menu"><div class="acct-av">م</div><div><div class="acct-n">محمد العبدالله</div><div class="acct-s">حساب شخصي</div></div><span class="chev">⌄</span>
+        <div class="acct-drop"><a href="#">حسابي</a><a href="#">المدفوعات والفواتير</a><a href="#" data-owner="book">دفتر العناوين</a><i></i><a href="#">تسجيل الخروج</a></div>
+      </div>
+    </div>
+    <div class="acct-body">
+      <div class="crumb"><span data-owner="account">مناسباتي</span> ← <b>زواج ابن خالي</b></div>
+
+      <!-- بطاقة المناسبة: بيانات ثابتة من المالك -->
+      <div class="ev-fixed">
+        <div class="ef-head">
+          <div><div class="ef-t">زواج فيصل</div><div class="ef-s">صفتك هنا: <b>داعٍ</b> · صاحب المناسبة: أبو فيصل العتيبي</div></div>
+          <div class="ef-cd"><b>١٢</b><span>يوماً متبقياً</span></div>
+        </div>
+        <div class="ef-grid">
+          <div class="ef-i"><span>التاريخ</span><b>الجمعة ٢٦ شوال ١٤٤٧</b></div>
+          <div class="ef-i"><span>الموافق</span><b dir="ltr">04 / 09 / 2026</b></div>
+          <div class="ef-i"><span>وقت الاستقبال</span><b>٠٩:٠٠ مساءً</b></div>
+          <div class="ef-i"><span>المكان</span><b>قاعة النخيل — الرياض</b></div>
+        </div>
+        <div class="ef-note">هذه بيانات المناسبة كما حدّدها صاحبها — تظهر في دعوتك تلقائياً ولا تُعدَّل من طرفك.</div>
+      </div>
+
+      <!-- حصتك -->
+      <div class="sec-label">حصتك من المقاعد</div>
+      <div class="quota-bar" style="margin-bottom:8px">
+        <div class="qb-l"><b>٨٠</b> مقعداً منحك إياها صاحب المناسبة</div>
+        <div class="qb-track"><i class="q1" style="width:34%"></i><i class="q2" style="width:0%"></i></div>
+        <div class="qb-key"><span><i class="k1"></i> مؤكّد ٢٧</span><span><i class="k2"></i> محجوز ٠</span><span><i class="k3"></i> متاح لك ٥٣</span></div>
+      </div>
+      <div class="grid3" style="margin-bottom:12px">
+        <div class="stat g"><div class="l">متاح لك</div><div class="v">٥٣</div></div>
+        <div class="stat d"><div class="l">محجوز بانتظار الرد</div><div class="v">٠</div></div>
+        <div class="stat n"><div class="l">مؤكّد</div><div class="v">٢٧</div></div>
+      </div>
+      <div class="inviter-note">لا ترى إجمالي المناسبة ولا مقاعد بقية الدعاة ولا مدعوّيهم.</div>
+
+      <!-- ما يحتاج انتباهك -->
+      <div class="sec-label" style="margin-top:20px">ما يحتاج انتباهك</div>
+      <div class="todo-grid">
+        <div class="todo"><div class="td-n">٤</div><div class="td-l">مسوّدات لم تُرسل</div><button class="btn btn-primary btn-sm">أرسلها الآن</button></div>
+        <div class="todo"><div class="td-n">٦</div><div class="td-l">لم يردّوا منذ ٣ أيام</div><button class="btn btn-ghost btn-sm">ذكّرهم</button></div>
+        <div class="todo"><div class="td-n">٥٣</div><div class="td-l">مقعداً متاحاً لك</div><button class="btn btn-ghost btn-sm">أضف مدعوين</button></div>
+      </div>
+
+      <!-- تبويبات -->
+      <div class="ev-tabs" style="margin-top:20px"><span class="tab on">دعوتي</span><span class="tab">مدعوّوي</span></div>
+
+      <!-- دعوتي -->
+      <div class="card" style="margin-bottom:14px">
+        <div class="inv-step"><span class="istep done">✓</span><div><b>١ · قالب دعوتك</b><i>اختيارك مستقل عن بقية الدعاة</i></div></div>
+        <div class="tpl-pick" style="margin-top:12px">
+          <label class="tp"><input type="radio" name="tp2" checked><span class="tp-b"><span class="tp-prev cls">كلاسيكي</span><b>كلاسيكي ذهبي</b><i>إطار ذهبي فخم</i></span></label>
+          <label class="tp"><input type="radio" name="tp2"><span class="tp-b"><span class="tp-prev smp">بسيط</span><b>بسيط أبيض</b><i>نظيف وهادئ</i></span></label>
+          <label class="tp"><input type="radio" name="tp2"><span class="tp-b"><span class="tp-prev mdn">مودرن</span><b>مودرن رمادي</b><i>خطوط عصرية</i></span></label>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="inv-step"><span class="istep">٢</span><div><b>٢ · نصّك الخاص</b><i>اكتب كلماتك — التاريخ والمكان يُضافان تلقائياً</i></div></div>
+        <div class="var-row" style="margin-top:14px">
+          <div class="field"><label>الاسم كما تريده <span class="hint">— أبو خالد · محمد العبدالله · أسرة العبدالله</span></label><input id="w1" value="أبو خالد"></div>
+          <div class="field"><label>صلتك بالمناسبة <span class="hint">— زواج ابن أختي فيصل</span></label><input id="w2" value="زواج ابن أختي فيصل"></div>
+        </div>
+
+        <div class="locked-row">
+          <span class="lk">🔒 الموعد والمكان</span>
+          <b>الجمعة ٢٦ شوال · قاعة النخيل</b>
+          <i>من بيانات المناسبة</i>
+        </div>
+
+        <div class="prev-note" style="margin:14px 0 12px">
+          <span class="pn-l">معاينة · كما تصل على واتساب</span>
+          <div class="wa-prev">
+            <div class="wp-img">[صورة دعوتك]</div>
+            <div class="wp-txt">تتشرّف <b id="q1">أبو خالد</b> بدعوتكم لحضور <b id="q2">زواج ابن أختي فيصل</b> — <b class="fixed-v">الجمعة ٢٦ شوال، قاعة النخيل، الساعة ٠٩:٠٠ مساءً</b>.</div>
+            <div class="wp-btns"><span>✓ سأحضر</span><span>✕ أعتذر</span></div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm">⬆ رفع صورة الدعوة</button>
+        <button class="btn btn-primary btn-sm">حفظ</button>
+      </div>
+
+      <!-- مدعوّوي -->
+      <div class="acct-head" style="margin-bottom:12px">
+        <div><h2 class="acct-h" style="font-size:20px">مدعوّوك</h2><div class="acct-sub">٢٧ مدعواً · ٣١ مقعداً مستخدماً من ٨٠</div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost btn-sm">من دفتر العناوين</button><button class="btn btn-ghost btn-sm">⬆ رفع Excel</button><button class="btn btn-primary btn-sm">＋ إضافة</button></div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <tr><th>الاسم</th><th>الجوال</th><th>المقاعد</th><th>الحالة</th><th></th></tr>
+          <tr><td>سعد المطيري</td><td dir="ltr">0554000001</td><td>٥</td><td><span class="badge b-green">أكّد</span></td><td style="text-align:left"><span class="lnk">الباركود</span></td></tr>
+          <tr><td>ماجد الحربي</td><td dir="ltr">0554000002</td><td>٣</td><td><span class="badge b-green">أكّد</span></td><td style="text-align:left"><span class="lnk">الباركود</span></td></tr>
+          <tr><td>بندر الشمري</td><td dir="ltr">0554000003</td><td>٤</td><td><span class="badge b-gold">بانتظار الرد</span></td><td style="text-align:left"><span class="lnk">ذكّره</span></td></tr>
+          <tr><td>عمر الزهراني</td><td dir="ltr">0554000004</td><td>٢</td><td><span class="badge b-gray">مسودة</span></td><td style="text-align:left"><span class="lnk">أرسل</span></td></tr>
+        </table>
+        <div class="table-foot" style="padding:12px 14px">عرض ٤ من ٢٧ · <span class="lnk">التالي</span></div>
+      </div>
+
+      <div class="inviter-warn">لو احتجت مقاعد إضافية، اطلبها من <b>أبو فيصل العتيبي</b> — الحصص تُوزَّع من صاحب المناسبة.</div>
+    </div>
+  </div>
+
+  <!-- إنشاء مناسبة -->
+  <div class="acct" id="o-new" style="display:none">
+    <div class="acct-top">
+      <div class="acct-brand">برقية<span class="dot">.</span></div>
+      <div class="acct-me menu"><div class="acct-av">م</div><div><div class="acct-n">محمد العبدالله</div><div class="acct-s">حساب شخصي</div></div><span class="chev">⌄</span>
+        <div class="acct-drop"><a href="#">حسابي</a><a href="#">المدفوعات والفواتير</a><a href="#" data-owner="book">دفتر العناوين</a><i></i><a href="#">تسجيل الخروج</a></div>
+      </div>
+    </div>
+    <div class="acct-body">
+      <div class="crumb"><span data-owner="account">مناسباتي</span> ← <b>مناسبة جديدة</b></div>
+      <div class="steps-line"><span class="sl on">١ التفاصيل</span><span class="sl">٢ الباقة</span><span class="sl">٣ القالب</span><span class="sl">٤ الدفع</span></div>
+
+      <div class="card center-narrow" style="margin-top:18px">
+        <div class="sec-label">تفاصيل المناسبة</div>
+
+        <div class="field"><label>نوع المناسبة</label>
+          <select id="occType">
+            <option value="wedding">حفل زواج</option>
+            <option value="engagement">خطوبة وملكة</option>
+            <option value="katb">عقد قران</option>
+            <option value="grad">حفل تخرّج</option>
+            <option value="baby">مولود جديد</option>
+            <option value="formal">مناسبة رسمية</option>
+          </select>
+        </div>
+
+        <div class="split" id="fWedding">
+          <div class="field"><label>اسم العريس</label><input value="خالد" placeholder="الاسم كما يظهر في الدعوة"></div>
+          <div class="field"><label>اسم العروس</label><input placeholder="اختياري — يُعرض إن أردت"></div>
+        </div>
+
+        <div class="field" id="fSingle" style="display:none"><label id="lblSingle">صاحب المناسبة</label><input id="inpSingle" placeholder="الاسم كما يظهر في الدعوة"></div>
+
+        <div class="field"><label>الدعوة باسم <span class="hint">— الجهة الداعية التي تظهر في نص الدعوة</span></label>
+          <input value="أسرة العبدالله" placeholder="مثال: أسرة العبدالله · أو: عبدالله ومحمد العبدالله">
+        </div>
+
+        <div class="row2">
+          <div class="field"><label>التاريخ الهجري</label><input value="١٤ شوال ١٤٤٧"></div>
+          <div class="field"><label>الموافق ميلادياً</label><input value="٢٤ / ٠٨ / ٢٠٢٦" dir="ltr"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>اليوم</label><select><option>الخميس</option><option>الجمعة</option><option>السبت</option><option>الأحد</option><option>الاثنين</option><option>الثلاثاء</option><option>الأربعاء</option></select></div>
+          <div class="field"><label>وقت الاستقبال</label><input value="٠٩:٠٠ مساءً"></div>
+        </div>
+
+        <div class="field"><label>المكان</label><input value="قاعة الماسة"></div>
+        <div class="field"><label>اسم المناسبة <span class="hint">— داخلي، يظهر لك وحدك في قائمة مناسباتك</span></label><input value="زواج خالد" placeholder="لتمييزها بين مناسباتك"></div>
+
+        <div class="prev-note">
+          <span class="pn-l">معاينة نص الدعوة</span>
+          <div class="pn-b">تتشرّف <b>أسرة العبدالله</b> بدعوتكم لحضور حفل زواج ابنها <b>خالد</b> — الخميس ١٤ شوال، قاعة الماسة، الساعة ٠٩:٠٠ مساءً.</div>
+        </div>
+
+        <button class="btn btn-primary btn-sm">التالي: اختيار الباقة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- المستوى الثاني: داخل المناسبة -->
+  <div class="app" id="o-event" style="display:none">
+    <aside class="side">
+      <button class="back-acct" data-owner="account">← كل مناسباتي</button>
+      <div class="host"><div class="l">الدعوة باسم</div><div class="h">أسرة العبدالله</div><div class="o">زواج خالد · غداً</div></div>
+      <button class="nav-i on" data-o="dash"><span class="ic">▤</span> لوحة المعلومات</button>
+      <button class="nav-i" data-o="guests"><span class="ic">☰</span> المدعوون</button>
+      <button class="nav-i" data-o="inviters"><span class="ic">◑</span> الدعاة</button>
+      <button class="nav-i" data-o="tpl"><span class="ic">▧</span> قالب الدعوة</button>
+      <button class="nav-i" data-o="scanners"><span class="ic">▦</span> حسابات المسح</button>
+      <button class="nav-i" data-o="info"><span class="ic">✎</span> بيانات المناسبة</button>
+    </aside>
+    <div class="main">
+      <div class="subscreen on" id="o-dash">
+        <div class="head"><div><h2>لوحة المعلومات</h2><div class="sub">زواج خالد · قاعة الماسة</div></div><button class="btn btn-primary btn-sm">＋ إضافة مدعو</button></div>
+
+        <div class="countdown">
+          <div class="cd-n"><b>١</b><span>يوم متبقٍّ</span></div>
+          <div class="cd-t"><b>الخميس ١٤ شوال</b><span>٢٤٥ ضيفاً مؤكّداً حتى الآن</span></div>
+          <button class="btn btn-ghost btn-sm">قائمة الحضور</button>
+        </div>
+
+        <div class="sec-label">ما يحتاج انتباهك</div>
+        <div class="todo-grid">
+          <div class="todo"><div class="td-n">٣</div><div class="td-l">مسوّدات لم تُرسل</div><button class="btn btn-primary btn-sm">أرسلها الآن</button></div>
+          <div class="todo"><div class="td-n">١٢</div><div class="td-l">لم يردّوا منذ ٤ أيام</div><button class="btn btn-ghost btn-sm">ذكّرهم</button></div>
+          <div class="todo"><div class="td-n">١</div><div class="td-l">فشل إرسالهم</div><button class="btn btn-ghost btn-sm">أعد المحاولة</button></div>
+        </div>
+
+        <div class="sec-label">الرصيد بالمقاعد — باقة ٣٠٠ مقعد</div>
+        <div class="grid3" style="margin-bottom:16px">
+          <div class="stat g"><div class="l">متاح</div><div class="v">٢٨٤</div></div>
+          <div class="stat d"><div class="l">محجوز (بانتظار الرد)</div><div class="v">١٣</div></div>
+          <div class="stat n"><div class="l">مؤكّد</div><div class="v">٣</div></div>
+        </div>
+        <div class="grid5" style="margin-bottom:16px">
+          <div class="mini"><div class="v">٥</div><div class="l">مُرسل</div></div>
+          <div class="mini"><div class="v">٢</div><div class="l">أكّد</div></div>
+          <div class="mini"><div class="v">١</div><div class="l">اعتذر</div></div>
+          <div class="mini"><div class="v">١</div><div class="l">لم يرد</div></div>
+          <div class="mini"><div class="v">١</div><div class="l">حضر</div></div>
+        </div>
+        <div class="card">
+          <div class="sec-label">أحدث المدعوين</div>
+          <table>
+            <tr><td>خالد الفهد <span style="color:var(--muted);font-size:11px">· ٤ مقاعد</span></td><td style="text-align:left"><span class="badge b-green">أكّد الحضور</span></td></tr>
+            <tr><td>فيصل المطيري <span style="color:var(--muted);font-size:11px">· ٧ مقاعد</span></td><td style="text-align:left"><span class="badge b-gold">بانتظار الرد</span></td></tr>
+            <tr><td>نايف السالم <span style="color:var(--muted);font-size:11px">· ١ مقعد</span></td><td style="text-align:left"><span class="badge b-green">حضر</span></td></tr>
+            <tr><td>عبدالله القحطاني <span style="color:var(--muted);font-size:11px">· ٣ مقاعد</span></td><td style="text-align:left"><span class="badge b-red">اعتذر</span></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="subscreen" id="o-guests">
+        <div class="head"><div><h2>المدعوون</h2><div class="sub">٦ مدعوين · ٤ مؤكّدين</div></div><div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm">⬆ رفع Excel</button><button class="btn btn-primary btn-sm">＋ إضافة</button></div></div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="sec-label">إضافة مدعو</div>
+          <div class="row2"><div class="field"><label>الاسم</label><input value="تركي الدوسري"></div><div class="field"><label>الجوال</label><input value="05xxxxxxxx" dir="ltr"></div></div>
+          <div class="row2"><div class="field"><label>عدد الأشخاص (حد أقصى)</label><input value="٥"></div><div class="field"><label>الداعي</label><select><option>المالك</option><option>أحمد العبدالله</option></select></div></div>
+          <div class="field"><label>عند الإضافة</label><div class="toggle"><div class="t on">أرسل الآن</div><div class="t">احفظ كمسودة</div></div></div>
+          <button class="btn btn-primary btn-sm">حفظ وإرسال</button>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table>
+            <tr><th>الاسم</th><th>الجوال</th><th>المقاعد</th><th>الداعي</th><th>الحالة</th></tr>
+            <tr><td>خالد الفهد</td><td dir="ltr">0551000001</td><td>٤</td><td>المالك</td><td><span class="badge b-green">أكّد</span></td></tr>
+            <tr><td>نايف السالم</td><td dir="ltr">0551000002</td><td>١</td><td>أحمد</td><td><span class="badge b-green">حضر</span></td></tr>
+            <tr><td>فيصل المطيري</td><td dir="ltr">0551000003</td><td>٧</td><td>المالك</td><td><span class="badge b-gold">بانتظار الرد</span></td></tr>
+            <tr><td>عبدالله القحطاني</td><td dir="ltr">0551000004</td><td>٣</td><td>سعد</td><td><span class="badge b-red">اعتذر</span></td></tr>
+            <tr><td>منصور العنزي</td><td dir="ltr">0551000006</td><td>٦</td><td>المالك</td><td><span class="badge b-gray">لم يرد</span></td></tr>
+            <tr><td>تركي الدوسري</td><td dir="ltr">0551000005</td><td>٥</td><td>أحمد</td><td><span class="badge b-gray">مسودة</span></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="subscreen" id="o-inviters">
+        <div class="head"><div><h2>الدعاة</h2><div class="sub">وزّع المقاعد على الأطراف — لكل داعٍ حصته ونصّ دعوته</div></div><button class="btn btn-primary btn-sm">＋ إضافة داعٍ</button></div>
+
+        <div class="quota-bar">
+          <div class="qb-l"><b>٣٠٠</b> مقعداً في الباقة</div>
+          <div class="qb-track"><i class="q1" style="width:50%"></i><i class="q2" style="width:40%"></i></div>
+          <div class="qb-key"><span><i class="k1"></i> أم حمودي ١٥٠</span><span><i class="k2"></i> أم سوسو ١٢٠</span><span><i class="k3"></i> غير موزّع ٣٠</span></div>
+        </div>
+
+        <div class="inv-card">
+          <div class="inv-top">
+            <div><div class="inv-name">أم حمودي <span class="badge b-gold">المالك</span></div><div class="inv-sub">أهل العريس · <span dir="ltr">0551111111</span></div></div>
+            <div class="inv-seats"><b>١٥٠</b><span>مقعداً</span></div>
+          </div>
+          <div class="inv-body">
+            <div class="inv-lbl">نصّها كما كتبته <span class="ro">للاطلاع فقط</span></div>
+            <div class="inv-text ro-text">تتشرّف <b>أم حمودي</b> بدعوتكم لحضور <b>زواج ابني حمودي</b> — الجمعة ٣٣، قصر ٣٣.</div>
+            <div class="inv-row"><span>اختارت قالب: <b>كلاسيكي ذهبي</b></span><span>صورتها: <b>دعوة_العريس.jpg</b></span></div>
+            <div class="inv-stats"><span>أُرسل ٨٤</span><span>أكّد ٧١</span><span>متاح لها ٤٢</span></div>
+          </div>
+          <div class="inv-acts"><button class="btn btn-ghost btn-sm">تعديل الحصة</button><button class="btn btn-ghost btn-sm">مدعووها</button></div>
+        </div>
+
+        <div class="inv-card">
+          <div class="inv-top">
+            <div><div class="inv-name">أم سوسو <span class="badge b-green">داعية</span></div><div class="inv-sub">أهل العروس · <span dir="ltr">0552222222</span></div></div>
+            <div class="inv-seats"><b>١٢٠</b><span>مقعداً</span></div>
+          </div>
+          <div class="inv-body">
+            <div class="inv-lbl">نصّها كما كتبته <span class="ro">للاطلاع فقط</span></div>
+            <div class="inv-text ro-text">تتشرّف <b>أم سوسو</b> بدعوتكم لحضور <b>زواج ابنتي سوسو</b> — الجمعة ٣٣، قصر ٣٣.</div>
+            <div class="inv-row"><span>اختارت قالب: <b>بسيط أبيض</b></span><span>صورتها: <b>دعوة_العروس.jpg</b></span></div>
+            <div class="inv-stats"><span>أُرسل ٦٢</span><span>أكّد ٤٨</span><span>متاح لها ٥٢</span></div>
+          </div>
+          <div class="inv-acts"><button class="btn btn-ghost btn-sm">تعديل الحصة</button><button class="btn btn-ghost btn-sm">مدعووها</button></div>
+        </div>
+
+        <div class="inv-card">
+          <div class="inv-top">
+            <div><div class="inv-name">أبو حمودي <span class="badge b-green">داعٍ</span></div><div class="inv-sub">أهل العريس · <span dir="ltr">0553333333</span></div></div>
+            <div class="inv-seats"><b>٣٠</b><span>مقعداً</span></div>
+          </div>
+          <div class="inv-body">
+            <div class="inv-lbl">نصّه</div>
+            <div class="inv-pending">لم يكتب نصّه بعد — سيكتبه عند أول دخول له.</div>
+          </div>
+          <div class="inv-acts"><button class="btn btn-ghost btn-sm">تعديل الحصة</button><button class="btn btn-ghost btn-sm">أعد إرسال رابط الدخول</button></div>
+        </div>
+
+        <div class="card" style="margin-top:6px">
+          <div class="sec-label">إضافة داعٍ</div>
+          <div class="row2"><div class="field"><label>الاسم كما يظهر في الدعوة</label><input placeholder="مثال: أم سوسو"></div><div class="field"><label>الجوال (للدخول)</label><input placeholder="05xxxxxxxx" dir="ltr"></div></div>
+          <div class="row2"><div class="field"><label>حصته من المقاعد</label><input placeholder="١٢٠"></div><div class="field"><label>الصفة</label><input placeholder="أهل العروس"></div></div>
+          <div class="tpl-hint">يصل الداعي رابط دخول على جواله، ويختار قالبه ويكتب نصّه بنفسه. أنت تحدّد الحصة فقط — النص ملكه ولا يُعدَّل من طرفك.</div>
+          <button class="btn btn-primary btn-sm">إنشاء حساب وإرسال رابط الدخول</button>
+        </div>
+      </div>
+
+      <div class="subscreen" id="o-tpl">
+        <div class="head"><div><h2>قالب الدعوة</h2><div class="sub">اختر قالباً معتمداً أو اطلب قالباً خاصاً</div></div><button class="btn btn-ghost btn-sm">＋ طلب قالب خاص</button></div>
+        <div class="grid3">
+          <div class="tpl sel"><div class="prev">كلاسيكي</div><div style="font-weight:600;color:var(--green)">كلاسيكي — ذهبي</div><div style="font-size:12px;color:var(--muted)">إطار ذهبي فخم</div></div>
+          <div class="tpl"><div class="prev">بسيط</div><div style="font-weight:600;color:var(--green)">بسيط — أبيض</div><div style="font-size:12px;color:var(--muted)">تصميم نظيف وهادئ</div></div>
+          <div class="tpl"><div class="prev">مودرن</div><div style="font-weight:600;color:var(--green)">مودرن — رمادي</div><div style="font-size:12px;color:var(--muted)">خطوط عصرية</div></div>
+        </div>
+      </div>
+
+      <div class="subscreen" id="o-scanners">
+        <div class="head"><div><h2>حسابات المسح</h2><div class="sub">حسابات تستخدم على الباب للمسح فقط</div></div><button class="btn btn-primary btn-sm">＋ إنشاء حساب</button></div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table>
+            <tr><th>الحساب</th><th>اسم الدخول</th><th>الحالة</th></tr>
+            <tr><td>بوابة الرجال</td><td dir="ltr">scan_men</td><td><span class="badge b-green">نشط</span></td></tr>
+            <tr><td>بوابة النساء</td><td dir="ltr">scan_women</td><td><span class="badge b-green">نشط</span></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="subscreen" id="o-info">
+        <div class="head"><div><h2>بيانات المناسبة</h2><div class="sub">تفاصيل المناسبة والباقة</div></div></div>
+        <div class="card center-narrow">
+          <div class="field"><label>نوع المناسبة</label><input value="حفل زواج"></div>
+          <div class="field"><label>الدعوة باسم</label><input value="أسرة العبدالله"></div>
+          <div class="row2"><div class="field"><label>اسم المشتري</label><input value="محمد العبدالله"></div><div class="field"><label>جوال المشتري</label><input value="0555123456" dir="ltr"></div></div>
+          <div class="field"><label>التاريخ</label><input value="١٤ شوال ١٤٤٧"></div>
+          <div style="background:#EDF3EF;border-radius:10px;padding:14px;margin:6px 0 12px"><div style="font-size:13px;color:var(--green);font-weight:600">الباقة الحالية: قياسية — ٣٠٠ مقعد</div><div style="font-size:12px;color:#3B6D57;margin-top:3px">مدفوعة ✓ — فُعّلت تلقائياً بعد الدفع</div></div>
+          <button class="btn btn-ghost btn-sm">ترقية / شراء مقاعد إضافية</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============= ADMIN ============= -->
+<section class="screen" id="s-admin">
+  <div class="app">
+    <aside class="side">
+      <div class="logo">برقية<span class="dot">.</span></div>
+      <div class="host"><div class="l">لوحة الإدارة</div><div class="h">محمد الشمري</div><div class="o">مدير المنصة</div></div>
+      <div class="adm-search">⌕ بحث سريع… <kbd>⌘K</kbd></div>
+      <div class="nav-group">التشغيل اليومي</div>
+      <button class="nav-i on" data-a="dash"><span class="ic">▤</span> اليوم <span class="pill">٧</span></button>
+      <button class="nav-i" data-a="wa"><span class="ic">◉</span> مراقبة واتساب <span class="dot-warn"></span></button>
+      <button class="nav-i" data-a="events"><span class="ic">☰</span> المناسبات</button>
+      <button class="nav-i" data-a="calendar"><span class="ic">▦</span> التقويم</button>
+      <button class="nav-i" data-a="reqs"><span class="ic">✉</span> طلبات القوالب <span class="pill">٣</span></button>
+      <button class="nav-i" data-a="support"><span class="ic">☎</span> الدعم <span class="pill">٢</span></button>
+      <div class="nav-group">الإدارة</div>
+      <button class="nav-i" data-a="clients"><span class="ic">◑</span> العملاء</button>
+      <button class="nav-i" data-a="finance"><span class="ic">₪</span> المالية والرؤى</button>
+      <div class="nav-group">النظام</div>
+      <button class="nav-i" data-a="team"><span class="ic">◈</span> الفريق والصلاحيات</button>
+      <button class="nav-i" data-a="log"><span class="ic">⟳</span> سجل النشاط</button>
+      <button class="nav-i" data-a="settings"><span class="ic">⚙</span> الإعدادات</button>
+    </aside>
+    <div class="main">
+
+      <!-- اليوم -->
+      <div class="subscreen on" id="a-dash">
+        <div class="head"><div><h2>اليوم</h2><div class="sub">الأحد ٢٣ أغسطس · المدفوع يُفعّل تلقائياً — هذي اللي تحتاج تدخّلك</div></div><div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm">تصدير تقرير</button></div></div>
+
+        <div class="alert warn">
+          <span class="a-ic">!</span>
+          <div><b>تقييم جودة رقم الواتساب انخفض إلى «متوسط»</b><div class="a-sub">١٤ شكوى حظر خلال ٧ أيام. راجع العملاء ذوي معدل الشكاوى الأعلى قبل الإرسال الجماعي القادم.</div></div>
+          <button class="btn btn-ghost btn-sm">افحص</button>
+        </div>
+
+        <div class="sec-label">مهام تنتظرك</div>
+        <div class="task-grid" style="margin-bottom:22px">
+          <div class="task"><div class="t-n">٢</div><div class="t-l">طلبات غير مدفوعة</div><div class="t-m">تحويل بنكي · أقدمها منذ ١٩ ساعة</div><button class="btn btn-primary btn-sm">راجع</button></div>
+          <div class="task"><div class="t-n">٣</div><div class="t-l">قوالب قيد المراجعة</div><div class="t-m">مناسبة أقربها بعد ٤ أيام</div><button class="btn btn-primary btn-sm">راجع</button></div>
+          <div class="task"><div class="t-n">٢</div><div class="t-l">تذاكر دعم مفتوحة</div><div class="t-m">واحدة عاجلة</div><button class="btn btn-primary btn-sm">افتح</button></div>
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <div class="sec-label">مناسبات خلال ٧ أيام</div>
+            <table>
+              <tr><th>المناسبة</th><th>التاريخ</th><th>المقاعد</th><th>الجاهزية</th></tr>
+              <tr><td>زواج العبدالله</td><td>غداً</td><td>٢٨٧/٣٠٠</td><td><span class="badge b-green">جاهزة</span></td></tr>
+              <tr><td>خطوبة الفهد</td><td>بعد ٣ أيام</td><td>٠/١٠٠</td><td><span class="badge b-red">غير مدفوعة</span></td></tr>
+              <tr><td>تخرّج المطيري</td><td>بعد ٤ أيام</td><td>١٤٠/٦٠٠</td><td><span class="badge b-gold">قالب قيد المراجعة</span></td></tr>
+              <tr><td>زواج الحربي</td><td>بعد ٦ أيام</td><td>٢١٠/٣٠٠</td><td><span class="badge b-green">جاهزة</span></td></tr>
+            </table>
+          </div>
+          <div class="card">
+            <div class="sec-label">نبض المنصة · اليوم</div>
+            <div class="pulse"><span>رسائل أُرسلت</span><b>٤٨٢</b></div>
+            <div class="pulse"><span>فشل الإرسال</span><b class="bad">٧</b></div>
+            <div class="pulse"><span>تأكيدات حضور</span><b>٣١٦</b></div>
+            <div class="pulse"><span>عمليات مسح</span><b>٠</b></div>
+            <div class="pulse"><span>إيراد اليوم</span><b>٢٬٠٩٧ ﷼</b></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- مراقبة واتساب -->
+      <div class="subscreen" id="a-wa">
+        <div class="head"><div><h2>مراقبة واتساب</h2><div class="sub">رقم المنصة المشترك — Meta Cloud API</div></div><button class="btn btn-ghost btn-sm">تحديث الحالة</button></div>
+
+        <div class="grid3" style="margin-bottom:16px">
+          <div class="stat d"><div class="l">تقييم الجودة</div><div class="v">متوسط</div></div>
+          <div class="stat g"><div class="l">طبقة الإرسال</div><div class="v">١٠٬٠٠٠</div></div>
+          <div class="stat n"><div class="l">أُرسل اليوم</div><div class="v">٤٨٢</div></div>
+        </div>
+
+        <div class="alert warn" style="margin-bottom:18px">
+          <span class="a-ic">!</span>
+          <div><b>خطر على الرقم المشترك</b><div class="a-sub">انخفاض الجودة يؤثر على جميع العملاء دفعةً واحدة. راجع مصدر الشكاوى قبل الإرسال القادم.</div></div>
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <div class="sec-label">أعلى العملاء في معدّل الشكاوى</div>
+            <table>
+              <tr><th>العميل</th><th>أُرسل</th><th>شكاوى</th><th></th></tr>
+              <tr><td>قاعة الياسمين</td><td>٨٤٠</td><td><span class="badge b-red">٩</span></td><td style="text-align:left"><button class="btn btn-ghost btn-sm">إيقاف مؤقت</button></td></tr>
+              <tr><td>سعد الفهد</td><td>١٢٠</td><td><span class="badge b-gold">٣</span></td><td style="text-align:left"><button class="btn btn-ghost btn-sm">تنبيه</button></td></tr>
+              <tr><td>نورة المطيري</td><td>٣١٠</td><td><span class="badge b-green">٢</span></td><td></td></tr>
+            </table>
+          </div>
+          <div class="card">
+            <div class="sec-label">حالات الفشل · آخر ٢٤ ساعة</div>
+            <table>
+              <tr><th>السبب</th><th>العدد</th></tr>
+              <tr><td>رقم غير مسجّل بواتساب</td><td>٤</td></tr>
+              <tr><td>تجاوز حد الإرسال</td><td>٢</td></tr>
+              <tr><td>قالب مرفوض من Meta</td><td>١</td></tr>
+            </table>
+            <div style="margin-top:12px"><button class="btn btn-ghost btn-sm">عرض السجل الكامل</button></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <div class="sec-label">حالة القوالب في Meta</div>
+          <table>
+            <tr><th>القالب</th><th>التصنيف</th><th>حالة Meta</th><th>الاستخدام</th></tr>
+            <tr><td>دعوة زفاف — كلاسيكي</td><td><span class="badge b-gray">Utility</span></td><td><span class="badge b-green">معتمد</span></td><td>٦٢٪</td></tr>
+            <tr><td>دعوة خطوبة — بسيط</td><td><span class="badge b-gray">Utility</span></td><td><span class="badge b-green">معتمد</span></td><td>٢١٪</td></tr>
+            <tr><td>تذكير الحضور</td><td><span class="badge b-gold">Marketing</span></td><td><span class="badge b-red">مرفوض</span></td><td>—</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- المناسبات -->
+      <div class="subscreen" id="a-events">
+        <div class="head"><div><h2>المناسبات</h2><div class="sub">٤٢ مناسبة · ٢ غير مدفوعة · الباقي فُعّل تلقائياً</div></div><div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm">⌕ بحث</button><button class="btn btn-ghost btn-sm">تصفية</button></div></div>
+        <div class="tabs-row"><span class="tab on">الكل</span><span class="tab">غير مدفوعة ٢</span><span class="tab">نشطة</span><span class="tab">قريبة</span><span class="tab">منتهية</span></div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table>
+            <tr><th>المناسبة</th><th>العميل</th><th>التاريخ</th><th>الباقة</th><th>المقاعد</th><th>الحالة</th><th></th></tr>
+            <tr><td>خطوبة الفهد</td><td>سعد الفهد</td><td>بعد ٣ أيام</td><td>أساسية</td><td>٠/١٠٠</td><td><span class="badge b-red">غير مدفوعة</span></td><td style="text-align:left"><button class="btn btn-ghost btn-sm">تفعيل يدوي</button></td></tr>
+            <tr><td>زواج العبدالله</td><td>محمد العبدالله</td><td>غداً</td><td>قياسية</td><td>٢٨٧/٣٠٠</td><td><span class="badge b-green">نشطة · دفع تلقائي</span></td><td style="text-align:left"><button class="btn btn-ghost btn-sm" data-jump="event">إدارة</button></td></tr>
+            <tr><td>تخرّج المطيري</td><td>نورة المطيري</td><td>بعد ٤ أيام</td><td>مميزة</td><td>١٤٠/٦٠٠</td><td><span class="badge b-green">نشطة</span></td><td style="text-align:left"><button class="btn btn-ghost btn-sm" data-jump="event">إدارة</button></td></tr>
+            <tr><td>زواج الحربي</td><td>فهد الحربي</td><td>بعد ٦ أيام</td><td>قياسية</td><td>٢١٠/٣٠٠</td><td><span class="badge b-green">نشطة</span></td><td style="text-align:left"><button class="btn btn-ghost btn-sm" data-jump="event">إدارة</button></td></tr>
+            <tr><td>ملكة القحطاني</td><td>عبدالله القحطاني</td><td>منذ ١٢ يوم</td><td>أساسية</td><td>٩٨/١٠٠</td><td><span class="badge b-gray">منتهية</span></td><td style="text-align:left"><button class="btn btn-ghost btn-sm">تقرير</button></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- التقويم -->
+      <div class="subscreen" id="a-calendar">
+        <div class="head"><div><h2>التقويم</h2><div class="sub">توزيع المناسبات على الأيام — لرصد الازدحام مبكراً</div></div><div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm">‹ السابق</button><button class="btn btn-ghost btn-sm">التالي ›</button></div></div>
+
+        <div class="cal-head">
+          <div class="cal-month">أغسطس ٢٠٢٦</div>
+          <div class="cal-key"><span><i class="k-ok"></i> جاهزة</span><span><i class="k-warn"></i> تحتاج متابعة</span><span><i class="k-bad"></i> غير مدفوعة</span></div>
+        </div>
+
+        <div class="cal">
+          <div class="cal-dow">السبت</div><div class="cal-dow">الأحد</div><div class="cal-dow">الاثنين</div><div class="cal-dow">الثلاثاء</div><div class="cal-dow">الأربعاء</div><div class="cal-dow">الخميس</div><div class="cal-dow">الجمعة</div>
+
+          <div class="cd out"><span class="dn">١٥</span></div>
+          <div class="cd out"><span class="dn">١٦</span></div>
+          <div class="cd"><span class="dn">١٧</span></div>
+          <div class="cd"><span class="dn">١٨</span></div>
+          <div class="cd"><span class="dn">١٩</span></div>
+          <div class="cd"><span class="dn">٢٠</span><span class="ev ok">زواج الشمري</span></div>
+          <div class="cd"><span class="dn">٢١</span></div>
+
+          <div class="cd"><span class="dn">٢٢</span></div>
+          <div class="cd today"><span class="dn">٢٣</span><span class="td">اليوم</span></div>
+          <div class="cd"><span class="dn">٢٤</span><span class="ev ok">زواج العبدالله</span></div>
+          <div class="cd"><span class="dn">٢٥</span></div>
+          <div class="cd"><span class="dn">٢٦</span><span class="ev bad">خطوبة الفهد</span></div>
+          <div class="cd busy"><span class="dn">٢٧</span><span class="ev warn">تخرّج المطيري</span><span class="ev ok">زواج الحربي</span><span class="ev ok">ملكة الشهري</span><span class="more">+١ أخرى</span></div>
+          <div class="cd"><span class="dn">٢٨</span></div>
+
+          <div class="cd"><span class="dn">٢٩</span><span class="ev ok">زواج القحطاني</span></div>
+          <div class="cd"><span class="dn">٣٠</span></div>
+          <div class="cd"><span class="dn">٣١</span></div>
+          <div class="cd out"><span class="dn">١</span></div>
+          <div class="cd out"><span class="dn">٢</span></div>
+          <div class="cd out"><span class="dn">٣</span><span class="ev ok">زواج الغامدي</span></div>
+          <div class="cd out"><span class="dn">٤</span></div>
+        </div>
+
+        <div class="alert warn" style="margin-top:20px">
+          <span class="a-ic">!</span>
+          <div><b>ازدحام يوم الخميس ٢٧ أغسطس</b><div class="a-sub">٤ مناسبات في ليلة واحدة · ١٬٤٢٠ مقعداً متوقعاً. جهّز الفريق، وراقب طبقة إرسال واتساب قبلها بيومين.</div></div>
+          <button class="btn btn-ghost btn-sm" data-jump="wa">افحص الإرسال</button>
+        </div>
+
+        <div class="two-col" style="margin-top:16px">
+          <div class="card">
+            <div class="sec-label">مناسبات الخميس ٢٧ أغسطس</div>
+            <table>
+              <tr><th>المناسبة</th><th>المقاعد</th><th>الجاهزية</th><th></th></tr>
+              <tr><td>تخرّج المطيري</td><td>١٤٠/٦٠٠</td><td><span class="badge b-gold">قالب قيد المراجعة</span></td><td style="text-align:left"><button class="btn btn-ghost btn-sm" data-jump="event">فتح</button></td></tr>
+              <tr><td>زواج الحربي</td><td>٢١٠/٣٠٠</td><td><span class="badge b-green">جاهزة</span></td><td style="text-align:left"><button class="btn btn-ghost btn-sm" data-jump="event">فتح</button></td></tr>
+              <tr><td>ملكة الشهري</td><td>٩٤/١٠٠</td><td><span class="badge b-green">جاهزة</span></td><td style="text-align:left"><button class="btn btn-ghost btn-sm" data-jump="event">فتح</button></td></tr>
+              <tr><td>زواج الدوسري</td><td>٢٧٦/٣٠٠</td><td><span class="badge b-green">جاهزة</span></td><td style="text-align:left"><button class="btn btn-ghost btn-sm" data-jump="event">فتح</button></td></tr>
+            </table>
+          </div>
+          <div class="card">
+            <div class="sec-label">ضغط الشهر</div>
+            <div class="pulse"><span>إجمالي المناسبات</span><b>٩</b></div>
+            <div class="pulse"><span>أكثر ليلة ازدحاماً</span><b>الخميس ٢٧</b></div>
+            <div class="pulse"><span>مقاعد متوقعة</span><b>٣٬٢٤٠</b></div>
+            <div class="pulse"><span>تحتاج متابعة</span><b class="bad">٢</b></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- طلبات القوالب -->
+      <div class="subscreen" id="a-reqs">
+        <div class="head"><div><h2>طلبات القوالب</h2><div class="sub">٣ بانتظار المراجعة · التزم بالمهلة قبل موعد المناسبة</div></div></div>
+        <div class="card" style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:12px;flex-wrap:wrap">
+            <div><div style="font-weight:600;color:var(--green)">قالب زواج — آل الفهد</div><div style="font-size:12px;color:var(--muted)">سعد الفهد · قُدّم منذ يومين · المناسبة بعد ٣ أيام</div></div>
+            <span class="badge b-gold">قيد المراجعة</span>
+          </div>
+          <div class="tpl-preview">يتشرّف آل الفهد بدعوتكم…</div>
+          <div class="field" style="margin-top:12px"><label>تصنيف Meta</label><select><option>Utility — تسعير أقل</option><option>Marketing</option></select></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary btn-sm">قبول وإرسال لـMeta</button><button class="btn btn-ghost btn-sm" style="border-color:var(--red);color:var(--red)">رفض مع سبب</button><button class="btn btn-ghost btn-sm">طلب تعديل</button></div>
+        </div>
+        <div class="card" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><div style="font-weight:600;color:var(--green)">قالب تخرّج — المطيري</div><div style="font-size:12px;color:var(--muted)">نورة المطيري · بانتظار اعتماد Meta</div></div><span class="badge b-green">مقبول منّا</span></div></div>
+        <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><div style="font-weight:600;color:var(--green)">قالب زفاف — قاعة الياسمين</div><div style="font-size:12px;color:var(--muted)">رُفض: صورة منخفضة الدقة</div></div><span class="badge b-red">مرفوض</span></div></div>
+      </div>
+
+      <!-- الدعم -->
+      <div class="subscreen" id="a-support">
+        <div class="head"><div><h2>الدعم</h2><div class="sub">٢ مفتوحة · متوسط زمن الرد ٣ ساعات</div></div></div>
+        <div class="card" style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+            <div><div style="font-weight:600;color:var(--green)">دعوات لم تصل لبعض المدعوين</div><div style="font-size:12px;color:var(--muted)">سعد الفهد · منذ ٤ ساعات</div></div>
+            <span class="badge b-red">عاجلة</span>
+          </div>
+          <p style="font-size:13.5px;color:var(--muted);margin-bottom:12px">١٢ مدعو من أصل ٤٠ ما وصلتهم الدعوة. الحالة تظهر «مُرسل» في لوحته.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary btn-sm">افتح حساب العميل</button><button class="btn btn-ghost btn-sm">راجع سجل الإرسال</button><button class="btn btn-ghost btn-sm">رد</button></div>
+        </div>
+        <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><div style="font-weight:600;color:var(--green)">طلب استرداد مقاعد ملغاة</div><div style="font-size:12px;color:var(--muted)">نورة المطيري · منذ يوم</div></div><span class="badge b-gold">مفتوحة</span></div></div>
+      </div>
+
+      <!-- العملاء -->
+      <div class="subscreen" id="a-clients">
+        <div class="head"><div><h2>العملاء</h2><div class="sub">٣٦ عميل · ٩ نشطون هذا الشهر</div></div><button class="btn btn-ghost btn-sm">⌕ بحث</button></div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table>
+            <tr><th>العميل</th><th>الجوال</th><th>المناسبات</th><th>الإنفاق</th><th>آخر نشاط</th><th></th></tr>
+            <tr><td>قاعة الياسمين</td><td dir="ltr">0551110001</td><td>١٢</td><td>٨٬٣٨٨ ﷼</td><td>اليوم</td><td style="text-align:left"><button class="btn btn-ghost btn-sm">الملف</button></td></tr>
+            <tr><td>محمد العبدالله</td><td dir="ltr">0555123456</td><td>٢</td><td>١٬٣٩٨ ﷼</td><td>اليوم</td><td style="text-align:left"><button class="btn btn-ghost btn-sm">الملف</button></td></tr>
+            <tr><td>نورة المطيري</td><td dir="ltr">0553330003</td><td>١</td><td>١٬١٩٩ ﷼</td><td>أمس</td><td style="text-align:left"><button class="btn btn-ghost btn-sm">الملف</button></td></tr>
+            <tr><td>سعد الفهد</td><td dir="ltr">0554440004</td><td>١</td><td>٢٩٩ ﷼</td><td>منذ ٤ ساعات</td><td style="text-align:left"><button class="btn btn-ghost btn-sm">الملف</button></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- المالية -->
+      <div class="subscreen" id="a-finance">
+        <div class="head"><div><h2>المالية والرؤى</h2><div class="sub">أغسطس ٢٠٢٦</div></div><button class="btn btn-ghost btn-sm">تصدير CSV</button></div>
+        <div class="ev-tabs"><span class="tab on">المالية</span><span class="tab" data-jump="insights">الرؤى</span></div>
+        <div class="grid3" style="margin-bottom:16px">
+          <div class="stat g"><div class="l">إيراد الشهر</div><div class="v">٣٨٬٤٠٠</div></div>
+          <div class="stat d"><div class="l">بانتظار التحصيل</div><div class="v">٢٬٦٠٠</div></div>
+          <div class="stat n"><div class="l">متوسط قيمة المناسبة</div><div class="v">٩١٤</div></div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table>
+            <tr><th>المرجع</th><th>العميل</th><th>الباقة</th><th>المبلغ</th><th>الطريقة</th><th>الحالة</th></tr>
+            <tr><td dir="ltr">#TX-1043</td><td>محمد العبدالله</td><td>قياسية</td><td>٦٩٩ ﷼</td><td>مدى · بوابة</td><td><span class="badge b-green">مدفوع · فُعّل تلقائياً</span></td></tr>
+            <tr><td dir="ltr">#TX-1044</td><td>سعد الفهد</td><td>أساسية</td><td>٢٩٩ ﷼</td><td>تحويل بنكي</td><td><span class="badge b-red">غير مدفوع · موقوف</span></td></tr>
+            <tr><td dir="ltr">#TX-1045</td><td>قاعة الياسمين</td><td>مميزة ×٢</td><td>٢٬٣٩٨ ﷼</td><td>Apple Pay · بوابة</td><td><span class="badge b-green">مدفوع · فُعّل تلقائياً</span></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- الباقات -->
+      <div class="subscreen" id="a-packs">
+        <div class="crumb"><span data-jump="settings">الإعدادات</span> ← <b>الباقات</b></div>
+        <div class="head"><div><h2>الباقات</h2><div class="sub">إنشاء وتسعير الباقات</div></div><button class="btn btn-primary btn-sm">＋ باقة جديدة</button></div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table>
+            <tr><th>الباقة</th><th>المقاعد</th><th>السعر</th><th>مبيعات الشهر</th><th>الحالة</th></tr>
+            <tr><td>أساسية</td><td>١٠٠</td><td>٢٩٩ ﷼</td><td>١٤</td><td><span class="badge b-green">مفعّلة</span></td></tr>
+            <tr><td>قياسية</td><td>٣٠٠</td><td>٦٩٩ ﷼</td><td>٢١</td><td><span class="badge b-green">مفعّلة</span></td></tr>
+            <tr><td>مميزة</td><td>٦٠٠</td><td>١١٩٩ ﷼</td><td>٧</td><td><span class="badge b-green">مفعّلة</span></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- مكتبة القوالب -->
+      <div class="subscreen" id="a-tpls">
+        <div class="crumb"><span data-jump="settings">الإعدادات</span> ← <b>مكتبة القوالب</b></div>
+        <div class="head"><div><h2>مكتبة القوالب</h2><div class="sub">القوالب العامة المعتمدة</div></div><button class="btn btn-primary btn-sm">＋ قالب عام</button></div>
+        <div class="grid3">
+          <div class="tpl"><div class="prev">كلاسيكي</div><div style="font-weight:600;color:var(--green)">كلاسيكي — ذهبي</div><div style="font-size:12px;color:var(--muted);margin-bottom:6px">استخدام ٦٢٪</div><span class="badge b-green">معتمد</span></div>
+          <div class="tpl"><div class="prev">بسيط</div><div style="font-weight:600;color:var(--green)">بسيط — أبيض</div><div style="font-size:12px;color:var(--muted);margin-bottom:6px">استخدام ٢١٪</div><span class="badge b-green">معتمد</span></div>
+          <div class="tpl"><div class="prev">مودرن</div><div style="font-weight:600;color:var(--green)">مودرن — رمادي</div><div style="font-size:12px;color:var(--muted);margin-bottom:6px">استخدام ١٧٪</div><span class="badge b-green">معتمد</span></div>
+        </div>
+      </div>
+
+      <!-- الفريق والصلاحيات -->
+      <div class="subscreen" id="a-team">
+        <div class="head"><div><h2>الفريق والصلاحيات</h2><div class="sub">٤ أعضاء · صلاحيات حسب الدور</div></div><button class="btn btn-primary btn-sm">＋ دعوة عضو</button></div>
+        <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
+          <table>
+            <tr><th>العضو</th><th>الدور</th><th>آخر دخول</th><th>الحالة</th><th></th></tr>
+            <tr><td>محمد الشمري</td><td><span class="badge b-gold">مدير المنصة</span></td><td>الآن</td><td><span class="badge b-green">نشط</span></td><td></td></tr>
+            <tr><td>عبدالرحمن السالم</td><td><span class="badge b-green">دعم فني</span></td><td>منذ ساعة</td><td><span class="badge b-green">نشط</span></td><td style="text-align:left"><button class="btn btn-ghost btn-sm">تعديل</button></td></tr>
+            <tr><td>ريم العتيبي</td><td><span class="badge b-green">مراجع قوالب</span></td><td>أمس</td><td><span class="badge b-green">نشط</span></td><td style="text-align:left"><button class="btn btn-ghost btn-sm">تعديل</button></td></tr>
+            <tr><td>خالد الدوسري</td><td><span class="badge b-gray">محاسب</span></td><td>منذ ٣ أيام</td><td><span class="badge b-gray">موقوف</span></td><td style="text-align:left"><button class="btn btn-ghost btn-sm">تفعيل</button></td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <div class="sec-label">مصفوفة الصلاحيات</div>
+          <table>
+            <tr><th>الصلاحية</th><th>مدير</th><th>دعم</th><th>مراجع</th><th>محاسب</th></tr>
+            <tr><td>تفعيل يدوي (غير المدفوع)</td><td>✓</td><td>✓</td><td>—</td><td>—</td></tr>
+            <tr><td>مراجعة القوالب</td><td>✓</td><td>—</td><td>✓</td><td>—</td></tr>
+            <tr><td>الدخول لحساب عميل</td><td>✓</td><td>✓</td><td>—</td><td>—</td></tr>
+            <tr><td>المالية والتقارير</td><td>✓</td><td>—</td><td>—</td><td>✓</td></tr>
+            <tr><td>إعدادات واتساب</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr><td>إدارة الفريق</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- سجل النشاط -->
+      <div class="subscreen" id="a-log">
+        <div class="head"><div><h2>سجل النشاط</h2><div class="sub">كل إجراء مسجّل باسم صاحبه</div></div><button class="btn btn-ghost btn-sm">تصفية</button></div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table>
+            <tr><th>الوقت</th><th>العضو</th><th>الإجراء</th><th>الهدف</th></tr>
+            <tr><td>١٠:٤٢</td><td>النظام</td><td>تفعيل تلقائي بعد الدفع</td><td>زواج الحربي · ٦٩٩ ﷼</td></tr>
+            <tr><td>٠٩:١٥</td><td>ريم</td><td>رفضت قالباً</td><td>قاعة الياسمين</td></tr>
+            <tr><td>أمس ١٨:٣٠</td><td>محمد</td><td>عدّل سعر باقة</td><td>مميزة — ١١٩٩ ﷼</td></tr>
+            <tr><td>أمس ١٤:٠٢</td><td>عبدالرحمن</td><td>دخل لحساب عميل</td><td>سعد الفهد</td></tr>
+            <tr><td>أمس ١١:٢٠</td><td>محمد</td><td>أوقف إرسال عميل</td><td>قاعة الياسمين</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- تفاصيل المناسبة -->
+      <div class="subscreen" id="a-event">
+        <div class="crumb"><span data-jump="events">المناسبات</span> ← <b>زواج العبدالله</b></div>
+        <div class="head">
+          <div>
+            <h2>زواج العبدالله</h2>
+            <div class="sub">محمد العبدالله · <span dir="ltr">0555123456</span> · الخميس ١٤ شوال · قاعة الماسة</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm">الدخول كالعميل</button>
+            <button class="btn btn-ghost btn-sm">تقرير المناسبة</button>
+          </div>
+        </div>
+
+        <div class="ev-status">
+          <div class="es-item"><span>الحالة</span><b class="ok">نشطة</b></div>
+          <div class="es-item"><span>الدفع</span><b class="ok">مدفوعة · تلقائي</b></div>
+          <div class="es-item"><span>الموعد</span><b class="warn">غداً · ١٤ شوال</b></div>
+          <div class="es-item"><span>الباقة</span><b>قياسية · ٣٠٠</b></div>
+          <div class="es-item"><span>القالب</span><b>كلاسيكي ذهبي</b></div>
+        </div>
+
+        <div class="alert warn" style="margin-bottom:18px">
+          <span class="a-ic">!</span>
+          <div><b>المناسبة غداً · ٦ رسائل فشل إرسالها</b><div class="a-sub">راجع الأرقام الفاشلة قبل الحفل، و٤٢ مقعداً ما زالت محجوزة بانتظار رد.</div></div>
+          <button class="btn btn-ghost btn-sm">راجع الفشل</button>
+        </div>
+
+        <div class="sec-label">إجراءات سريعة</div>
+        <div class="qa-row">
+          <button class="qa-btn"><b>ذكّر من لم يردّ</b><span>٤٢ مدعواً</span></button>
+          <button class="qa-btn"><b>أعد إرسال الفاشل</b><span>٦ رسائل</span></button>
+          <button class="qa-btn"><b>أوقف الإرسال مؤقتاً</b><span>إجراء طارئ</span></button>
+          <button class="qa-btn"><b>تقرير الحضور</b><span>تصدير</span></button>
+        </div>
+
+        <div class="ev-tabs"><span class="tab on">نظرة عامة</span><span class="tab">المدعوون</span><span class="tab">الدعاة</span><span class="tab">سجل الإرسال</span><span class="tab">المسح</span></div>
+
+        <div class="grid3" style="margin-bottom:14px">
+          <div class="stat g"><div class="l">متاح</div><div class="v">١٣</div></div>
+          <div class="stat d"><div class="l">محجوز</div><div class="v">٤٢</div></div>
+          <div class="stat n"><div class="l">مؤكّد</div><div class="v">٢٤٥</div></div>
+        </div>
+
+        <div class="two-col" style="margin-bottom:14px">
+          <div class="card">
+            <div class="sec-label">أداء الدعاة</div>
+            <table>
+              <tr><th>الداعي</th><th>مدعوون</th><th>أكّدوا</th><th>معدّل التأكيد</th></tr>
+              <tr><td>محمد العبدالله <span class="badge b-gold">المالك</span></td><td>٨٤</td><td>٧١</td><td><span class="badge b-green">٨٥٪</span></td></tr>
+              <tr><td>أحمد العبدالله</td><td>٦٢</td><td>٤٨</td><td><span class="badge b-green">٧٧٪</span></td></tr>
+              <tr><td>سعد العبدالله</td><td>٤١</td><td>٢٢</td><td><span class="badge b-gold">٥٤٪</span></td></tr>
+            </table>
+          </div>
+          <div class="card">
+            <div class="sec-label">صحة الإرسال</div>
+            <div class="pulse"><span>رسائل أُرسلت</span><b>١٨٧</b></div>
+            <div class="pulse"><span>وصلت</span><b>١٨١</b></div>
+            <div class="pulse"><span>فشلت</span><b class="bad">٦</b></div>
+            <div class="pulse"><span>شكاوى حظر</span><b>٠</b></div>
+            <div class="pulse"><span>تكلفة الرسائل</span><b>٤٩ ﷼</b></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px">
+            <div class="sec-label" style="margin:0">المدعوون · ١٨٧</div>
+            <div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm">⌕ بحث</button><button class="btn btn-ghost btn-sm">تصدير</button></div>
+          </div>
+          <table>
+            <tr><th>الاسم</th><th>الجوال</th><th>الداعي</th><th>المقاعد</th><th>الحالة</th><th>المسح</th></tr>
+            <tr><td>خالد الفهد</td><td dir="ltr">0551000001</td><td>المالك</td><td>٤</td><td><span class="badge b-green">أكّد</span></td><td>٠/٤</td></tr>
+            <tr><td>نايف السالم</td><td dir="ltr">0551000002</td><td>أحمد</td><td>١</td><td><span class="badge b-green">حضر</span></td><td>١/١</td></tr>
+            <tr><td>فيصل المطيري</td><td dir="ltr">0551000003</td><td>المالك</td><td>٧</td><td><span class="badge b-gold">بانتظار الرد</span></td><td>—</td></tr>
+            <tr><td>عبدالله القحطاني</td><td dir="ltr">0551000004</td><td>سعد</td><td>٣</td><td><span class="badge b-red">اعتذر</span></td><td>—</td></tr>
+            <tr><td>منصور العنزي</td><td dir="ltr">0551000006</td><td>المالك</td><td>٦</td><td><span class="badge b-gray">فشل الإرسال</span></td><td>—</td></tr>
+          </table>
+          <div class="table-foot">عرض ٥ من ١٨٧ · <span class="lnk">التالي</span></div>
+        </div>
+      </div>
+
+      <!-- الرؤى -->
+      <div class="subscreen" id="a-insights">
+        <div class="crumb"><span data-jump="finance">المالية والرؤى</span> ← <b>الرؤى</b></div>
+        <div class="head"><div><h2>الرؤى</h2><div class="sub">إحصائيات مجمّعة — بلا بيانات شخصية</div></div><button class="btn btn-ghost btn-sm">تصدير</button></div>
+
+        <div class="alert info" style="margin-bottom:20px">
+          <span class="a-ic i">i</span>
+          <div><b>بيانات مجمّعة فقط</b><div class="a-sub">أرقام المدعوين والدعاة لا تُستخدم للتسويق ولا تُصدَّر. التسويق موجّه لعملاء المنصة (أصحاب المناسبات) ولمن سجّل موافقته صراحةً — التزاماً بنظام حماية البيانات وشروط واتساب.</div></div>
+        </div>
+
+        <div class="grid3" style="margin-bottom:14px">
+          <div class="stat g"><div class="l">متوسط معدّل التأكيد</div><div class="v">٧٤٪</div></div>
+          <div class="stat d"><div class="l">متوسط مقاعد الدعوة</div><div class="v">٣٫٢</div></div>
+          <div class="stat n"><div class="l">متوسط زمن الرد</div><div class="v">٤ س</div></div>
+        </div>
+
+        <div class="two-col" style="margin-bottom:14px">
+          <div class="card">
+            <div class="sec-label">الطلب حسب نوع المناسبة</div>
+            <div class="bar"><span>زواج</span><div class="bt"><i style="width:64%"></i></div><b>٦٤٪</b></div>
+            <div class="bar"><span>خطوبة</span><div class="bt"><i style="width:18%"></i></div><b>١٨٪</b></div>
+            <div class="bar"><span>تخرّج</span><div class="bt"><i style="width:11%"></i></div><b>١١٪</b></div>
+            <div class="bar"><span>أخرى</span><div class="bt"><i style="width:7%"></i></div><b>٧٪</b></div>
+          </div>
+          <div class="card">
+            <div class="sec-label">الباقة الأكثر مبيعاً</div>
+            <div class="bar"><span>قياسية</span><div class="bt"><i style="width:50%"></i></div><b>٢١</b></div>
+            <div class="bar"><span>أساسية</span><div class="bt"><i style="width:33%"></i></div><b>١٤</b></div>
+            <div class="bar"><span>مميزة</span><div class="bt"><i style="width:17%"></i></div><b>٧</b></div>
+            <div style="font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.7">٣١٪ من عملاء «أساسية» رقّوا باقتهم قبل المناسبة — مؤشر على أن مقاعدها قليلة.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="sec-label">فرص تسويقية مشروعة</div>
+          <div class="opp"><div><b>٩ عملاء</b> لديهم مناسبة سابقة ولم يعودوا منذ ٦ أشهر<div class="o-s">عملاء مسجّلون — التسويق لهم مسموح بموافقتهم عند التسجيل</div></div><button class="btn btn-primary btn-sm">حملة تجديد</button></div>
+          <div class="opp"><div><b>٤ قاعات</b> تستخدم المنصة بكثافة (٣+ مناسبات)<div class="o-s">مرشّحون لعرض شراكة أو باقة جملة</div></div><button class="btn btn-ghost btn-sm">عرض القائمة</button></div>
+          <div class="opp"><div><b>١٤٢ مدعو</b> ضغطوا «أنشئ مناسبتك» بعد الحفل<div class="o-s">سجّلوا اهتمامهم طوعاً — قائمة تسويق شرعية (opt-in)</div></div><button class="btn btn-primary btn-sm">تواصل</button></div>
+        </div>
+      </div>
+
+      <!-- الإعدادات -->
+      <div class="subscreen" id="a-settings">
+        <div class="head"><div><h2>الإعدادات</h2><div class="sub">إعدادات المنصة والتكاملات والمحتوى</div></div></div>
+        <div class="ev-tabs"><span class="tab on">التكاملات</span><span class="tab" data-jump="packs">الباقات</span><span class="tab" data-jump="tpls">مكتبة القوالب</span></div>
+        <div class="card center-narrow" style="margin-bottom:14px">
+          <div class="sec-label">Meta Cloud API</div>
+          <div class="field"><label>Phone Number ID</label><input value="•••••••••••" dir="ltr"></div>
+          <div class="field"><label>WABA ID</label><input value="•••••••••••" dir="ltr"></div>
+          <div class="field"><label>Access Token</label><input value="••••••••••••••••" dir="ltr"></div>
+          <div class="field"><label>Webhook Verify Token</label><input value="••••••" dir="ltr"></div>
+          <div style="background:#EDF3EF;border-radius:10px;padding:12px;font-size:12px;color:var(--green);margin-bottom:14px">الحالة: متصل ✓ — آخر فحص قبل ٣ دقائق</div>
+          <button class="btn btn-primary btn-sm">حفظ</button>
+        </div>
+        <div class="card center-narrow">
+          <div class="sec-label">بوابة الدفع</div>
+          <div class="field"><label>المزوّد</label><select><option>Moyasar (نشط)</option><option>Tap</option><option>تفعيل يدوي فقط</option></select></div>
+          <div class="field"><label>Webhook الدفع</label><input value="https://barqiyah.sa/api/payments/webhook" dir="ltr"></div>
+          <div style="background:#EDF3EF;border-radius:10px;padding:12px;font-size:12px;color:var(--green);margin-bottom:12px">التفعيل التلقائي نشط ✓ — كل عملية دفع ناجحة تُفعّل المناسبة فوراً عبر Webhook.</div>
+          <div style="background:#F7F0DC;border-radius:10px;padding:12px;font-size:12px;color:#8A6D1F">الطلبات غير المدفوعة (أو التحويل البنكي) تبقى موقوفة بانتظار اعتماد الفريق.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============= SCANNER ============= -->
+<section class="screen" id="s-scanner">
+  <div class="phone-wrap">
+    <div class="phone"><div class="scr"><div class="scan-scr">
+      <div class="scan-title">برقية</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">بوابة الرجال — زواج العبدالله</div>
+      <div class="scan-box">▦</div>
+      <div style="font-size:13px;color:var(--muted)">وجّه الكاميرا نحو باركود المدعو</div>
+    </div></div></div>
+    <div class="phone"><div class="scr"><div class="scan-scr">
+      <div class="scan-title">نتيجة المسح</div>
+      <div class="scan-box" style="border-style:solid;font-size:44px">✓</div>
+      <div class="result r-ok">خالد الفهد<br><span style="font-size:13px;font-weight:400">مسح ٢ من ٤ مقاعد · حضر</span></div>
+    </div></div></div>
+    <div class="phone"><div class="scr"><div class="scan-scr">
+      <div class="scan-title">نتيجة المسح</div>
+      <div class="scan-box" style="border-color:var(--red);color:var(--red);background:var(--red-soft);border-style:solid;font-size:44px">✕</div>
+      <div class="result r-bad">الكود مستخدم بالكامل<br><span style="font-size:13px;font-weight:400">استُهلكت كل المقاعد المؤكّدة</span></div>
+    </div></div></div>
+  </div>
+</section>
+
+<!-- ============= GUEST ============= -->
+<section class="screen" id="s-guest">
+  <div class="phone-wrap">
+    <div class="phone"><div class="scr"><div class="wa">
+      <div class="wa-top">▦ برقية · دعوات</div>
+      <div class="wa-body">
+        <div class="bubble"><div class="img">دعوة زواج خالد</div>يتشرّف أبو خالد العبدالله بدعوتكم لحضور حفل زواج ابنه، الخميس ١٤ شوال — قاعة الماسة.<div style="margin-top:8px;color:var(--gold);font-size:12px">هل ستشرّفنا بالحضور؟</div></div>
+        <div class="bubble" style="padding:0;overflow:hidden"><div class="wa-btn">✓ سأحضر</div><div class="wa-btn" style="color:var(--red)">✕ أعتذر</div></div>
+      </div>
+    </div></div></div>
+    <div class="phone"><div class="scr"><div class="wa">
+      <div class="wa-top">▦ برقية · دعوات</div>
+      <div class="wa-body">
+        <div class="bubble" style="background:#DCF8C6">شكراً لك! كم عدد الأشخاص الحاضرين؟ (الحد الأقصى ٤)</div>
+        <div class="bubble" style="padding:0;overflow:hidden"><div class="wa-btn">١</div><div class="wa-btn">٢</div><div class="wa-btn">٣</div><div class="wa-btn">٤</div></div>
+      </div>
+    </div></div></div>
+    <div class="phone"><div class="scr"><div class="wa">
+      <div class="wa-top">▦ برقية · دعوات</div>
+      <div class="wa-body">
+        <div class="bubble">تم تأكيد حضورك لـ ٢ من الأشخاص ✓ نتشرّف بكم.<div class="img" style="margin-top:10px;height:130px;font-size:52px">▦</div><div style="text-align:center;font-size:12px;color:var(--muted);margin-top:6px">اعرض هذا الباركود عند الباب</div></div>
+      </div>
+    </div></div></div>
+  </div>
+  <div style="text-align:center;font-size:13px;color:var(--muted);padding-bottom:26px">تجربة المدعو داخل واتساب: الدعوة ← اختيار العدد ← استلام الباركود</div>
+</section>
+
+<script>
+document.querySelectorAll('.ptab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.ptab').forEach(x=>x.classList.remove('on'));t.classList.add('on');
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  document.getElementById('s-'+t.dataset.role).classList.add('on');window.scrollTo(0,0);
+});
+function ownerGo(v){
+  ['o-account','o-book','o-new','o-event','o-inviterview'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.display='none';
+  });
+  const t=document.getElementById('o-'+v);
+  if(t) t.style.display = (v==='event') ? 'flex' : 'block';
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('[data-owner]').forEach(b=>b.onclick=()=>ownerGo(b.dataset.owner));
+document.querySelectorAll('[data-o]').forEach(n=>n.onclick=()=>{
+  document.querySelectorAll('[data-o]').forEach(x=>x.classList.remove('on'));n.classList.add('on');
+  document.querySelectorAll('#s-owner .subscreen').forEach(s=>s.classList.remove('on'));
+  document.getElementById('o-'+n.dataset.o).classList.add('on');
+});
+document.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#s-admin .subscreen').forEach(s=>s.classList.remove('on'));
+  document.getElementById('a-'+b.dataset.jump).classList.add('on');
+  document.querySelectorAll('[data-a]').forEach(x=>x.classList.remove('on'));
+  const nv=document.querySelector('[data-a="'+(b.dataset.jump==='event'?'events':b.dataset.jump)+'"]');
+  if(nv)nv.classList.add('on');window.scrollTo(0,0);
+});
+document.querySelectorAll('[data-a]').forEach(n=>n.onclick=()=>{
+  document.querySelectorAll('[data-a]').forEach(x=>x.classList.remove('on'));n.classList.add('on');
+  document.querySelectorAll('#s-admin .subscreen').forEach(s=>s.classList.remove('on'));
+  document.getElementById('a-'+n.dataset.a).classList.add('on');
+});
+(function(){
+  const q=document.getElementById('miniqr');if(!q)return;let h=7919;const rng=()=>{h=(h*1103515245+12345)&0x7fffffff;return h/0x7fffffff;};
+  const N=11;for(let r=0;r<N;r++)for(let c=0;c<N;c++){const corner=(r<3&&c<3)||(r<3&&c>N-4)||(r>N-4&&c<3);let fill=corner?(r===0||r===2||c===0||c===2||(r===1&&c===1)):rng()>0.5;const cell=document.createElement('i');if(fill)cell.className='on';q.appendChild(cell);}
+})();
+
+(function(){
+  const sel=document.getElementById('occType');if(!sel)return;
+  const W=document.getElementById('fWedding'),S=document.getElementById('fSingle'),L=document.getElementById('lblSingle'),I=document.getElementById('inpSingle');
+  const labels={engagement:'اسم الخاطب',katb:'اسم العريس',grad:'اسم الخرّيج',baby:'اسم المولود',formal:'اسم الجهة'};
+  sel.onchange=()=>{
+    const v=sel.value;
+    if(v==='wedding'){W.style.display='grid';S.style.display='none';}
+    else{W.style.display='none';S.style.display='block';L.textContent=labels[v]||'صاحب المناسبة';I.value='';}
+  };
+})();
+
+(function(){
+  const map={v1:'p1',v2:'p2',w1:'q1',w2:'q2'};
+  Object.keys(map).forEach(k=>{
+    const i=document.getElementById(k),o=document.getElementById(map[k]);
+    if(i&&o) i.addEventListener('input',()=>{o.textContent=i.value||'…';});
+  });
+})();
+</script>
+</body>
+</html>
