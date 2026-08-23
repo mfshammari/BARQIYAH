@@ -188,7 +188,13 @@ export interface MessageLog {
   id: string;
   event_id: string | null;
   guest_id: string | null;
+  inviter_id: string | null;
   kind: string;
+  direction: 'outbound' | 'inbound';
+  template_name: string | null;
+  meta_message_id: string | null;
+  error_code: string | null;
+  cost: number | null;
   provider: string;
   to_phone: string | null;
   status: string;
