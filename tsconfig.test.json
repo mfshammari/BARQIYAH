@@ -15,6 +15,8 @@
     "src/lib/format.ts",
     "src/lib/balance.ts",
     "src/lib/types.ts",
-    "src/lib/inviteVars.ts"
+    "src/lib/inviteVars.ts",
+    "src/lib/payments/moyasar.ts",
+    "src/lib/payments/index.ts"
   ]
 }

@@ -26,8 +26,30 @@ if (added.size === 0) {
 const problems = [];
 const lines = sql.split('\n');
 
+/**
+ * أجسام دوال plpgsql لا تُحلَّل عند الإنشاء، فاستخدام قيمة enum جديدة
+ * داخلها لا يفشل — التنفيذ يقع في معاملة لاحقة. أما دوال language sql
+ * والسياسات والقيود فتُحلَّل فوراً، وهي وحدها الخطرة.
+ */
+let inPlpgsqlBody = false;
+let recentLanguage = '';
+
 lines.forEach((line, i) => {
   const trimmed = line.trim();
+
+  const lang = /language\s+(plpgsql|sql)\b/i.exec(trimmed);
+  if (lang) recentLanguage = lang[1].toLowerCase();
+
+  // بداية جسم الدالة أو نهايته
+  if (/\$\$/.test(trimmed)) {
+    const markers = (trimmed.match(/\$\$/g) ?? []).length;
+    if (markers % 2 === 1) {
+      if (!inPlpgsqlBody && recentLanguage === 'plpgsql') inPlpgsqlBody = true;
+      else if (inPlpgsqlBody) { inPlpgsqlBody = false; recentLanguage = ''; }
+    }
+  }
+
+  if (inPlpgsqlBody) return;
   if (trimmed.startsWith('--')) return;
   // سطر الإضافة نفسه ليس استخداماً
   if (/alter\s+type\s+\w+\s+add\s+value/i.test(trimmed)) return;
