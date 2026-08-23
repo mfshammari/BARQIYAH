@@ -33,11 +33,28 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   return { id: user.id, email: user.email ?? null, profile: ensured };
 }
 
+/** أدوار الفريق الإداري (SPEC §3). */
+export const ADMIN_ROLES: UserRole[] = [
+  'admin', 'admin_owner', 'admin_support', 'admin_reviewer', 'admin_finance',
+];
+
+/** أدوار العميل — حساب واحد دائم، وكونه مالكاً أو داعياً صفة تُشتق من
+ *  علاقته بالمناسبة لا من الدور (SPEC §3). */
+export const CLIENT_ROLES: UserRole[] = ['user', 'owner'];
+
+export function isAdminRole(role: UserRole): boolean {
+  return ADMIN_ROLES.includes(role);
+}
+
+export function isClientRole(role: UserRole): boolean {
+  return CLIENT_ROLES.includes(role);
+}
+
 /** المسار الافتراضي لكل دور بعد تسجيل الدخول. */
 export function homePathForRole(role: UserRole): string {
-  if (role === 'admin') return '/admin';
+  if (isAdminRole(role)) return '/admin';
   if (role === 'scanner') return '/scan';
-  return '/events';
+  return '/app';   // «مناسباتي» — نقطة دخول العميل (SPEC §8.2)
 }
 
 /** يشترط تسجيل الدخول. */
