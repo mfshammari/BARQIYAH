@@ -4,6 +4,7 @@ import type { EventStatus, GuestStatus, TemplateStatus } from '@/lib/types';
 import { EVENT_STATUS_LABELS, GUEST_STATUS_LABELS, TEMPLATE_STATUS_LABELS } from '@/lib/types';
 
 const GUEST_BADGE: Record<GuestStatus, string> = {
+  failed: 'bg-danger text-white',
   draft: 'bg-panel text-muted border border-line',
   sent: 'bg-info-soft text-info',
   accepted: 'bg-ok-soft text-ok',
@@ -17,6 +18,7 @@ export function GuestStatusBadge({ status }: { status: GuestStatus }) {
 }
 
 const EVENT_BADGE: Record<EventStatus, string> = {
+  unpaid: 'bg-danger-soft text-danger',
   pending: 'bg-warn-soft text-warn',
   active: 'bg-ok-soft text-ok',
   closed: 'bg-panel text-muted border border-line',

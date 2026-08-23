@@ -2,7 +2,8 @@
 //   node tests/balance.test.mjs
 import assert from 'node:assert/strict';
 import { computeBalance, usageRatio } from '../.test-build/lib/balance.js';
-import { normalizePhone, isValidPhone } from '../.test-build/lib/format.js';
+import { normalizePhone, isValidPhone, formatHijri, formatWeekday, formatTime, formatEventLine, formatNumber }
+  from '../.test-build/lib/format.js';
 
 let passed = 0;
 function test(name, fn) { fn(); passed++; console.log(`  ✓ ${name}`); }
@@ -109,6 +110,53 @@ test('التحقق يرفض غير الصالح', () => {
   assert.equal(isValidPhone('123'), false);
   assert.equal(isValidPhone(''), false);
   assert.equal(isValidPhone('غير رقم'), false);
+});
+
+console.log('\nالتاريخ الهجري وسطر الموعد:');
+
+test('الأرقام تُعرض عربية هندية', () => {
+  assert.equal(formatNumber(1234), '١٬٢٣٤');
+  assert.equal(formatNumber(7), '٧');
+});
+
+test('التاريخ الهجري بتقويم أم القرى', () => {
+  const h = formatHijri('2027-04-26');
+  assert.match(h, /١٤٤٨/, 'يحتوي السنة الهجرية');
+  assert.match(h, /[\u0600-\u06FF]/, 'اسم الشهر بالعربية');
+});
+
+test('اسم اليوم بالعربية', () => {
+  assert.equal(formatWeekday('2027-04-26'), 'الاثنين');
+});
+
+test('الوقت بصيغة ١٢ ساعة عربية', () => {
+  assert.match(formatTime('21:00'), /٠٩:٠٠/);
+  assert.equal(formatTime(''), '');
+  assert.equal(formatTime(null), '');
+});
+
+test('سطر الموعد يجمع اليوم والتاريخ والمكان والوقت', () => {
+  const line = formatEventLine({
+    dateGregorian: '2027-04-26', dateHijri: '٢٦ شوال ١٤٤٨ هـ',
+    weekday: 'الجمعة', time: '21:00', venue: 'قصر ٣٣',
+  });
+  assert.match(line, /الجمعة/);
+  assert.match(line, /٢٦ شوال/);
+  assert.match(line, /قصر ٣٣/);
+  assert.match(line, /٠٩:٠٠/);
+});
+
+test('سطر الموعد يشتق الهجري واليوم إن لم يُمرَّرا', () => {
+  const line = formatEventLine({ dateGregorian: '2027-04-26', venue: 'قاعة الرياض' });
+  assert.match(line, /الاثنين/);
+  assert.match(line, /١٤٤٨/);
+  assert.match(line, /قاعة الرياض/);
+});
+
+test('الحقول الفارغة لا تترك فواصل معلّقة', () => {
+  const line = formatEventLine({ dateGregorian: '2027-04-26' });
+  assert.ok(!line.endsWith('·'), 'لا فاصل في النهاية');
+  assert.ok(!line.includes('· ·'), 'لا فواصل متتالية');
 });
 
 console.log(`\n✓ نجحت ${passed} حالة اختبار`);

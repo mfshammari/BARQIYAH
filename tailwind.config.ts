@@ -10,6 +10,8 @@ const config: Config = {
     extend: {
       colors: {
         bg: 'rgb(var(--bg) / <alpha-value>)',
+        ivory: 'rgb(var(--ivory) / <alpha-value>)',
+        red: { DEFAULT: 'rgb(var(--red) / <alpha-value>)', soft: 'rgb(var(--red-soft) / <alpha-value>)' },
         surface: 'rgb(var(--surface) / <alpha-value>)',
         panel: 'rgb(var(--panel) / <alpha-value>)',
         ink: 'rgb(var(--ink) / <alpha-value>)',
@@ -24,9 +26,11 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['var(--font-body)'],
+        ui: ['var(--font-ui)'],
         display: ['var(--font-display)'],
         cerem: ['var(--font-cerem)'],
       },
+      spacing: { section: 'var(--section-gap)' },
       borderRadius: { xl: 'var(--radius)', '2xl': 'calc(var(--radius) + 6px)' },
       boxShadow: {
         card: '0 1px 2px rgba(20,30,25,.04), 0 6px 20px -12px rgba(20,30,25,.18)',

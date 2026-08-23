@@ -30,6 +30,7 @@ export async function GET() {
   let database: {
     connected: boolean;
     schema_ready: boolean;
+    schema_version?: 'v1' | 'v2';
     reason?: string;
     detail?: string;
   } = { connected: false, schema_ready: false, reason: 'MISSING_KEYS' };
@@ -42,7 +43,24 @@ export async function GET() {
       const { error } = await supabase.from('packages').select('id', { head: true, count: 'exact' });
 
       if (!error) {
-        database = { connected: true, schema_ready: true };
+        // جداول v2: وجودها يحدّد إن كان ترحيل v2 مطبَّقاً
+        const v2Tables = ['contacts', 'activity_logs', 'platform_settings'] as const;
+        const results = await Promise.all(
+          v2Tables.map(async (t) => {
+            const { error: e } = await supabase.from(t).select('id', { head: true, count: 'exact' });
+            return [t, !e || e.code !== '42P01'] as const;
+          }),
+        );
+        const missing = results.filter(([, ok]) => !ok).map(([t]) => t);
+
+        database = {
+          connected: true,
+          schema_ready: true,
+          schema_version: missing.length === 0 ? 'v2' : 'v1',
+          ...(missing.length > 0
+            ? { detail: `جداول v2 غير موجودة: ${missing.join('، ')} — شغّل supabase/setup.sql` }
+            : {}),
+        };
       } else if (error.code === '42P01') {
         database = {
           connected: true,
