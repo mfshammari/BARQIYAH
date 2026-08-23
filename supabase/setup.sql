@@ -1074,6 +1074,11 @@ alter table public.profiles
 -- ============================================================
 
 -- ---------- ١) توسيع is_admin لتشمل أدوار الأدمن الأربعة ----------
+--
+-- ملاحظة مهمة: تُقارَن الأدوار كنص (role::text) لا كقيم enum.
+-- Postgres يمنع استخدام قيمة enum أُضيفت للتو في نفس المعاملة
+-- (55P04: unsafe use of new value)، ومحرر SQL في Supabase ينفّذ
+-- الملف كله كمعاملة واحدة. المقارنة النصية تتفادى ذلك تماماً.
 create or replace function public.is_admin()
 returns boolean
 language sql
@@ -1084,7 +1089,7 @@ as $$
   select exists (
     select 1 from public.profiles
     where id = auth.uid()
-      and role in ('admin', 'admin_owner', 'admin_support', 'admin_reviewer', 'admin_finance')
+      and role::text in ('admin', 'admin_owner', 'admin_support', 'admin_reviewer', 'admin_finance')
       and is_active
   );
 $$;
@@ -1100,11 +1105,11 @@ as $$
   select exists (
     select 1 from public.profiles p
     where p.id = auth.uid() and p.is_active and (
-      p.role in ('admin', 'admin_owner')                                     -- المدير يملك كل شيء
-      or (p_permission = 'manual_activation' and p.role = 'admin_support')
-      or (p_permission = 'review_templates'  and p.role = 'admin_reviewer')
-      or (p_permission = 'impersonate'       and p.role = 'admin_support')
-      or (p_permission = 'finance'           and p.role = 'admin_finance')
+      p.role::text in ('admin', 'admin_owner')                                -- المدير يملك كل شيء
+      or (p_permission = 'manual_activation' and p.role::text = 'admin_support')
+      or (p_permission = 'review_templates'  and p.role::text = 'admin_reviewer')
+      or (p_permission = 'impersonate'       and p.role::text = 'admin_support')
+      or (p_permission = 'finance'           and p.role::text = 'admin_finance')
     )
   );
 $$;
@@ -1301,7 +1306,7 @@ create policy platform_settings_admin on public.platform_settings for all to aut
 -- ---------- ٩) الملف الشخصي: الدور الافتراضي صار user ----------
 drop policy if exists profiles_insert_self on public.profiles;
 create policy profiles_insert_self on public.profiles for insert to authenticated
-  with check (id = auth.uid() and role in ('user', 'owner'));
+  with check (id = auth.uid() and role::text in ('user', 'owner'));
 
 grant execute on function public.has_permission(text) to authenticated, service_role;
 grant execute on function public.my_inviter_id(uuid)  to authenticated, service_role;

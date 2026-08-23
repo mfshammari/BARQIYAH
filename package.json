@@ -8,8 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "tsc -p tsconfig.test.json && node tests/whatsapp-parse.test.mjs && node tests/balance.test.mjs",
-    "test:db": "echo 'شغّل ملفات supabase/migrations ثم supabase/tests/logic.test.sql على قاعدة اختبار'"
+    "test": "node scripts/check-setup-single-tx.mjs && tsc -p tsconfig.test.json && node tests/whatsapp-parse.test.mjs && node tests/balance.test.mjs",
+    "test:db": "echo 'شغّل ملفات supabase/migrations ثم supabase/tests/logic.test.sql على قاعدة اختبار'",
+    "check:sql": "node scripts/build-setup-sql.mjs && node scripts/check-setup-single-tx.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
