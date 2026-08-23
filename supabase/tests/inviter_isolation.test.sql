@@ -172,5 +172,89 @@ do $$ begin
     'المراجع لا يفعّل المناسبات يدوياً');
 end $$;
 
+-- ————— ١٠) رصيد الداعي محسوب داخل حصته وحدها —————
+set local role authenticated;
+set local request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000003';
+
+do $$
+declare b record;
+begin
+  select * into b from public.inviter_balance('d0000000-0000-0000-0000-00000000000a');
+  perform pg_temp.assert_eq(b.seats_quota, 50, 'حصة الداعي كما وزّعها المالك');
+  perform pg_temp.assert_eq(b.held, 0, 'لا حجز قبل الإرسال');
+  perform pg_temp.assert_eq(b.available, 50, 'المتاح = الحصة كاملة');
+  perform pg_temp.assert_eq(b.total_guests, 2, 'يرى مدعوّيه الاثنين فقط لا الثلاثة');
+end $$;
+
+-- ————— ١١) الحجز يخصم من حصة الداعي —————
+do $$
+declare r record; okc int := 0;
+begin
+  for r in select * from public.reserve_seats_for_inviter(
+    'd0000000-0000-0000-0000-00000000000a',
+    array(select id from public.guests where inviter_id = 'd0000000-0000-0000-0000-00000000000a'))
+  loop
+    if r.ok then okc := okc + 1; end if;
+  end loop;
+  perform pg_temp.assert_eq(okc, 2, 'حُجز مدعوّا الداعي (٤+٢ من حصة ٥٠)');
+end $$;
+
+do $$
+declare b record;
+begin
+  select * into b from public.inviter_balance('d0000000-0000-0000-0000-00000000000a');
+  perform pg_temp.assert_eq(b.held, 6, 'المحجوز من حصته = ٤+٢');
+  perform pg_temp.assert_eq(b.available, 44, 'المتاح له نقص بمقدار المحجوز');
+end $$;
+
+-- الداعي لا يقرأ رصيد داعٍ آخر أصلاً (الدالة لا تعيد صفوفاً)
+do $$
+begin
+  perform pg_temp.assert_eq(
+    (select count(*)::int from public.inviter_balance('d0000000-0000-0000-0000-00000000000b')),
+    0, 'الداعي لا يقرأ رصيد داعٍ آخر');
+end $$;
+
+-- والمالك يرى الاثنين: حصة الداعي الآخر لم تتأثر بإرسال غيره
+set local request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
+do $$
+declare b record;
+begin
+  select * into b from public.inviter_balance('d0000000-0000-0000-0000-00000000000b');
+  perform pg_temp.assert_eq(b.held, 0, 'حصة الداعي الآخر لم تتأثر بإرسال غيره');
+
+  select * into b from public.inviter_balance('d0000000-0000-0000-0000-00000000000a');
+  perform pg_temp.assert_eq(b.held, 6, 'المالك يرى رصيد كل داعٍ');
+end $$;
+
+-- ————— ١٢) منع تجاوز حصة الداعي —————
+insert into public.guests (id, event_id, inviter_id, name, phone, max_seats)
+values ('99991111-0000-0000-0000-00000000000a', 'c0000000-0000-0000-0000-00000000000a',
+        'd0000000-0000-0000-0000-00000000000b', 'ضيف كبير', '966500003001', 40);
+
+set local request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000004';
+do $$
+declare r record;
+begin
+  select * into r from public.reserve_seats_for_inviter(
+    'd0000000-0000-0000-0000-00000000000b',
+    array['99991111-0000-0000-0000-00000000000a']::uuid[]);
+  perform pg_temp.assert_eq(r.reason, 'INSUFFICIENT_QUOTA', 'منع تجاوز حصة الداعي');
+  perform pg_temp.assert_eq(r.missing_seats, 10, 'يبيّن كم مقعداً ينقصه (٤٠ - ٣٠)');
+end $$;
+
+-- ————— ١٣) الداعي لا يحجز من حصة داعٍ آخر —————
+do $$
+begin
+  begin
+    perform public.reserve_seats_for_inviter(
+      'd0000000-0000-0000-0000-00000000000a', array[]::uuid[]);
+    raise exception 'FAIL — داعٍ حجز من حصة داعٍ آخر';
+  exception when others then
+    if sqlerrm <> 'FORBIDDEN' then raise; end if;
+    raise notice 'PASS — منع الداعي من الحجز على حصة غيره';
+  end;
+end $$;
+
 reset role;
 rollback;

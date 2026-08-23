@@ -14,6 +14,7 @@
     "src/lib/whatsapp/types.ts",
     "src/lib/format.ts",
     "src/lib/balance.ts",
-    "src/lib/types.ts"
+    "src/lib/types.ts",
+    "src/lib/inviteVars.ts"
   ]
 }

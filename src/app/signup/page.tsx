@@ -7,7 +7,10 @@ import { SignupForm } from './SignupForm';
 
 export const dynamic = 'force-dynamic';
 
-export default async function SignupPage() {
+export default async function SignupPage({
+  searchParams,
+}: { searchParams: Promise<{ next?: string }> }) {
+  const { next } = await searchParams;
   if (!supabaseConfigured) return <SetupNotice />;
 
   const user = await getSessionUser();
@@ -24,7 +27,7 @@ export default async function SignupPage() {
         </div>
 
         <div className="border border-gold-line bg-white p-6">
-          <SignupForm />
+          <SignupForm next={next ?? ''} />
         </div>
 
         <p className="mt-5 text-center text-[12.5px] text-muted">
