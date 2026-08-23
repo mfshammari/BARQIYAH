@@ -4,6 +4,7 @@ import { getSessionUser, homePathForRole } from '@/lib/auth';
 import { supabaseConfigured } from '@/lib/env';
 import { createClient } from '@/lib/supabase/server';
 import { InvitePreview, GoldRule } from '@/components/landing/InvitePreview';
+import { Icon, type IconName } from '@/components/landing/Icons';
 import {
   ShowcaseRow, BalanceVisual, GuestsVisual, SeatsVisual, ScanVisual,
 } from '@/components/landing/Showcase';
@@ -12,20 +13,20 @@ import type { Package } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
-const STEPS = [
-  { n: '٠١', t: 'أنشئ مناسبتك', d: 'اختر نوع المناسبة وتاريخها، والباقة المناسبة بعدد المقاعد.' },
-  { n: '٠٢', t: 'جهّز دعوتك', d: 'اختر قالباً معتمداً لنوع مناسبتك، وأضف صورة الدعوة الخاصة بك.' },
-  { n: '٠٣', t: 'أرسلها عبر واتساب', d: 'أرسل لمدعوٍّ واحد، أو احفظ القائمة كاملةً كمسودة وأطلقها دفعةً واحدة.' },
-  { n: '٠٤', t: 'استقبل ضيوفك', d: 'يُمسح باركود كل مدعوٍّ عند الباب، وتتابع الحضور من لوحتك.' },
+const STEPS: { n: string; t: string; d: string; ic: IconName }[] = [
+  { n: '٠١', t: 'أنشئ مناسبتك', ic: 'plus', d: 'اختر نوع المناسبة وتاريخها، والباقة المناسبة بعدد المقاعد.' },
+  { n: '٠٢', t: 'جهّز دعوتك', ic: 'docRect', d: 'اختر قالباً معتمداً لنوع مناسبتك، وأضف صورة الدعوة الخاصة بك.' },
+  { n: '٠٣', t: 'أرسلها عبر واتساب', ic: 'chat', d: 'أرسل لمدعوٍّ واحد، أو احفظ القائمة كاملةً كمسودة وأطلقها دفعةً واحدة.' },
+  { n: '٠٤', t: 'استقبل ضيوفك', ic: 'qrBox', d: 'يُمسح باركود كل مدعوٍّ عند الباب، وتتابع الحضور من لوحتك.' },
 ];
 
-const FEATURES = [
-  { t: 'باركود لكل مدعو', d: 'بطاقة دخول فريدة بعدد مقاعدها، تمنع تكرار الدخول.' },
-  { t: 'تأكيد فوري', d: 'يؤكّد المدعو حضوره وعدد مرافقيه بضغطةٍ من الواتساب.' },
-  { t: 'إدارة الدعاة', d: 'أضف دعاةً يوزّعون قوائمهم، ويظهر لكل مدعوٍّ اسم داعيه.' },
-  { t: 'رصيد بالمقاعد', d: 'تابع المتاح والمحجوز والمؤكّد، مع استرداد المقاعد الملغاة.' },
-  { t: 'قوالب لكل مناسبة', d: 'مكتبة قوالب مصنّفة، أو اطلب تصميماً خاصاً باسمك.' },
-  { t: 'تقارير الحضور', d: 'من قبِل، ومن اعتذر، ومن حضر — أرقامٌ واضحة لحظياً.' },
+const FEATURES: { t: string; d: string; ic: IconName }[] = [
+  { t: 'باركود لكل مدعو', ic: 'qrBox', d: 'بطاقة دخول فريدة بعدد مقاعدها، تمنع تكرار الدخول.' },
+  { t: 'تأكيد فوري', ic: 'check', d: 'يؤكّد المدعو حضوره وعدد مرافقيه بضغطةٍ من الواتساب.' },
+  { t: 'إدارة الدعاة', ic: 'peopleFull', d: 'أضف دعاةً يوزّعون قوائمهم، ويظهر لكل مدعوٍّ اسم داعيه.' },
+  { t: 'رصيد بالمقاعد', ic: 'seats', d: 'تابع المتاح والمحجوز والمؤكّد، مع استرداد المقاعد الملغاة.' },
+  { t: 'قوالب لكل مناسبة', ic: 'star', d: 'مكتبة قوالب مصنّفة، أو اطلب تصميماً خاصاً باسمك.' },
+  { t: 'تقارير الحضور', ic: 'chart', d: 'من قبِل، ومن اعتذر، ومن حضر — أرقامٌ واضحة لحظياً.' },
 ];
 
 const OCCASIONS = [
@@ -103,14 +104,14 @@ export default async function LandingPage() {
             <a href="#faq" className="hover:text-gold">الأسئلة</a>
           </nav>
           <div className="flex items-center gap-2">
-            <Link href="/login" className="btn-ghost btn-sm !rounded-[2px] hidden sm:inline-flex">دخول</Link>
-            <Link href="/signup" className="btn-primary btn-sm !rounded-[2px]">أنشئ مناسبتك</Link>
+            <Link href="/login" className="btn-ghost btn-sm !rounded-[2px] hidden sm:inline-flex">تسجيل الدخول</Link>
+            <Link href="/signup" className="btn-primary btn-sm !rounded-[2px]">ابدأ الآن</Link>
           </div>
         </div>
       </header>
 
       {/* ————— الهيرو ————— */}
-      <section className="mx-auto grid max-w-6xl items-center gap-14 px-5 py-16 md:grid-cols-2 md:py-24">
+      <section className="mx-auto grid max-w-[1160px] items-center gap-[52px] px-6 py-16 md:grid-cols-[1.05fr_.95fr] md:py-24">
         <div className="text-center md:text-right">
           <p className="text-[13px] font-semibold tracking-[4px] text-gold">منصة الدعوات الرقمية</p>
           <h1 className="mt-5 font-display text-[clamp(34px,5vw,54px)] font-bold leading-[1.35] text-brand">
@@ -127,9 +128,12 @@ export default async function LandingPage() {
             <Link href="/signup" className="btn-primary !rounded-[2px]">أنشئ مناسبتك</Link>
             <a href="#how" className="btn-ghost !rounded-[2px]">شاهد كيف تعمل</a>
           </div>
-          <p className="mt-4 text-[12.5px] text-muted">
-            <b className="text-gold">جرّبها مجاناً</b> — خمس دعوات تجريبية قبل أن تدفع، بلا بطاقة ولا التزام.
-          </p>
+          <div className="trial">
+            <span className="trial-ic" aria-hidden>✓</span>
+            <span>
+              <b>جرّبها مجاناً</b> — خمس دعوات تجريبية قبل أن تدفع، بلا بطاقة ولا التزام.
+            </span>
+          </div>
 
           <div className="mt-9 grid grid-cols-3 gap-5 border-t border-gold-line pt-6">
             {[
@@ -145,27 +149,51 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        <div>
-          <p className="mb-3 text-center text-[11.5px] tracking-[2px] text-gold">دعوة بباركود</p>
-          <InvitePreview />
+        <div className="relative">
+          <InvitePreview badge="دعوة بباركود" />
         </div>
       </section>
+
+      {/* ————— شريط الطمأنة ————— */}
+      <div className="strip">
+        <div className="strip-in">
+          <span>دعواتٌ تصل مباشرةً على واتساب</span><i>◆</i>
+          <span>باركود فريد لكل بطاقة</span><i>◆</i>
+          <span>تأكيدٌ بضغطة زر</span><i>◆</i>
+          <span>مسحٌ فوري عند الباب</span>
+        </div>
+      </div>
 
       {/* ————— كيف تعمل ————— */}
       <section id="how" className="bg-paper py-20">
         <div className="mx-auto max-w-6xl px-5">
           <p className="eyebrow">تجربة الاستخدام</p>
-          <h2 className="sec-title font-display text-brand">من الدعوة إلى باب الحفل</h2>
+          <h2 className="sec-h">من الدعوة إلى باب الحفل</h2>
           <GoldRule />
-          <p className="mx-auto max-w-xl text-center text-[14.5px] leading-8 text-muted">
+          <p className="sec-sub">
             أربع خطواتٍ تفصلك عن مناسبةٍ منظّمة، بلا جداول ولا مكالمات تأكيد.
           </p>
 
-          <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="relative mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {/* الخط المنقّط الواصل بين الخطوات */}
+            <div
+              className="pointer-events-none absolute inset-x-[14%] top-[63px] hidden h-px lg:block"
+              style={{
+                background:
+                  'repeating-linear-gradient(90deg,rgb(var(--gold-line)) 0 5px,transparent 5px 11px)',
+              }}
+              aria-hidden
+            />
             {STEPS.map((s) => (
-              <div key={s.n} className="border-t border-gold-line pt-5">
-                <div className="font-display text-[40px] font-bold leading-none text-gold-soft num">{s.n}</div>
-                <h3 className="mt-4 font-display text-[20px] font-bold text-brand">{s.t}</h3>
+              <div key={s.n} className="relative z-10 text-center">
+                <div className="mb-3.5 font-display text-[15px] font-bold tracking-[2px] text-gold num">
+                  {s.n}
+                </div>
+                <div className="mx-auto mb-5 grid h-[68px] w-[68px] place-items-center rounded-full
+                                border border-gold-line bg-surface text-brand">
+                  <Icon name={s.ic} className="h-7 w-7" />
+                </div>
+                <h3 className="font-display text-[20px] font-bold text-brand">{s.t}</h3>
                 <p className="mt-2 text-[13.5px] leading-7 text-muted">{s.d}</p>
               </div>
             ))}
@@ -176,14 +204,19 @@ export default async function LandingPage() {
       {/* ————— المميزات ————— */}
       <section id="features" className="mx-auto max-w-6xl px-5 py-20">
         <p className="eyebrow">المميزات</p>
-        <h2 className="sec-title font-display text-brand">كل ما تحتاجه لإدارة الحضور</h2>
+        <h2 className="sec-h">كل ما تحتاجه لإدارة الحضور</h2>
         <GoldRule />
-        <div className="mt-10 grid gap-x-10 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-10 grid gap-x-10 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
-            <div key={f.t}>
-              <div className="mb-3 h-px w-10 bg-gold" />
-              <h4 className="font-display text-[19px] font-bold text-brand">{f.t}</h4>
-              <p className="mt-1.5 text-[13.5px] leading-7 text-muted">{f.d}</p>
+            <div key={f.t} className="flex items-start gap-4">
+              <div className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-full
+                              border border-gold-line text-gold">
+                <Icon name={f.ic} className="h-5 w-5" />
+              </div>
+              <div>
+                <h4 className="font-display text-[19px] font-bold text-brand">{f.t}</h4>
+                <p className="mt-0.5 text-[14px] leading-7 text-muted">{f.d}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -193,9 +226,9 @@ export default async function LandingPage() {
       <section id="platform" className="bg-paper py-20">
         <div className="mx-auto max-w-6xl px-5">
           <p className="eyebrow">داخل المنصة</p>
-          <h2 className="sec-title font-display text-brand">لوحةٌ تُريك كل شيء</h2>
+          <h2 className="sec-h">لوحةٌ تُريك كل شيء</h2>
           <GoldRule />
-          <p className="mx-auto max-w-xl text-center text-[14.5px] leading-8 text-muted">
+          <p className="sec-sub">
             لا جداول إكسل ولا مكالمات تأكيد — كل مدعوٍّ وحالته أمامك في شاشةٍ واحدة.
           </p>
 
@@ -240,7 +273,7 @@ export default async function LandingPage() {
       {/* ————— أنواع الاحتفالات ————— */}
       <section className="mx-auto max-w-6xl px-5 py-20">
         <p className="eyebrow">لكل مناسبةٍ برقيّتها</p>
-        <h2 className="sec-title font-display text-brand">أنواع الاحتفالات</h2>
+        <h2 className="sec-h">أنواع الاحتفالات</h2>
         <GoldRule />
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {OCCASIONS.map((o) => (
@@ -262,9 +295,9 @@ export default async function LandingPage() {
       <section id="pricing" className="bg-paper py-20">
         <div className="mx-auto max-w-6xl px-5">
           <p className="eyebrow">الأسعار</p>
-          <h2 className="sec-title font-display text-brand">باقاتٌ بعدد المقاعد</h2>
+          <h2 className="sec-h">باقاتٌ بعدد المقاعد</h2>
           <GoldRule />
-          <p className="mx-auto max-w-xl text-center text-[14px] leading-8 text-muted">
+          <p className="sec-sub">
             ادفع مرةً واحدة لكل مناسبة — لا اشتراكات. المقعد الواحد = ضيفٌ واحد يدخل الحفل،
             وكل باقة مستقلة لمناسبتها.
           </p>
@@ -319,7 +352,7 @@ export default async function LandingPage() {
       {/* ————— الأسئلة ————— */}
       <section id="faq" className="mx-auto max-w-3xl px-5 py-20">
         <p className="eyebrow">قبل أن تبدأ</p>
-        <h2 className="sec-title font-display text-brand">أسئلة يسألها الجميع</h2>
+        <h2 className="sec-h">أسئلة يسألها الجميع</h2>
         <GoldRule />
         <div className="mt-8 divide-y divide-gold-line border-y border-gold-line">
           {FAQ.map((f) => (
@@ -350,7 +383,7 @@ export default async function LandingPage() {
       {/* ————— تواصل ————— */}
       <section className="mx-auto max-w-3xl px-5 py-20 text-center">
         <p className="eyebrow">تواصل</p>
-        <h2 className="sec-title font-display text-brand">لديك سؤال قبل أن تبدأ؟</h2>
+        <h2 className="sec-h">لديك سؤال قبل أن تبدأ؟</h2>
         <GoldRule />
         <p className="text-[14px] leading-8 text-muted">
           نجيبك على أي استفسار — عن الباقات، أو القوالب، أو تجهيز مناسبتك.

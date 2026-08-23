@@ -31,7 +31,12 @@ export function ShowcaseRow({ block }: { block: ShowcaseBlock }) {
           ))}
         </ul>
       </div>
-      <div className={block.flip ? 'lg:[direction:rtl]' : ''}>{block.visual}</div>
+      <div className={block.flip ? 'lg:[direction:rtl]' : ''}>
+        <div className="sc-shot" style={{ boxShadow: '0 24px 48px -28px rgba(21,58,43,.4)' }}>
+          <div className="shot-bar" aria-hidden><i /><i /><i /></div>
+          {block.visual}
+        </div>
+      </div>
     </div>
   );
 }
@@ -39,7 +44,7 @@ export function ShowcaseRow({ block }: { block: ShowcaseBlock }) {
 /** معاينة لوحة الرصيد بثلاث حالات. */
 export function BalanceVisual() {
   return (
-    <div className="rounded-2xl border border-gold-line bg-white p-5 shadow-card">
+    <div className="p-5">
       <div className="mb-4 text-[12px] font-semibold text-muted">لوحة المعلومات</div>
       <div className="grid grid-cols-3 gap-3">
         {[['متاح', 284, 'text-brand bg-brand-soft'], ['محجوز', 13, 'text-warn bg-warn-soft'], ['مؤكّد', 103, 'text-ok bg-ok-soft']]
@@ -78,7 +83,7 @@ export function GuestsVisual() {
   ] as const;
 
   return (
-    <div className="rounded-2xl border border-gold-line bg-white p-5 shadow-card">
+    <div className="p-5">
       <div className="mb-3 flex items-center justify-between">
         <span className="text-[12px] font-semibold text-muted num">المدعوون · ١٨٧</span>
         <span className="rounded-lg bg-brand px-2.5 py-1 text-[11px] font-semibold text-white num">
@@ -135,7 +140,7 @@ export function SeatsVisual() {
 /** معاينة شاشة المسح عند الباب. */
 export function ScanVisual() {
   return (
-    <div className="rounded-2xl border border-gold-line bg-brand p-5 text-center text-white shadow-card">
+    <div className="bg-brand p-5 text-center text-white">
       <div className="text-[11.5px] text-white/60">بوابة الرجال</div>
       <div className="mx-auto mt-4 grid h-28 w-28 grid-cols-5 grid-rows-5 gap-[3px] rounded-xl bg-white p-2">
         {[1,0,1,1,0, 0,1,1,0,1, 1,1,0,1,1, 1,0,1,0,0, 0,1,1,1,0].map((on, i) => (

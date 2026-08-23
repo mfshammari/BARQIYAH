@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { requireUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { PageHeader, EmptyState, EventStatusBadge } from '@/components/ui';
+import { EmptyState, EventStatusBadge, SecLabel, NoticeBar, TaskCardBox } from '@/components/ui';
 import { can } from '@/lib/permissions';
 import { formatCurrency, formatDate, formatHijri, formatNumber } from '@/lib/format';
 import { metaConfigured } from '@/lib/env';
@@ -16,43 +16,6 @@ function ageDays(iso: string): number {
 
 interface EventWithGuests extends EventRow {
   guests: Pick<Guest, 'status' | 'max_seats' | 'confirmed_seats'>[];
-}
-
-/** بطاقة مهمة: عدد وأقدمية ورابط مباشر للإجراء. */
-function TaskCard({
-  title, count, oldestDays, href, tone = 'warn', empty,
-}: {
-  title: string; count: number; oldestDays?: number; href: string;
-  tone?: 'warn' | 'danger' | 'info'; empty: string;
-}) {
-  const tones = {
-    warn: 'border-warn/25 bg-warn-soft text-warn',
-    danger: 'border-danger/25 bg-danger-soft text-danger',
-    info: 'border-info/20 bg-info-soft text-info',
-  } as const;
-
-  if (count === 0) {
-    return (
-      <div className="card card-pad">
-        <div className="text-[13px] font-semibold text-ink">{title}</div>
-        <div className="mt-2 text-[12.5px] text-ok">{empty}</div>
-      </div>
-    );
-  }
-
-  return (
-    <Link href={href} className={`rounded-xl border p-4 transition-shadow hover:shadow-card ${tones[tone]}`}>
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[13px] font-semibold">{title}</span>
-        <span className="font-ui text-2xl font-extrabold num leading-none">{formatNumber(count)}</span>
-      </div>
-      {oldestDays != null && oldestDays > 0 ? (
-        <div className="mt-2 text-[11.5px] opacity-80 num">
-          الأقدم منذ {formatNumber(oldestDays)} يوماً
-        </div>
-      ) : null}
-    </Link>
-  );
 }
 
 export default async function AdminToday() {
@@ -113,75 +76,74 @@ export default async function AdminToday() {
     return { label: 'جاهزة', cls: 'bg-ok-soft text-ok' };
   };
 
+  const today = new Intl.DateTimeFormat('ar-SA', {
+    weekday: 'long', day: 'numeric', month: 'long',
+  }).format(new Date());
+
   return (
     <>
-      <PageHeader
-        title="اليوم"
-        subtitle="ما يحتاج تدخّلك الآن — مرتّباً بالأقدمية لا بالأرقام."
-      />
+      <div className="acct-head">
+        <div>
+          <h1 className="acct-h">اليوم</h1>
+          <p className="acct-sub">
+            {today} · المدفوع يُفعَّل تلقائياً — هذه التي تحتاج تدخّلك.
+          </p>
+        </div>
+        <Link href="/admin/events" className="btn-ghost btn-sm">كل المناسبات</Link>
+      </div>
 
       {!metaConfigured ? (
-        <div className="mb-5 rounded-xl border border-warn/25 bg-warn-soft px-4 py-3 text-[13px] text-warn">
-          <b>وضع المحاكاة:</b> مفاتيح Meta غير مضبوطة — الرسائل تُسجَّل ولا تُرسل فعلياً.
-        </div>
+        <NoticeBar tone="warn" title="وضع المحاكاة">
+          مفاتيح Meta غير مضبوطة — الرسائل تُسجَّل وتُحدِّث الحالات والرصيد دون إرسال فعلي.
+        </NoticeBar>
       ) : null}
 
-      {/* بطاقات المهام */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <TaskCard
+      <SecLabel>مهام تنتظرك</SecLabel>
+      <div className="task-grid mb-6">
+        <TaskCardBox
+          count={formatNumber(unpaid.length)}
           title="طلبات غير مدفوعة"
-          count={unpaid.length}
-          oldestDays={unpaid[0] ? ageDays(unpaid[0].created_at) : undefined}
-          href="/admin/events?tab=unpaid"
-          tone="danger"
-          empty="لا طلبات معلّقة ✓"
+          meta={
+            unpaid[0]
+              ? `أقدمها منذ ${formatNumber(ageDays(unpaid[0].created_at))} يوماً`
+              : 'لا شيء ينتظر ✓'
+          }
+          action={
+            unpaid.length > 0 ? (
+              <Link href="/admin/events?tab=unpaid" className="btn-primary btn-sm">راجع</Link>
+            ) : null
+          }
         />
         {can(role, 'review_templates') ? (
-          <TaskCard
+          <TaskCardBox
+            count={formatNumber(templates.length)}
             title="قوالب قيد المراجعة"
-            count={templates.length}
-            oldestDays={templates[0] ? ageDays(templates[0].created_at) : undefined}
-            href="/admin/template-requests"
-            tone="warn"
-            empty="لا قوالب تنتظر المراجعة ✓"
+            meta={
+              templates[0]
+                ? `أقدمها منذ ${formatNumber(ageDays(templates[0].created_at))} يوماً`
+                : 'لا قوالب تنتظر ✓'
+            }
+            action={
+              templates.length > 0 ? (
+                <Link href="/admin/template-requests" className="btn-primary btn-sm">راجع</Link>
+              ) : null
+            }
           />
         ) : null}
-        <TaskCard
+        <TaskCardBox
+          count={formatNumber(upcoming.length)}
           title="مناسبات خلال ٧ أيام"
-          count={upcoming.length}
-          href="/admin/events?tab=soon"
-          tone="info"
-          empty="لا مناسبات قريبة"
+          meta={upcoming[0] ? upcoming[0].internal_name || upcoming[0].host_name : 'لا مناسبات قريبة'}
+          action={
+            upcoming.length > 0 ? (
+              <Link href="/admin/events?tab=soon" className="btn-ghost btn-sm">افتح</Link>
+            ) : null
+          }
         />
       </div>
 
-      {/* نبض اليوم */}
-      <h2 className="sec-title mb-3">نبض اليوم</h2>
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
-        {[
-          ['أُرسل', pulse.sent, 'text-ink'],
-          ['فشل', pulse.failed, pulse.failed > 0 ? 'text-danger' : 'text-ink'],
-          ['تأكيدات', pulse.accepted, 'text-ok'],
-          ['مسح عند الباب', pulse.scans, 'text-brand'],
-        ].map(([label, value, cls]) => (
-          <div key={String(label)} className="card card-pad">
-            <div className={`font-ui text-2xl font-extrabold num leading-none ${cls}`}>
-              {formatNumber(Number(value))}
-            </div>
-            <div className="mt-2 text-[12.5px] text-muted">{String(label)}</div>
-          </div>
-        ))}
-        {can(role, 'finance') ? (
-          <div className="card card-pad">
-            <div className="font-ui text-2xl font-extrabold num leading-none text-ok">
-              {formatCurrency(pulse.revenue)}
-            </div>
-            <div className="mt-2 text-[12.5px] text-muted">إيراد اليوم</div>
-          </div>
-        ) : null}
-      </div>
-
-      {/* مناسبات قريبة بعمود الجاهزية */}
+      {/* مناسبات قريبة + نبض المنصة */}
+      <div className="two-col">
       <div className="card">
         <div className="flex items-center justify-between border-b border-line px-4 py-3.5 sm:px-5">
           <h2 className="sec-title">مناسبات خلال ٧ أيام</h2>
@@ -223,6 +185,27 @@ export default async function AdminToday() {
             </table>
           </div>
         )}
+      </div>
+
+      <div className="card card-pad">
+        <SecLabel>نبض المنصة · اليوم</SecLabel>
+        <dl className="divide-y divide-line/70">
+          {([
+            ['رسائل أُرسلت', formatNumber(pulse.sent), 'text-ink'],
+            ['فشل الإرسال', formatNumber(pulse.failed), pulse.failed > 0 ? 'text-danger' : 'text-ink'],
+            ['تأكيدات حضور', formatNumber(pulse.accepted), 'text-ok'],
+            ['عمليات مسح', formatNumber(pulse.scans), 'text-brand'],
+            ...(can(role, 'finance')
+              ? [['إيراد اليوم', formatCurrency(pulse.revenue), 'text-ok'] as const]
+              : []),
+          ] as const).map(([label, value, cls]) => (
+            <div key={label} className="flex items-center justify-between gap-3 py-2.5">
+              <dt className="text-[13px] text-muted">{label}</dt>
+              <dd className={`font-ui text-[15px] font-bold num ${cls}`}>{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
       </div>
     </>
   );

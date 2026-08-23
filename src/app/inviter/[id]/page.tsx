@@ -4,9 +4,9 @@ import { requireUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseConfigured, appUrl } from '@/lib/env';
 import { SetupNotice } from '@/components/SetupNotice';
-import { AppShell } from '@/components/AppShell';
+import { AccountShell } from '@/components/AccountShell';
 import {
-  PageHeader, Alert, SecLabel, QuotaBar, StatTriple, TodoCard, PolicyNote,
+  PageHeader, Alert, SecLabel, QuotaBar, StatTriple, TodoCard, PolicyNote, Crumb,
 } from '@/components/ui';
 import { InviteEditor } from './InviteEditor';
 import { InviterGuests } from './InviterGuests';
@@ -83,22 +83,21 @@ export default async function InviterWorkspace({
   const drafts = guests.filter((g) => g.status === 'draft').length;
 
   return (
-    <AppShell
-      nav={[
-        { href: `/inviter/${id}?tab=invite`, label: 'دعوتي', icon: '✎' },
-        { href: `/inviter/${id}?tab=guests`, label: 'مدعوّوي', icon: '☰' },
-      ]}
-      active={`/inviter/${id}?tab=${active}`}
+    <AccountShell
       userName={inviter.name}
       userSub={inviter.side_label ?? 'داعٍ'}
-      host={{
-        label: 'صفتك هنا: داعٍ',
-        name: inviter.name,
-        sub: `${event.host_name} · ${formatHijri(event.event_date)}`,
-      }}
-      backHref="/app"
-      backLabel="كل مناسباتي"
+      crumb={<Crumb trail={[{ href: '/app', label: 'مناسباتي' }]} current={event.host_name} />}
     >
+      {/* تبويبات مساحة الداعي */}
+      <div className="ev-tabs">
+        <Link href={`/inviter/${id}?tab=invite`} className={active === 'invite' ? 'tab-on' : 'tab'}>
+          دعوتي
+        </Link>
+        <Link href={`/inviter/${id}?tab=guests`} className={active === 'guests' ? 'tab-on' : 'tab'}>
+          مدعوّوي
+        </Link>
+      </div>
+
       {/* بطاقة المناسبة الثابتة — للقراءة فقط */}
       <div className="card card-pad mb-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -256,6 +255,6 @@ export default async function InviterWorkspace({
           الحصص تُوزَّع من صاحب المناسبة. وأرقام مدعويك بيانات أمانة لا تُستخدم لغير إيصال دعوتك.
         </PolicyNote>
       </div>
-    </AppShell>
+    </AccountShell>
   );
 }

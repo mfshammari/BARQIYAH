@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { formatNumber } from '@/lib/format';
 import type { EventStatus, GuestStatus, TemplateStatus } from '@/lib/types';
 import { EVENT_STATUS_LABELS, GUEST_STATUS_LABELS, TEMPLATE_STATUS_LABELS } from '@/lib/types';
 
@@ -157,15 +158,24 @@ export function Crumb({ trail, current }: { trail: { href: string; label: string
   );
 }
 
+/** تمييز عربي سليم لعدد الأيام: يوم / يومان / أيام. */
+function dayWord(n: number): string {
+  if (n === 0) return 'اليوم';
+  if (n === 1) return 'يوم متبقٍّ';
+  if (n === 2) return 'يومان متبقيان';
+  if (n <= 10) return 'أيام متبقية';
+  return 'يوماً متبقياً';
+}
+
 /** شريط العدّ التنازلي: كم بقي على المناسبة وكم أكّد. */
 export function Countdown({
   days, dateLine, note, action,
-}: { days: ReactNode; dateLine: string; note?: string; action?: ReactNode }) {
+}: { days: number; dateLine: string; note?: string; action?: ReactNode }) {
   return (
     <div className="countdown">
       <div className="cd-n">
-        <b className="num">{days}</b>
-        <span>يوماً متبقياً</span>
+        <b className="num">{formatNumber(days)}</b>
+        <span>{dayWord(days)}</span>
       </div>
       <div className="cd-t">
         <b>{dateLine}</b>
@@ -190,13 +200,15 @@ export function TodoCard({
 }
 
 /** الأرقام الثلاثة الكبيرة للرصيد: متاح / محجوز / مؤكّد. */
+const STAT_TONE = { g: 'stat stat-g', d: 'stat stat-d', n: 'stat stat-n' } as const;
+
 export function StatTriple({
   items,
 }: { items: { tone: 'g' | 'd' | 'n'; label: string; value: ReactNode }[] }) {
   return (
     <div className="grid3">
       {items.map((it) => (
-        <div key={it.label} className={`stat-${it.tone}`}>
+        <div key={it.label} className={STAT_TONE[it.tone]}>
           <div className="l">{it.label}</div>
           <div className="v num">{it.value}</div>
         </div>
@@ -252,4 +264,39 @@ export function QuotaBar({
 /** ملاحظة سياسة البيانات — تظهر أسفل أي شاشة تعرض أرقام المدعوين. */
 export function PolicyNote({ children }: { children: ReactNode }) {
   return <div className="policy-note">{children}</div>;
+}
+
+/** شريط تنبيه بأيقونة دائرية وزر إجراء — كما في لوحة الإدارة بالنموذج. */
+export function NoticeBar({
+  tone = 'warn', title, children, action,
+}: {
+  tone?: 'warn' | 'info';
+  title: string;
+  children?: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <div className={`alert-row ${tone === 'warn' ? 'alert-warn' : 'alert-info'}`}>
+      <span className="a-ic" aria-hidden>{tone === 'warn' ? '!' : 'i'}</span>
+      <div>
+        <b>{title}</b>
+        {children ? <div className="a-sub">{children}</div> : null}
+      </div>
+      {action ? <div className="a-act">{action}</div> : null}
+    </div>
+  );
+}
+
+/** بطاقة مهمة إدارية: رقم كبير، عنوان، سطر سياق، وزر. */
+export function TaskCardBox({
+  count, title, meta, action,
+}: { count: ReactNode; title: string; meta?: string; action?: ReactNode }) {
+  return (
+    <div className="task">
+      <div className="t-n num">{count}</div>
+      <div className="t-l">{title}</div>
+      {meta ? <div className="t-m">{meta}</div> : null}
+      {action}
+    </div>
+  );
 }
