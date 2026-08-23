@@ -64,7 +64,7 @@ test('المراجع يرى طلبات القوالب ولا يرى المالي
 });
 
 test('المدير يرى كل العناصر', () => {
-  assert.equal(navFor('admin_owner').length, 9);
+  assert.equal(navFor('admin_owner').length, 11);
 });
 
 test('العناصر بلا شرط تظهر للجميع', () => {

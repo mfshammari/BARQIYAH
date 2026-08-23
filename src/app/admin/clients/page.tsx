@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { requireUser } from '@/lib/auth';
+import { can } from '@/lib/permissions';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader, EmptyState, StatCard } from '@/components/ui';
 import { formatCurrency, formatDate, formatNumber } from '@/lib/format';
@@ -7,7 +9,8 @@ import type { EventRow, Profile, Transaction } from '@/lib/types';
 export const dynamic = 'force-dynamic';
 
 export default async function ClientsPage() {
-  await requireUser();
+  const user = await requireUser();
+  const mayImpersonate = can(user.profile.role, 'impersonate');
   const supabase = await createClient();
 
   const [{ data: clientsData }, { data: eventsData }, { data: txData }] = await Promise.all([
@@ -54,7 +57,7 @@ export default async function ClientsPage() {
         <div className="card table-wrap">
           <table className="tbl">
             <thead>
-              <tr><th>العميل</th><th>الجوال</th><th>المناسبات</th><th>الإنفاق</th><th>آخر نشاط</th><th>الحالة</th></tr>
+              <tr><th>العميل</th><th>الجوال</th><th>المناسبات</th><th>الإنفاق</th><th>آخر نشاط</th><th>الحالة</th><th></th></tr>
             </thead>
             <tbody>
               {rows.map(({ c, eventCount, spend, last }) => (
@@ -70,6 +73,13 @@ export default async function ClientsPage() {
                     ) : (
                       <span className="badge bg-ok-soft text-ok">نشط</span>
                     )}
+                  </td>
+                  <td className="text-left">
+                    {mayImpersonate ? (
+                      <Link href={`/admin/clients/${c.id}`} className="btn-ghost btn-sm">
+                        عرض كالعميل
+                      </Link>
+                    ) : null}
                   </td>
                 </tr>
               ))}

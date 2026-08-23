@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader, EmptyState, TemplateStatusBadge } from '@/components/ui';
-import { ActionForm, SubmitButton } from '@/components/ActionForm';
-import { reviewTemplateRequest } from '../actions';
+import { BulkReview } from './BulkReview';
 import { formatDateTime } from '@/lib/format';
 import type { Template } from '@/lib/types';
 
@@ -38,48 +37,9 @@ export default async function TemplateRequestsPage() {
       {pending.length === 0 ? (
         <EmptyState title="لا توجد طلبات معلّقة" description="كل الطلبات تمت مراجعتها." />
       ) : (
-        <div className="space-y-4">
-          {pending.map((r) => (
-            <div key={r.id} className="card card-pad">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <div className="font-display font-bold">{r.name}</div>
-                  <div className="text-[12.5px] text-muted mt-0.5">
-                    من: {r.profiles?.full_name ?? 'عميل'} · {formatDateTime(r.created_at)}
-                  </div>
-                </div>
-                <TemplateStatusBadge status={r.status} />
-              </div>
-
-              <p className="mt-3 rounded-xl bg-panel border border-line px-3.5 py-3 text-[13px] leading-7">
-                {r.body_text}
-              </p>
-
-              <div className="grid gap-4 md:grid-cols-2 mt-4">
-                <ActionForm action={reviewTemplateRequest} className="space-y-3">
-                  <input type="hidden" name="id" value={r.id} />
-                  <input type="hidden" name="decision" value="approve" />
-                  <div>
-                    <label className="label">اسم القالب المعتمد في Meta</label>
-                    <input name="meta_template_name" dir="ltr" className="field text-left"
-                      placeholder="barqiyah_custom_0001" />
-                  </div>
-                  <SubmitButton className="btn-primary w-full" pendingLabel="جارٍ الاعتماد…">اعتماد القالب</SubmitButton>
-                </ActionForm>
-
-                <ActionForm action={reviewTemplateRequest} className="space-y-3">
-                  <input type="hidden" name="id" value={r.id} />
-                  <input type="hidden" name="decision" value="reject" />
-                  <div>
-                    <label className="label">سبب الرفض</label>
-                    <input name="rejection_reason" className="field" placeholder="النص يخالف سياسة قوالب واتساب…" />
-                  </div>
-                  <SubmitButton className="btn-danger w-full" pendingLabel="جارٍ الرفض…">رفض مع السبب</SubmitButton>
-                </ActionForm>
-              </div>
-            </div>
-          ))}
-        </div>
+        <BulkReview
+          requests={pending.map((r) => ({ ...r, ownerName: r.profiles?.full_name ?? null }))}
+        />
       )}
 
       {settled.length > 0 ? (

@@ -27,7 +27,7 @@ export function AdminNav({
     .filter((g) => g.items.length > 0);
 
   return (
-    <AppShell nav={nav} active={active} userName={userName} userSub={roleLabel}>
+    <AppShell nav={nav} active={active} userName={userName} userSub={roleLabel} search>
       {/* القائمة المجمّعة — تظهر على الشاشات الواسعة */}
       <nav className="mb-5 hidden flex-wrap gap-x-6 gap-y-2 border-b border-line pb-3 lg:flex">
         {groups.map((g) => (

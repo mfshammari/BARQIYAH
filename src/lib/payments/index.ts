@@ -24,7 +24,7 @@ export interface CheckoutResult {
 }
 
 export interface PaymentProvider {
-  id: 'manual' | 'moyasar' | 'tap';
+  id: 'manual' | 'mock' | 'moyasar' | 'tap';
   label: string;
   createCheckout(params: CheckoutParams): Promise<CheckoutResult>;
   verify(reference: string): Promise<{ ok: boolean; paid: boolean; error?: string }>;
@@ -49,18 +49,27 @@ export class ManualPaymentProvider implements PaymentProvider {
 }
 
 /**
- * المزوّد الفعّال: Moyasar عند توفّر مفتاحها، وإلا التفعيل اليدوي.
- * غياب المفاتيح لا يوقف المنصة — يبقى الطلب معلّقاً ينفّذه الفريق.
+ * المزوّد الفعّال:
+ *   مفتاح Moyasar موجود      → البوابة الحقيقية
+ *   غائب (الوضع الافتراضي)   → بوابة محاكاة تُشغّل المسار كاملاً
+ *
+ * المحاكاة أنفع من التفعيل اليدوي في التجربة: تختبر الدفع والتفعيل
+ * التلقائي والـidempotency بلا انتظار اعتماد البوابة.
  */
 export function getPaymentProvider(): PaymentProvider {
   const key = process.env.MOYASAR_SECRET_KEY;
   if (key) {
-    // استيراد كسول: كود البوابة لا يُحمَّل في وضع التفعيل اليدوي
+    // استيراد كسول: كود البوابة لا يُحمَّل في وضع المحاكاة
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { MoyasarPaymentProvider } = require('./moyasar') as typeof import('./moyasar');
     return new MoyasarPaymentProvider(key);
   }
-  return new ManualPaymentProvider();
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { MockPaymentProvider } = require('./mock') as typeof import('./mock');
+  return new MockPaymentProvider();
 }
+
+/** التفعيل اليدوي يبقى متاحاً للفريق مهما كان المزوّد. */
+export { ManualPaymentProvider as _ManualPaymentProvider };
 
 // TODO: أضف TapPaymentProvider عند الحاجة — يطبّق الواجهة نفسها.
