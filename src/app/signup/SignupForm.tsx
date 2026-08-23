@@ -13,7 +13,7 @@ function Submit() {
   );
 }
 
-export function SignupForm() {
+export function SignupForm({ next = '' }: { next?: string }) {
   const [state, formAction] = useActionState<SignupState, FormData>(signUp, {});
 
   if (state.notice) {
@@ -26,6 +26,7 @@ export function SignupForm() {
 
   return (
     <form action={formAction} className="space-y-4">
+      <input type="hidden" name="next" value={next} />
       {state.error ? (
         <div className="rounded-xl bg-danger-soft px-3.5 py-2.5 text-[13px] text-danger">{state.error}</div>
       ) : null}

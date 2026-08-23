@@ -17,6 +17,7 @@ export async function signUp(_prev: SignupState, formData: FormData): Promise<Si
   const rawPhone = String(formData.get('phone') ?? '').trim();
   const password = String(formData.get('password') ?? '');
   const consent = formData.get('consent') === 'on';
+  const next = String(formData.get('next') ?? '');
 
   if (!fullName) return { error: 'اكتب اسمك الكامل.' };
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: 'أدخل بريداً إلكترونياً صحيحاً.' };
@@ -46,5 +47,5 @@ export async function signUp(_prev: SignupState, formData: FormData): Promise<Si
   }
 
   revalidatePath('/', 'layout');
-  redirect('/app');
+  redirect(next && next.startsWith('/') ? next : '/app');
 }

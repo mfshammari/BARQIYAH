@@ -279,20 +279,86 @@ export async function deleteGuest(formData: FormData) {
 }
 
 // ————————————————————— الدعاة —————————————————————
+/**
+ * إضافة داعٍ: المالك يحدّد الاسم والجوال والصفة والحصة فقط.
+ * النص والقالب والصورة يملكها الداعي وحده (SPEC §8.2).
+ * إن كان الرقم لمستخدم قائم رُبط حسابه مباشرة، وإلا وصله رابط ينشئ به حسابه.
+ */
 export async function addInviter(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const eventId = String(formData.get('event_id') ?? '');
+  const { supabase, event } = await guardEvent(eventId);
+
+  const name = String(formData.get('name') ?? '').trim();
+  const rawPhone = String(formData.get('phone') ?? '').trim();
+  const roleLabel = String(formData.get('role_label') ?? 'داعٍ').trim() || 'داعٍ';
+  const sideLabel = String(formData.get('side_label') ?? '').trim() || null;
+  const seatsQuota = Number(formData.get('seats_quota') ?? 0);
+
+  if (!name) return { error: 'اسم الداعي مطلوب.' };
+  if (!isValidPhone(rawPhone)) return { error: 'جوال الداعي مطلوب ليدخل ويكتب دعوته.' };
+  if (!Number.isInteger(seatsQuota) || seatsQuota < 0) return { error: 'الحصة يجب أن تكون رقماً موجباً.' };
+
+  const phone = normalizePhone(rawPhone);
+
+  // ربط حساب قائم بنفس الرقم إن وُجد
+  let profileId: string | null = null;
+  if (adminClientAvailable) {
+    try {
+      const { data: existing } = await createAdminClient()
+        .from('profiles').select('id').eq('phone', phone).limit(1).maybeSingle();
+      profileId = existing?.id ?? null;
+    } catch { /* الربط اختياري */ }
+  }
+
+  const { data, error } = await supabase
+    .from('inviters')
+    .insert({
+      event_id: eventId, name, phone, role_label: roleLabel,
+      side_label: sideLabel, seats_quota: seatsQuota, profile_id: profileId,
+      joined_at: profileId ? new Date().toISOString() : null,
+    })
+    .select('invite_token')
+    .single();
+
+  if (error) {
+    if (error.code === '23505') return { error: 'هذا الرقم مضاف كداعٍ في هذه المناسبة.' };
+    if (error.message.includes('QUOTA_EXCEEDS_EVENT_SEATS')) {
+      const left = event.seats_quota;
+      return { error: `الحصة تتجاوز المتاح للتوزيع من رصيد المناسبة (${left} مقعداً).` };
+    }
+    return { error: 'تعذّرت إضافة الداعي.' };
+  }
+
+  revalidateEvent(eventId);
+  return {
+    notice: profileId
+      ? `أُضيف ${name} — المناسبة ظهرت في حسابه مباشرة.`
+      : `أُضيف ${name} — شارك معه رابط الدخول ليكتب دعوته.`,
+  };
+}
+
+/** تعديل حصة داعٍ — المالك وحده يوزّع (SPEC §8.2). */
+export async function updateInviterQuota(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const eventId = String(formData.get('event_id') ?? '');
   const { supabase } = await guardEvent(eventId);
 
-  const name = String(formData.get('name') ?? '').trim();
-  const roleLabel = String(formData.get('role_label') ?? 'داعٍ').trim() || 'داعٍ';
-  if (!name) return { error: 'اسم الداعي مطلوب.' };
+  const inviterId = String(formData.get('inviter_id') ?? '');
+  const seatsQuota = Number(formData.get('seats_quota') ?? 0);
+  if (!Number.isInteger(seatsQuota) || seatsQuota < 0) return { error: 'حصة غير صالحة.' };
 
   const { error } = await supabase
-    .from('inviters').insert({ event_id: eventId, name, role_label: roleLabel });
-  if (error) return { error: 'تعذّرت إضافة الداعي.' };
+    .from('inviters').update({ seats_quota: seatsQuota })
+    .eq('id', inviterId).eq('event_id', eventId);
+
+  if (error) {
+    if (error.message.includes('QUOTA_EXCEEDS_EVENT_SEATS')) {
+      return { error: 'مجموع الحصص يتجاوز رصيد المناسبة — قلّل الحصة أو رقِّ الباقة.' };
+    }
+    return { error: 'تعذّر تعديل الحصة.' };
+  }
 
   revalidateEvent(eventId);
-  return { notice: `تمت إضافة ${name}.` };
+  return { notice: 'حُدّثت الحصة.' };
 }
 
 export async function deleteInviter(formData: FormData) {

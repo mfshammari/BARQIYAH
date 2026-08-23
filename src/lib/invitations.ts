@@ -4,7 +4,9 @@ import { createAdminClient, adminClientAvailable } from '@/lib/supabase/admin';
 import { appUrl } from '@/lib/env';
 import { buildButtonPayloads, buildSeatsPayload, getWhatsAppProvider } from '@/lib/whatsapp';
 import { OCCASION_LABELS, type EventRow, type Guest, type Template } from '@/lib/types';
-import { formatDate } from '@/lib/format';
+import { formatDate, formatEventLine } from '@/lib/format';
+import { renderInvite, type InviteVars } from '@/lib/inviteVars';
+
 
 export interface SendOutcome {
   guestId: string;
@@ -57,14 +59,27 @@ export function countPlaceholders(body: string): number {
   return found.size;
 }
 
+/** إرسال باسم داعٍ: بحصته ونصّه وصورته وقالبه. */
+export interface InviterContext {
+  inviterId: string;
+  inviteVars: InviteVars;
+  imageUrl: string | null;
+  templateId: string;
+  reasons?: Record<string, string>;
+}
+
 /**
  * إرسال دعوات: يحجز المقاعد ذرّياً في قاعدة البيانات أولاً،
  * ثم يرسل عبر واتساب، ويحرّر الحجز عند فشل الإرسال.
+ *
+ * مع سياق داعٍ: الحجز من حصته، والنص والصورة والقالب من اختياره —
+ * وسطر الموعد والمكان يُحقن من بيانات المناسبة ولا يحرّره (SPEC §6).
  */
 export async function sendInvitations(
   supabase: SupabaseClient,
   eventId: string,
   guestIds: string[],
+  inviterCtx?: InviterContext,
 ): Promise<SendOutcome[]> {
   if (guestIds.length === 0) return [];
 
@@ -81,11 +96,16 @@ export async function sendInvitations(
     .returns<Guest[]>();
   const guestMap = new Map((guests ?? []).map((g) => [g.id, g]));
 
-  // 1) الحجز الذرّي
-  const { data: reserved, error: reserveError } = await supabase.rpc('reserve_seats_for_send', {
-    p_event_id: eventId,
-    p_guest_ids: guestIds,
-  });
+  // 1) الحجز الذرّي — من حصة الداعي إن وُجد سياقه، وإلا من رصيد المناسبة
+  const { data: reserved, error: reserveError } = inviterCtx
+    ? await supabase.rpc('reserve_seats_for_inviter', {
+        p_inviter_id: inviterCtx.inviterId,
+        p_guest_ids: guestIds,
+      })
+    : await supabase.rpc('reserve_seats_for_send', {
+        p_event_id: eventId,
+        p_guest_ids: guestIds,
+      });
 
   if (reserveError) {
     const msg = reserveError.message.includes('FORBIDDEN')
@@ -102,11 +122,12 @@ export async function sendInvitations(
 
   for (const row of rows) {
     if (row.ok) { toSend.push(row); continue; }
+    const reasons = { ...RESERVE_REASONS, ...(inviterCtx?.reasons ?? {}) };
     outcomes.push({
       guestId: row.guest_id,
       name: guestMap.get(row.guest_id)?.name ?? '',
       ok: false,
-      reason: RESERVE_REASONS[row.reason] ?? 'تعذّر الإرسال.',
+      reason: reasons[row.reason] ?? 'تعذّر الإرسال.',
       missingSeats: row.missing_seats || undefined,
     });
   }
@@ -115,8 +136,31 @@ export async function sendInvitations(
 
   // 2) الإرسال الفعلي
   const provider = await getWhatsAppProvider();
-  const templateName = template?.meta_template_name || 'barqiyah_invite_default';
-  const bodyParams = buildBodyParams(event, template);
+
+  // قالب الداعي إن وُجد، وإلا قالب المناسبة
+  let activeTemplate = template;
+  if (inviterCtx && inviterCtx.templateId !== event.template_id) {
+    const { data: t } = await supabase
+      .from('templates').select('*').eq('id', inviterCtx.templateId).maybeSingle<Template>();
+    if (t) activeTemplate = t;
+  }
+
+  const templateName = activeTemplate?.meta_template_name || 'barqiyah_invite_default';
+
+  // سطر الموعد والمكان: من حقول المناسبة وحدها، مصدره واحد لكل الدعاة
+  const eventLine = formatEventLine({
+    dateGregorian: event.event_date,
+    dateHijri: event.event_date_hijri,
+    weekday: event.event_weekday,
+    time: event.event_time,
+    venue: event.venue,
+  });
+
+  const bodyParams = inviterCtx
+    ? [inviterCtx.inviteVars.host, inviterCtx.inviteVars.occasion, eventLine]
+    : buildBodyParams(event, activeTemplate);
+
+  const headerImage = inviterCtx?.imageUrl ?? event.image_url ?? activeTemplate?.image_url ?? null;
 
   for (const row of toSend) {
     const guest = guestMap.get(row.guest_id);
@@ -126,18 +170,21 @@ export async function sendInvitations(
       to: guest.phone,
       templateName,
       languageCode: 'ar',
-      headerImageUrl: event.image_url ?? template?.image_url ?? null,
+      headerImageUrl: headerImage,
       bodyParams,
       buttonPayloads: buildButtonPayloads(guest.invite_token),
     });
 
     await logMessage({
       event_id: eventId, guest_id: guest.id, kind: 'invitation',
+      inviter_id: inviterCtx?.inviterId ?? guest.inviter_id ?? null,
+      template_name: templateName,
+      meta_message_id: result.messageId ?? null,
       provider: result.provider, to_phone: guest.phone,
       status: result.ok ? 'sent' : 'failed',
       message_id: result.messageId ?? null, error: result.error ?? null,
       payload: {
-        template: templateName,
+        rendered: inviterCtx ? renderInvite(inviterCtx.inviteVars, eventLine) : null,
         rsvp_url: appUrl(`/rsvp/${guest.invite_token}`),
         body_params: bodyParams,
       },
@@ -147,7 +194,11 @@ export async function sendInvitations(
       outcomes.push({ guestId: guest.id, name: guest.name, ok: true });
     } else {
       // تحرير الحجز حتى لا يُستهلك الرصيد على رسالة لم تصل
-      await supabase.rpc('release_seat_hold', { p_guest_id: guest.id });
+      if (inviterCtx) {
+        await supabase.rpc('release_inviter_hold', { p_guest_id: guest.id });
+      } else {
+        await supabase.rpc('release_seat_hold', { p_guest_id: guest.id });
+      }
       outcomes.push({
         guestId: guest.id, name: guest.name, ok: false,
         reason: result.error ? `فشل الإرسال: ${result.error}` : 'فشل الإرسال عبر واتساب.',
