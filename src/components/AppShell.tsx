@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { signOut } from '@/app/login/actions';
 import { Logo } from '@/components/ui';
+import { CommandSearch } from '@/components/CommandSearch';
 
 export interface NavItem { href: string; label: string }
 
 /** الهيكل العام للوحات (أدمن / صاحب مناسبة) — موبايل أولاً. */
 export function AppShell({
-  nav, active, userName, userSub, children, backHref, backLabel,
+  nav, active, userName, userSub, children, backHref, backLabel, search = false,
 }: {
   nav: NavItem[];
   active: string;
@@ -15,6 +16,8 @@ export function AppShell({
   children: React.ReactNode;
   backHref?: string;
   backLabel?: string;
+  /** بحث ⌘K — للوحات الأدمن */
+  search?: boolean;
 }) {
   return (
     <div className="min-h-screen flex flex-col" data-layer="soft">
@@ -29,6 +32,7 @@ export function AppShell({
             ) : null}
           </div>
           <div className="flex items-center gap-3">
+            {search ? <CommandSearch /> : null}
             <div className="text-left hidden sm:block">
               <div className="text-[13px] font-semibold leading-tight">{userName}</div>
               {userSub ? <div className="text-[11px] text-white/60 leading-tight">{userSub}</div> : null}
