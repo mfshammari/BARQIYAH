@@ -77,7 +77,7 @@ export default async function EventDashboard({ params }: { params: Promise<{ id:
       ) : null}
 
       <Countdown
-        days={formatNumber(days)}
+        days={days}
         dateLine={
           formatEventLine({
             dateGregorian: e.event_date,

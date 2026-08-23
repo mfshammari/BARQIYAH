@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { requireUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { PageHeader, EmptyState, EventStatusBadge, PolicyNote } from '@/components/ui';
+import { EmptyState, EventStatusBadge } from '@/components/ui';
 import { formatHijri, formatNumber } from '@/lib/format';
 import { computeBalance } from '@/lib/balance';
 import { OCCASION_LABELS, type EventRow, type Guest, type Inviter } from '@/lib/types';
@@ -36,6 +36,13 @@ function OwnedEventCard({ event }: { event: EventWithGuests }) {
 
         {isDraft ? (
           <div className="evc-draft">أكمل التجهيز لتتمكن من الإرسال</div>
+        ) : isPast ? (
+          <div className="evc-nums num">
+            <span>
+              {formatNumber(balance.cnt_attended)} حضروا من {formatNumber(event.seats_quota)}
+            </span>
+            <span className="font-semibold text-brand">التقرير</span>
+          </div>
         ) : (
           <>
             <div className="evc-bar">
@@ -105,7 +112,12 @@ function InvitedEventCard({ row, mySeats }: { row: InviterRow; mySeats: { held: 
   );
 }
 
-export default async function MyEventsPage() {
+export default async function MyEventsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
   const user = await requireUser();
   const supabase = await createClient();
 
@@ -159,27 +171,72 @@ export default async function MyEventsPage() {
   const totalConfirmed = owned.reduce(
     (s, e) => s + computeBalance(e.guests as Guest[], e.seats_quota).confirmed, 0);
 
+  const rate = (() => {
+    const sent = owned.reduce((n, e) => n + (e.guests ?? []).filter((g) => g.status !== 'draft').length, 0);
+    const yes = owned.reduce((n, e) => n + (e.guests ?? [])
+      .filter((g) => g.status === 'accepted' || g.status === 'attended').length, 0);
+    return sent ? Math.round((yes / sent) * 100) : 0;
+  })();
+
+  // تبويبات التصفية — تُطبَّق على المناسبات المملوكة وحدها
+  const isPast = (e: EventWithGuests) =>
+    e.status === 'closed' || e.event_date < new Date().toISOString().slice(0, 10);
+  const buckets = {
+    all: owned,
+    active: owned.filter((e) => e.status === 'active' && !isPast(e)),
+    soon: owned.filter((e) => (e.status === 'unpaid' || e.status === 'pending') && !isPast(e)),
+    past: owned.filter(isPast),
+  } as const;
+  const tabKey = (tab === 'active' || tab === 'soon' || tab === 'past') ? tab : 'all';
+  const shown = buckets[tabKey];
+
+  const TABS: { key: keyof typeof buckets; label: string }[] = [
+    { key: 'all', label: 'الكل' },
+    { key: 'active', label: 'نشطة' },
+    { key: 'soon', label: 'قادمة' },
+    { key: 'past', label: 'سابقة' },
+  ];
+
   return (
     <>
-      <PageHeader
-        title="مناسباتي"
-        subtitle="حسابك الدائم يجمع كل مناسباتك — تلك التي تملكها وتلك التي دُعيت لتكون داعياً فيها."
-        action={<Link href="/app/events/new" className="btn-primary">+ مناسبة جديدة</Link>}
-      />
+      <div className="acct-head">
+        <div>
+          <h1 className="acct-h">مناسباتي</h1>
+          <p className="acct-sub">
+            كل مناسباتك في مكان واحد — نشطة وسابقة ومسوّدات، وتلك التي دُعيت لتكون داعياً فيها.
+          </p>
+        </div>
+        <Link href="/app/events/new" className="btn-primary btn-sm">＋ مناسبة جديدة</Link>
+      </div>
 
-      <div className="mb-6 grid grid-cols-3 gap-3">
-        <div className="stat-g">
-          <div className="l">مناسبات</div>
-          <div className="v num">{formatNumber(owned.length + invited.length)}</div>
+      <div className="acct-stats">
+        <div className="as">
+          <b className="num">{formatNumber(owned.length + invited.length)}</b>
+          <span>مناسبات</span>
         </div>
-        <div className="stat-n">
-          <div className="l">في دفتر العناوين</div>
-          <div className="v num">{formatNumber(contactCount?.length ?? 0)}</div>
+        <div className="as">
+          <b className="num">{formatNumber(contactCount?.length ?? 0)}</b>
+          <span>في دفتر العناوين</span>
         </div>
-        <div className="stat-d">
-          <div className="l">إجمالي التأكيدات</div>
-          <div className="v num">{formatNumber(totalConfirmed)}</div>
+        <div className="as">
+          <b className="num">{formatNumber(rate)}٪</b>
+          <span>متوسط التأكيد</span>
         </div>
+      </div>
+
+      <div className="tabs-row mt-5">
+        {TABS.map((t) => (
+          <Link
+            key={t.key}
+            href={t.key === 'all' ? '/app' : `/app?tab=${t.key}`}
+            className={tabKey === t.key ? 'tab-on' : 'tab'}
+          >
+            {t.label}
+            {t.key !== 'all' && buckets[t.key].length > 0 ? (
+              <span className="num"> {formatNumber(buckets[t.key].length)}</span>
+            ) : null}
+          </Link>
+        ))}
       </div>
 
       {owned.length === 0 ? (
@@ -188,19 +245,19 @@ export default async function MyEventsPage() {
           description="ابدأ بإنشاء مناسبتك الأولى، ثم أضف المدعوين وأرسل الدعوات عبر واتساب."
           action={<Link href="/app/events/new" className="btn-primary">إنشاء مناسبة</Link>}
         />
+      ) : shown.length === 0 ? (
+        <EmptyState title="لا مناسبات في هذا التبويب" />
       ) : (
         <div className="grid gap-3">
-          {owned.map((e) => <OwnedEventCard key={e.id} event={e} />)}
+          {shown.map((e) => <OwnedEventCard key={e.id} event={e} />)}
         </div>
       )}
 
       {invited.length > 0 ? (
         <>
-          <div className="mt-8 mb-3 border-t border-line pt-6">
-            <h2 className="sec-title">مناسبات أنا داعٍ فيها</h2>
-            <p className="mt-1 text-[13px] text-muted">
-              دعاكَ أصحابها للمشاركة في الدعوة — لكل واحدة حصتك ونصّك.
-            </p>
+          <div className="sec-split">
+            <h2 className="ss-h">مناسبات أنا داعٍ فيها</h2>
+            <p className="ss-s">دعاكَ أصحابها للمشاركة في الدعوة — لكل واحدة حصتك ونصّك.</p>
           </div>
           <div className="grid gap-3">
             {invited.map((r) => (
@@ -214,22 +271,27 @@ export default async function MyEventsPage() {
         </>
       ) : null}
 
-      <Link
-        href="/app/contacts"
-        className="mt-8 block rounded-2xl border border-line bg-surface p-4 transition hover:border-gold"
-      >
-        <b className="block text-[15px] font-bold text-brand">دفتر العناوين</b>
-        <span className="mt-1 block text-[12.5px] text-muted num">
-          {formatNumber(contactCount?.length ?? 0)} جهة محفوظة — تستخدمها في كل مناسباتك،
-          سواءً كنت مالكاً أو داعياً.
-        </span>
-      </Link>
-
-      <div className="mt-4">
-        <PolicyNote>
-          جهاتك وأرقام مدعويك خاصة بك — لا تُستخدم لأي غرض غير إرسال دعواتك.
-        </PolicyNote>
+      <div className="acct-links">
+        <Link href="/app/contacts" className="acct-link">
+          <b>دفتر العناوين</b>
+          <span className="num">
+            {formatNumber(contactCount?.length ?? 0)} جهة محفوظة — تستخدمها في كل مناسباتك،
+            سواءً كنت مالكاً أو داعياً.
+          </span>
+        </Link>
+        <Link href="/app/billing" className="acct-link">
+          <b>المدفوعات والفواتير</b>
+          <span>باقات مناسباتك وحالة كل عملية دفع.</span>
+        </Link>
+        <Link href="/app/settings" className="acct-link">
+          <b>حسابي</b>
+          <span>اسمك وجوالك — وما يظهر منها للمدعوين.</span>
+        </Link>
       </div>
+
+      <p className="bk-note">
+        جهاتك وأرقام مدعويك خاصة بك — لا تُستخدم لأي غرض غير إرسال دعواتك.
+      </p>
     </>
   );
 }

@@ -54,29 +54,36 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen flex-col bg-bg" data-layer="soft">
-      <header className="sticky top-0 z-30 bg-brand text-white">
-        <div className="mx-auto flex h-14 max-w-[1120px] items-center justify-between gap-3 px-4">
-          <Link href="/" className="shrink-0 font-cerem text-xl text-white">برقية</Link>
-          <div className="flex items-center gap-3">
-            {search ? <CommandSearch /> : null}
-            <div className="hidden text-start sm:block">
-              <div className="text-[13px] font-semibold leading-tight">{userName}</div>
-              {userSub ? <div className="text-[11px] leading-tight text-white/60">{userSub}</div> : null}
+      <div className="mx-auto w-full max-w-[1120px] px-4">
+        <div className="acct-top !mb-0">
+          <Link href="/" className="acct-brand">
+            برقية<span className="dot">.</span>
+          </Link>
+          <div className="group acct-me">
+            <div className="acct-av" aria-hidden>{userName.trim().charAt(0) || 'ب'}</div>
+            <div>
+              <div className="acct-n">{userName}</div>
+              {userSub ? <div className="acct-s">{userSub}</div> : null}
             </div>
-            <form action={signOut}>
-              <button type="submit" className="text-[12.5px] text-white/70 hover:text-white">
-                خروج
-              </button>
-            </form>
+            <span className="text-[13px] text-muted" aria-hidden>⌄</span>
+            <div className="acct-drop">
+              <Link href="/app">مناسباتي</Link>
+              <hr />
+              <form action={signOut}>
+                <button type="submit">تسجيل الخروج</button>
+              </form>
+            </div>
           </div>
         </div>
-      </header>
+      </div>
 
       <div className="mx-auto flex w-full max-w-[1120px] flex-1 flex-col items-start gap-5 px-4 py-6 lg:flex-row">
         <aside className="side-panel">
           {backHref ? (
             <Link href={backHref} className="back-acct">← {backLabel ?? 'رجوع'}</Link>
           ) : null}
+
+          {search ? <div className="mb-3"><CommandSearch /></div> : null}
 
           {host ? (
             <div className="side-host">

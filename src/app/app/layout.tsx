@@ -2,7 +2,7 @@ import { requireUser, isAdminRole } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { supabaseConfigured } from '@/lib/env';
 import { SetupNotice } from '@/components/SetupNotice';
-import { AccountNav } from './AccountNav';
+import { AccountShell } from '@/components/AccountShell';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,11 +15,11 @@ export default async function AccountLayout({ children }: { children: React.Reac
   if (isAdminRole(user.profile.role)) redirect('/admin');
 
   return (
-    <AccountNav
+    <AccountShell
       userName={user.profile.full_name ?? user.email ?? 'حسابي'}
-      userSub={user.profile.phone ?? undefined}
+      userSub="حساب شخصي"
     >
       {children}
-    </AccountNav>
+    </AccountShell>
   );
 }

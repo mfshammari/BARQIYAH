@@ -49,11 +49,12 @@ export function CommandSearch() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="hidden items-center gap-2 rounded-lg border border-white/20 px-3 py-1.5
-                   text-[12px] text-white/70 hover:text-white sm:flex"
+        className="flex w-full items-center gap-2 rounded-xl border border-line
+                   bg-surface px-3.5 py-2.5 text-[13.5px] text-muted hover:border-gold"
       >
-        بحث
-        <kbd className="rounded border border-white/25 px-1 text-[10px]">⌘K</kbd>
+        <span aria-hidden>⌕</span>
+        بحث سريع…
+        <kbd className="ms-auto rounded border border-line px-1 text-[10px]">⌘K</kbd>
       </button>
 
       {open ? (

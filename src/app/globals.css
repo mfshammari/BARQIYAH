@@ -151,6 +151,46 @@ body {
   .page-title { @apply font-display font-extrabold text-xl sm:text-2xl text-ink; }
   .page-sub   { @apply text-[13.5px] text-muted mt-1; }
   .sec-title  { @apply font-display font-bold text-base text-ink; }
+
+  /* ————— عناوين أقسام صفحة الهبوط: كبيرة ومتوسّطة ————— */
+  .sec-head { @apply mb-14; }
+  .sec-h {
+    @apply text-center font-display text-[clamp(28px,4vw,44px)] font-bold
+           leading-[1.3] text-brand;
+  }
+  .sec-sub {
+    @apply mx-auto mt-5 max-w-[520px] text-center text-[16px] leading-[1.9] text-muted;
+  }
+
+  /* لقطة شاشة مصغّرة داخل «داخل المنصة» */
+  .sc-shot { @apply overflow-hidden rounded-lg border border-line bg-surface; }
+  .shot-bar { @apply flex gap-1.5 bg-panel px-3 py-2.5; }
+  .shot-bar i { @apply block h-2.5 w-2.5 rounded-full bg-line; }
+
+  /* شريط الطمأنة أسفل الواجهة */
+  .strip { @apply bg-brand py-4; }
+  .strip-in {
+    @apply mx-auto flex max-w-[1160px] flex-wrap items-center justify-center gap-5
+           px-6 text-[13.5px] text-ivory/85;
+  }
+  .strip-in i { @apply text-[7px] not-italic text-gold-soft; }
+
+  /* شريط التجربة المجانية */
+  .trial {
+    @apply mt-5 inline-flex max-w-full items-center gap-2.5 rounded-[2px] border
+           border-gold-line bg-paper px-4 py-2.5 text-[14px] text-ink;
+  }
+  .trial b { @apply font-semibold text-brand; }
+  .trial-ic {
+    @apply grid h-5 w-5 flex-shrink-0 place-items-center rounded-full bg-gold
+           text-[11px] font-bold text-white;
+  }
+
+  /* وسم الدعوة الذهبي على زاوية البطاقة */
+  .invite-badge {
+    @apply absolute -top-3.5 z-10 rounded-[2px] bg-gold px-3 py-1.5 text-[11px]
+           font-semibold text-white shadow-pop;
+  }
   .sec-label  { @apply mb-2.5 text-[12px] text-muted; }
 
   /* ————— لغة الشاشات الداخلية (مطابقة النموذج) ————— */
@@ -177,12 +217,12 @@ body {
   .stat { @apply rounded-2xl p-4; }
   .stat .l { @apply text-[12px]; }
   .stat .v { @apply mt-1 font-ui text-[30px] font-bold leading-none; }
-  .stat-g { @apply stat bg-brand-soft; }
+  .stat-g { @apply bg-brand-soft; }
   .stat-g .l { @apply text-brand/85; }
   .stat-g .v { @apply text-brand; }
-  .stat-d { @apply stat bg-warn-soft; }
+  .stat-d { @apply bg-warn-soft; }
   .stat-d .l, .stat-d .v { @apply text-warn; }
-  .stat-n { @apply stat bg-panel; }
+  .stat-n { @apply bg-panel; }
   .stat-n .l { @apply text-muted; }
   .stat-n .v { @apply text-ink; }
 
@@ -253,6 +293,99 @@ body {
   .crumb { @apply mb-2.5 text-[12.5px] text-muted; }
   .crumb a { @apply text-brand hover:underline; }
   .crumb b { @apply font-semibold text-brand; }
+
+  /* ————— مستوى الحساب: شريط علوي فاتح بلا قائمة جانبية ————— */
+  .acct-top {
+    @apply mb-6 flex flex-wrap items-center justify-between gap-3
+           border-b border-line py-4;
+  }
+  .acct-brand { @apply font-cerem text-[26px] text-brand; }
+  .acct-brand .dot { @apply text-gold; }
+  .acct-me { @apply relative flex items-center gap-2.5 rounded-xl px-2 py-1.5 hover:bg-panel; }
+  .acct-av {
+    @apply grid h-[38px] w-[38px] place-items-center rounded-full
+           bg-brand-soft text-[15px] font-bold text-brand;
+  }
+  .acct-n { @apply text-[14px] font-semibold text-brand; }
+  .acct-s { @apply text-[12px] text-muted; }
+  .acct-drop {
+    @apply invisible absolute end-0 top-full z-40 min-w-[210px] rounded-xl border
+           border-line bg-surface p-1.5 opacity-0 shadow-pop transition
+           group-hover:visible group-hover:opacity-100
+           group-focus-within:visible group-focus-within:opacity-100;
+  }
+  .acct-drop a, .acct-drop button {
+    @apply block w-full rounded-lg px-3 py-2.5 text-start text-[13.5px] text-ink
+           hover:bg-brand-soft hover:text-brand;
+  }
+  .acct-drop hr { @apply mx-2 my-1.5 border-0 border-t border-line; }
+
+  .acct-head { @apply mb-5 flex flex-wrap items-start justify-between gap-3.5; }
+  .acct-h { @apply text-[24px] font-bold text-brand; }
+  .acct-sub { @apply mt-1 max-w-[520px] text-[13.5px] leading-8 text-muted; }
+  .acct-stats { @apply grid grid-cols-1 gap-3 sm:grid-cols-3; }
+  .as { @apply rounded-2xl bg-brand-soft px-4 py-3.5; }
+  .as b { @apply block font-ui text-[26px] font-bold leading-tight text-brand; }
+  .as span { @apply text-[12px] text-brand/80; }
+  .acct-links { @apply mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3; }
+  .acct-link {
+    @apply w-full rounded-2xl border border-line bg-paper p-4 text-start
+           transition hover:border-gold;
+  }
+  .acct-link b { @apply mb-0.5 block text-[14px] font-semibold text-brand; }
+  .acct-link span { @apply block text-[12px] leading-7 text-muted; }
+
+  /* فاصل قسم بعنوان ووصف */
+  .sec-split { @apply mb-3 mt-8 border-t border-line pt-5; }
+  .ss-h { @apply text-[18px] font-bold text-brand; }
+  .ss-s { @apply mt-1 text-[13px] text-muted; }
+
+  /* تبويبات دائرية للتصفية */
+  .tabs-row { @apply mb-3.5 flex flex-wrap gap-2; }
+  .tab {
+    @apply rounded-full border border-line px-3.5 py-1.5 text-[13px] text-muted
+           transition hover:text-ink;
+  }
+  .tab-on { @apply tab border-brand bg-brand font-semibold text-white hover:text-white; }
+
+  /* تبويبات داخلية بخط فاصل */
+  .ev-tabs { @apply mb-4 flex flex-wrap gap-2 border-b border-line pb-3; }
+
+  /* خطوات إنشاء مناسبة */
+  .steps-line { @apply mt-1.5 flex flex-wrap gap-2; }
+  .sl { @apply rounded-full bg-panel px-3.5 py-2 text-[12.5px] text-muted; }
+  .sl-on { @apply sl bg-brand font-semibold text-white; }
+
+  /* تنبيه بأيقونة دائرية وزر على اليسار */
+  .alert-row { @apply mb-5 flex items-start gap-3 rounded-xl px-4 py-3.5; }
+  .alert-warn { @apply alert-row bg-warn-soft; }
+  .alert-info { @apply alert-row bg-brand-soft; }
+  .alert-row .a-ic {
+    @apply grid h-[22px] w-[22px] flex-shrink-0 place-items-center rounded-full
+           text-[13px] font-bold text-white;
+  }
+  .alert-warn .a-ic { @apply bg-gold; }
+  .alert-info .a-ic { @apply bg-brand; }
+  .alert-row b { @apply text-[14px]; }
+  .alert-warn b { @apply text-warn; }
+  .alert-info b { @apply text-brand; }
+  .alert-row .a-sub { @apply mt-0.5 text-[13px] leading-7; }
+  .alert-warn .a-sub { @apply text-warn/90; }
+  .alert-info .a-sub { @apply text-brand/85; }
+  .alert-row .a-act { @apply ms-auto flex-shrink-0; }
+
+  /* بطاقة مهمة إدارية: رقم + عنوان + سطر سياق + زر */
+  .task-grid { @apply grid gap-3 sm:grid-cols-2 lg:grid-cols-3; }
+  .task { @apply rounded-2xl border border-line bg-surface p-4; }
+  .task .t-n { @apply font-ui text-[30px] font-bold leading-tight text-brand; }
+  .task .t-l { @apply mb-0.5 text-[13.5px] font-semibold text-brand; }
+  .task .t-m { @apply mb-3 text-[12px] text-muted; }
+
+  /* عمودان غير متساويين */
+  .two-col { @apply grid items-start gap-3.5 lg:grid-cols-[1.25fr_.75fr]; }
+
+  /* أدوات دفتر العناوين */
+  .bk-note { @apply mt-3.5 text-center text-[12.5px] text-muted; }
 
   /* هيكل اللوحات: شريط جانبي كما في النموذج */
   .side-panel {
