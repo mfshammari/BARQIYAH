@@ -1,26 +1,41 @@
 import { requireEventAccess } from '@/lib/auth';
-import { PageHeader, EmptyState, Alert } from '@/components/ui';
+import { PageHeader, EmptyState, Alert, QuotaBar } from '@/components/ui';
 import { ActionForm, SubmitButton } from '@/components/ActionForm';
 import { addInviter, deleteInviter, updateInviterQuota } from '../actions';
 import { appUrl } from '@/lib/env';
-import { formatNumber } from '@/lib/format';
-import type { EventRow, Guest, Inviter } from '@/lib/types';
+import { formatEventLine, formatNumber } from '@/lib/format';
+import { renderInvite } from '@/lib/inviteVars';
+import type { EventRow, Guest, Inviter, Template } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
+
+/** ألوان شرائح الحصص — تدور على الدعاة بالترتيب. */
+const SEGMENT_COLORS = ['rgb(var(--brand))', 'rgb(var(--gold))', 'rgb(var(--ok))', 'rgb(var(--warn))', 'rgb(var(--info))'];
 
 export default async function InvitersPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { event, supabase } = await requireEventAccess(id);
   const e = event as EventRow;
 
-  const [{ data: invitersData }, { data: guestsData }] = await Promise.all([
+  const [{ data: invitersData }, { data: guestsData }, { data: templatesData }] = await Promise.all([
     supabase.from('inviters').select('*').eq('event_id', id)
       .order('created_at', { ascending: true }).returns<Inviter[]>(),
     supabase.from('guests').select('*').eq('event_id', id).returns<Guest[]>(),
+    supabase.from('templates').select('id, name').returns<Template[]>(),
   ]);
 
   const inviters = invitersData ?? [];
   const guests = guestsData ?? [];
+  const templateName = new Map((templatesData ?? []).map((t) => [t.id, t.name]));
+
+  // سطر الموعد والمكان يُحقن في نص كل داعٍ — من بيانات المناسبة وحدها
+  const eventLine = formatEventLine({
+    dateGregorian: e.event_date,
+    dateHijri: e.event_date_hijri,
+    weekday: e.event_weekday,
+    time: e.event_time,
+    venue: e.venue,
+  });
 
   const allocated = inviters.reduce((s, i) => s + i.seats_quota, 0);
   const unallocated = e.seats_quota - allocated;
@@ -46,43 +61,33 @@ export default async function InvitersPage({ params }: { params: Promise<{ id: s
         subtitle="وزّع حصص المقاعد. كل داعٍ يكتب نصّه ويختار قالبه بنفسه — ولا تملك تعديلها."
       />
 
-      {/* شريط توزيع الحصص */}
-      <div className="card card-pad mb-5">
-        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="sec-title">توزيع المقاعد</h2>
-          <span className="text-[12.5px] text-muted">
-            من أصل <b className="text-ink num">{formatNumber(e.seats_quota)}</b> مقعد
-          </span>
-        </div>
+      {/* شريط توزيع الحصص — لكل داعٍ لونه في المفتاح */}
+      <QuotaBar
+        total={formatNumber(e.seats_quota)}
+        totalLabel="مقعداً في الباقة"
+        segments={[
+          ...inviters.map((inv, i) => ({
+            label: `${inv.name} ${formatNumber(inv.seats_quota)}`,
+            value: inv.seats_quota,
+            pct: e.seats_quota ? (inv.seats_quota / e.seats_quota) * 100 : 0,
+            color: SEGMENT_COLORS[i % SEGMENT_COLORS.length],
+          })),
+          {
+            label: `غير موزّع ${formatNumber(Math.max(unallocated, 0))}`,
+            value: Math.max(unallocated, 0),
+            pct: e.seats_quota ? (Math.max(unallocated, 0) / e.seats_quota) * 100 : 0,
+            color: 'rgb(var(--line))',
+          },
+        ]}
+      />
 
-        <div className="flex h-3 overflow-hidden rounded-full border border-line bg-panel">
-          {inviters.map((inv, i) => (
-            <div
-              key={inv.id}
-              title={`${inv.name}: ${inv.seats_quota}`}
-              className={i % 2 === 0 ? 'h-full bg-brand' : 'h-full bg-gold'}
-              style={{ width: `${e.seats_quota ? (inv.seats_quota / e.seats_quota) * 100 : 0}%` }}
-            />
-          ))}
+      {unallocated < 0 ? (
+        <div className="mb-4">
+          <Alert tone="danger" title="مجموع الحصص يتجاوز الباقة">
+            راجع الحصص — لا يمكن أن يتجاوز مجموعها عدد مقاعد الباقة.
+          </Alert>
         </div>
-
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <div>
-            <div className="font-ui text-lg font-extrabold num">{formatNumber(allocated)}</div>
-            <div className="text-[11.5px] text-muted">موزَّع على الدعاة</div>
-          </div>
-          <div>
-            <div className={`font-ui text-lg font-extrabold num ${unallocated < 0 ? 'text-danger' : 'text-brand'}`}>
-              {formatNumber(unallocated)}
-            </div>
-            <div className="text-[11.5px] text-muted">غير موزَّع (يبقى لك)</div>
-          </div>
-          <div>
-            <div className="font-ui text-lg font-extrabold num">{formatNumber(inviters.length)}</div>
-            <div className="text-[11.5px] text-muted">عدد الدعاة</div>
-          </div>
-        </div>
-      </div>
+      ) : null}
 
       <div className="grid gap-5 lg:grid-cols-[1fr_330px] items-start">
         <div className="space-y-4">
@@ -93,45 +98,74 @@ export default async function InvitersPage({ params }: { params: Promise<{ id: s
               const s = statsFor(inv.id);
               const written = Boolean(inv.template_id && (inv.invite_vars as Record<string, string>)?.host);
               return (
-                <div key={inv.id} className="card card-pad">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <div className="font-ui font-bold">{inv.name}</div>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <div key={inv.id} className="inv-card">
+                  <div className="inv-top">
+                    <div className="min-w-0">
+                      <div className="inv-name">
+                        {inv.name}
                         <span className="badge border border-line bg-panel text-muted">{inv.role_label}</span>
-                        {inv.side_label ? (
-                          <span className="badge bg-gold-soft/50 text-warn">{inv.side_label}</span>
-                        ) : null}
                         <span className={`badge ${written ? 'bg-ok-soft text-ok' : 'bg-warn-soft text-warn'}`}>
                           {written ? 'كتب دعوته' : 'لم يكتب نصّه بعد'}
                         </span>
                       </div>
-                      {inv.phone ? (
-                        <div className="mt-1 text-[12px] text-muted num" dir="ltr">{inv.phone}</div>
+                      <div className="inv-sub">
+                        {inv.side_label ? `${inv.side_label} · ` : ''}
+                        {inv.phone ? <span dir="ltr" className="num">{inv.phone}</span> : 'بلا جوال'}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="inv-seats">
+                        <b className="num">{formatNumber(inv.seats_quota)}</b>
+                        <span>مقعداً</span>
+                      </div>
+                      {inv.role_label !== 'المالك' ? (
+                        <form action={deleteInviter}>
+                          <input type="hidden" name="event_id" value={id} />
+                          <input type="hidden" name="inviter_id" value={inv.id} />
+                          <button type="submit" className="btn-ghost btn-sm">إلغاء</button>
+                        </form>
                       ) : null}
                     </div>
-
-                    {inv.role_label !== 'المالك' ? (
-                      <form action={deleteInviter}>
-                        <input type="hidden" name="event_id" value={id} />
-                        <input type="hidden" name="inviter_id" value={inv.id} />
-                        <button type="submit" className="btn-ghost btn-sm">إلغاء</button>
-                      </form>
-                    ) : null}
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-3 sm:grid-cols-5">
-                    <Stat label="حصته" value={inv.seats_quota} />
-                    <Stat label="مدعوون" value={s.total} />
-                    <Stat label="أُرسلت" value={s.sent} />
-                    <Stat label="مقاعد مؤكّدة" value={s.confirmed} />
-                    <div>
-                      <div className="font-ui text-lg font-extrabold leading-none num">{formatNumber(s.rate)}٪</div>
-                      <div className="mt-1 text-[11.5px] text-muted">معدّل التأكيد</div>
+                  <div className="inv-body">
+                    <div className="inv-lbl">
+                      نصّه كما كتبه{' '}
+                      <span className="badge border border-line bg-panel text-muted">للاطلاع فقط</span>
+                    </div>
+                    {written ? (
+                      <>
+                        <div className="inv-text">
+                          {renderInvite(
+                            (inv.invite_vars ?? {}) as Record<string, string>,
+                            eventLine,
+                          )}
+                        </div>
+                        <div className="inv-row">
+                          <span>
+                            اختار قالب:{' '}
+                            <b>{templateName.get(inv.template_id ?? '') ?? 'قالب معتمد'}</b>
+                          </span>
+                          <span>صورته: <b>{inv.image_url ? 'مرفوعة' : 'لم تُرفع'}</b></span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="inv-pending">
+                        لم يكتب نصّه بعد — سيكتبه عند أول دخول له.
+                      </div>
+                    )}
+
+                    <div className="inv-stats num">
+                      <span>مدعوون {formatNumber(s.total)}</span>
+                      <span>أُرسل {formatNumber(s.sent)}</span>
+                      <span>أكّد {formatNumber(s.accepted)}</span>
+                      <span>مقاعد مؤكّدة {formatNumber(s.confirmed)}</span>
+                      <span>معدّل التأكيد {formatNumber(s.rate)}٪</span>
                     </div>
                   </div>
 
-                  <div className="mt-4 flex flex-wrap items-end gap-2 border-t border-line pt-3">
+                  <div className="inv-acts items-end">
                     <ActionForm action={updateInviterQuota} className="flex flex-wrap items-end gap-2">
                       <input type="hidden" name="event_id" value={id} />
                       <input type="hidden" name="inviter_id" value={inv.id} />
@@ -203,14 +237,5 @@ export default async function InvitersPage({ params }: { params: Promise<{ id: s
         </div>
       </div>
     </>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div>
-      <div className="font-ui text-lg font-extrabold leading-none num">{formatNumber(value)}</div>
-      <div className="mt-1 text-[11.5px] text-muted">{label}</div>
-    </div>
   );
 }

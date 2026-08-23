@@ -4,10 +4,10 @@ import { usePathname } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
 
 const NAV = [
-  { href: '/app', label: 'مناسباتي' },
-  { href: '/app/contacts', label: 'دفتر العناوين' },
-  { href: '/app/billing', label: 'المشتريات' },
-  { href: '/app/settings', label: 'الحساب' },
+  { href: '/app', label: 'مناسباتي', icon: '☰' },
+  { href: '/app/contacts', label: 'دفتر العناوين', icon: '◑' },
+  { href: '/app/billing', label: 'المدفوعات والفواتير', icon: '₪' },
+  { href: '/app/settings', label: 'حسابي', icon: '⚙' },
 ];
 
 export function AccountNav({
@@ -19,7 +19,13 @@ export function AccountNav({
     .sort((a, b) => b.href.length - a.href.length)[0]?.href ?? '/app';
 
   return (
-    <AppShell nav={NAV} active={active} userName={userName} userSub={userSub}>
+    <AppShell
+      nav={NAV}
+      active={active}
+      userName={userName}
+      userSub={userSub}
+      host={{ label: 'حسابي', name: userName, sub: userSub ?? 'حساب شخصي' }}
+    >
       {children}
     </AppShell>
   );
