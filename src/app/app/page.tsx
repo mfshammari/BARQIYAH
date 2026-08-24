@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { EmptyState, EventStatusBadge } from '@/components/ui';
 import { formatHijri, formatNumber } from '@/lib/format';
 import { computeBalance } from '@/lib/balance';
+import { foreignInviterRows } from '@/lib/eventRoles';
 import { OCCASION_LABELS, type EventRow, type Guest, type Inviter } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -70,7 +71,7 @@ function OwnedEventCard({ event }: { event: EventWithGuests }) {
 }
 
 interface InviterRow extends Inviter {
-  events: Pick<EventRow, 'id' | 'host_name' | 'occasion_type' | 'event_date' | 'venue' | 'status'> | null;
+  events: Pick<EventRow, 'id' | 'owner_id' | 'host_name' | 'occasion_type' | 'event_date' | 'venue' | 'status'> | null;
 }
 
 /** بطاقة مناسبة العميل داعٍ فيها — حصته وحدها لا إجمالي المناسبة. */
@@ -142,14 +143,16 @@ export default async function MyEventsPage({
     safe<InviterRow[]>(() =>
       supabase
         .from('inviters')
-        .select('*, events:event_id (id, host_name, occasion_type, event_date, venue, status)')
+        .select('*, events:event_id (id, owner_id, host_name, occasion_type, event_date, venue, status)')
         .eq('profile_id', user.id)
         .returns<InviterRow[]>()),
     safe<{ id: string }[]>(() => supabase.from('contacts').select('id')),
   ]);
 
   const owned = ownedData ?? [];
-  const invited = (invitedData ?? []).filter((r) => r.events);
+  // المالك له صفٌّ في inviters بحسابه نفسه؛ لولا هذا الاستبعاد لظهرت
+  // مناسبته مرّتين: مرّةً يملكها ومرّةً «داعياً فيها» (SPEC §3)
+  const invited = foreignInviterRows(invitedData ?? [], user.id);
 
   // مقاعد الداعي محسوبة داخل حصته فقط (SPEC §8.4)
   const inviterIds = invited.map((r) => r.id);

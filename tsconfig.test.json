@@ -18,6 +18,7 @@
     "src/lib/inviteVars.ts",
     "src/lib/payments/moyasar.ts",
     "src/lib/payments/index.ts",
-    "src/lib/permissions.ts"
+    "src/lib/permissions.ts",
+    "src/lib/eventRoles.ts"
   ]
 }
