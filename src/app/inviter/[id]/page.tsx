@@ -60,6 +60,10 @@ export default async function InviterWorkspace({
 
   if (!event) redirect('/app');
 
+  // مالك المناسبة له صفٌّ في inviters بحسابه، لكن مكانه لوحة مناسبته
+  // لا مساحة الداعي — وإلا ظهر لنفسه «داعياً» بحصة صفر (SPEC §3)
+  if (event.owner_id === user.id) redirect(`/e/${event.id}`);
+
   const balance: EventBalance = {
     ...EMPTY,
     ...((Array.isArray(balanceRows) ? balanceRows[0] : balanceRows) ?? {}),

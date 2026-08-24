@@ -5,7 +5,7 @@ import { addInviter, deleteInviter, updateInviterQuota } from '../actions';
 import { appUrl } from '@/lib/env';
 import { formatEventLine, formatNumber } from '@/lib/format';
 import { renderInvite } from '@/lib/inviteVars';
-import type { EventRow, Guest, Inviter, Template } from '@/lib/types';
+import { OCCASION_LABELS, type EventRow, type Guest, type Inviter, type Template } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +27,10 @@ export default async function InvitersPage({ params }: { params: Promise<{ id: s
   const inviters = invitersData ?? [];
   const guests = guestsData ?? [];
   const templateName = new Map((templatesData ?? []).map((t) => [t.id, t.name]));
+
+  // وصف مناسبة المالك في نص دعوته: «حفل زواج ابنه خالد» ونحوه
+  const ownerOccasion = [OCCASION_LABELS[e.occasion_type], e.celebrant_primary]
+    .filter(Boolean).join(' ');
 
   // سطر الموعد والمكان يُحقن في نص كل داعٍ — من بيانات المناسبة وحدها
   const eventLine = formatEventLine({
@@ -96,7 +100,12 @@ export default async function InvitersPage({ params }: { params: Promise<{ id: s
           ) : (
             inviters.map((inv) => {
               const s = statsFor(inv.id);
-              const written = Boolean(inv.template_id && (inv.invite_vars as Record<string, string>)?.host);
+              // صفّ المالك دعوته هي دعوة المناسبة نفسها (من بياناتها
+              // وقالبها)، لا نصّاً يكتبه كداعٍ — فلا يُقال عنه «لم يكتب نصّه»
+              const isOwnerRow = inv.profile_id === e.owner_id;
+              const written = isOwnerRow
+                ? Boolean(e.template_id)
+                : Boolean(inv.template_id && (inv.invite_vars as Record<string, string>)?.host);
               return (
                 <div key={inv.id} className="inv-card">
                   <div className="inv-top">
@@ -105,7 +114,9 @@ export default async function InvitersPage({ params }: { params: Promise<{ id: s
                         {inv.name}
                         <span className="badge border border-line bg-panel text-muted">{inv.role_label}</span>
                         <span className={`badge ${written ? 'bg-ok-soft text-ok' : 'bg-warn-soft text-warn'}`}>
-                          {written ? 'كتب دعوته' : 'لم يكتب نصّه بعد'}
+                          {written
+                            ? (isOwnerRow ? 'دعوة المناسبة' : 'كتب دعوته')
+                            : (isOwnerRow ? 'لم يُختَر القالب بعد' : 'لم يكتب نصّه بعد')}
                         </span>
                       </div>
                       <div className="inv-sub">
@@ -131,28 +142,40 @@ export default async function InvitersPage({ params }: { params: Promise<{ id: s
 
                   <div className="inv-body">
                     <div className="inv-lbl">
-                      نصّه كما كتبه{' '}
-                      <span className="badge border border-line bg-panel text-muted">للاطلاع فقط</span>
+                      {isOwnerRow ? 'دعوة المناسبة كما تصل المدعوين' : 'نصّه كما كتبه'}{' '}
+                      {isOwnerRow ? null : (
+                        <span className="badge border border-line bg-panel text-muted">للاطلاع فقط</span>
+                      )}
                     </div>
                     {written ? (
                       <>
                         <div className="inv-text">
                           {renderInvite(
-                            (inv.invite_vars ?? {}) as Record<string, string>,
+                            isOwnerRow
+                              ? { host: e.host_name, occasion: ownerOccasion }
+                              : ((inv.invite_vars ?? {}) as Record<string, string>),
                             eventLine,
                           )}
                         </div>
                         <div className="inv-row">
                           <span>
-                            اختار قالب:{' '}
-                            <b>{templateName.get(inv.template_id ?? '') ?? 'قالب معتمد'}</b>
+                            القالب:{' '}
+                            <b>
+                              {templateName.get((isOwnerRow ? e.template_id : inv.template_id) ?? '')
+                                ?? 'قالب معتمد'}
+                            </b>
                           </span>
-                          <span>صورته: <b>{inv.image_url ? 'مرفوعة' : 'لم تُرفع'}</b></span>
+                          <span>
+                            الصورة:{' '}
+                            <b>{(isOwnerRow ? e.image_url : inv.image_url) ? 'مرفوعة' : 'لم تُرفع'}</b>
+                          </span>
                         </div>
                       </>
                     ) : (
                       <div className="inv-pending">
-                        لم يكتب نصّه بعد — سيكتبه عند أول دخول له.
+                        {isOwnerRow
+                          ? 'اختر قالب الدعوة من صفحة «قالب الدعوة» لتظهر هنا.'
+                          : 'لم يكتب نصّه بعد — سيكتبه عند أول دخول له.'}
                       </div>
                     )}
 

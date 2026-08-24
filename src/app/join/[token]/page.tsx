@@ -80,6 +80,20 @@ export default async function JoinPage({ params }: { params: Promise<{ token: st
     );
   }
 
+  // مالك المناسبة لا يصبح داعياً فيها — له لوحتها كاملة (SPEC §3).
+  // بلا هذا الحاجز يحتلّ المالكُ صفَّ داعٍ حقيقي لو فتح رابطه بنفسه.
+  if (event && event.owner_id === user.id) redirect(`/e/${event.id}`);
+
+  // له صفٌّ في المناسبة نفسها؟ نأخذه إليه بدل ازدواج الصفوف
+  const { data: existing } = await admin
+    .from('inviters')
+    .select('id')
+    .eq('event_id', inviter.event_id)
+    .eq('profile_id', user.id)
+    .maybeSingle<{ id: string }>();
+
+  if (existing && existing.id !== inviter.id) redirect(`/inviter/${existing.id}`);
+
   // مسجّل: نربط حسابه إن لم يكن مرتبطاً
   if (!inviter.profile_id) {
     await admin.from('inviters')
