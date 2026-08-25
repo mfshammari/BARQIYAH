@@ -190,7 +190,14 @@ export function GuestsTable({
                     ) : null}
                   </td>
                   <td className="text-muted text-[12.5px]">{g.inviter_id ? inviterName.get(g.inviter_id) ?? '—' : '—'}</td>
-                  <td><GuestStatusBadge status={g.status} /></td>
+                  <td>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <GuestStatusBadge status={g.status} />
+                      {g.reminded_at ? (
+                        <span className="badge border border-line bg-panel text-muted">ذُكّر</span>
+                      ) : null}
+                    </div>
+                  </td>
                   <td className="text-muted text-[12px] num">
                     {formatDateTime(g.responded_at ?? g.sent_at ?? g.created_at)}
                   </td>

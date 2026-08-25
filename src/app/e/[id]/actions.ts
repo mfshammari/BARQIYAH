@@ -4,7 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient, adminClientAvailable } from '@/lib/supabase/admin';
 import { requireUser } from '@/lib/auth';
-import { sendInvitations } from '@/lib/invitations';
+import { sendInvitations, sendReminders } from '@/lib/invitations';
+import { formatNumber } from '@/lib/format';
 import { normalizePhone, isValidPhone } from '@/lib/format';
 import type { EventRow, Guest, OccasionType, Package, WhatsAppCategory } from '@/lib/types';
 import { getPaymentProvider } from '@/lib/payments';
@@ -542,4 +543,27 @@ export async function requestUpgrade(_prev: ActionState, formData: FormData): Pr
   }
 
   redirect(result.redirectUrl);
+}
+
+/**
+ * تذكير من لم يردّ — رسالة واحدة فقط لمن مضى على دعوته ٥ أيام
+ * ولم يُذكَّر من قبل (SPEC §4.1). الشرطان محسومان في القاعدة،
+ * فالضغط مرّتين لا يذكّر أحداً مرّتين.
+ */
+export async function remindPending(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const eventId = String(formData.get('event_id') ?? '');
+  const { supabase } = await guardEvent(eventId);
+
+  const result = await sendReminders(supabase, eventId);
+
+  revalidatePath(`/e/${eventId}`);
+  revalidatePath(`/e/${eventId}/guests`);
+
+  if (result.none) return { notice: 'لا أحد مؤهّل للتذكير الآن.' };
+  if (result.failed > 0) {
+    return {
+      notice: `ذُكِّر ${formatNumber(result.sent)}، وتعذّر إرسال ${formatNumber(result.failed)}.`,
+    };
+  }
+  return { notice: `أُرسل التذكير إلى ${formatNumber(result.sent)} مدعواً — مرة واحدة فقط.` };
 }
