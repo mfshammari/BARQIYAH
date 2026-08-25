@@ -8,7 +8,7 @@ import { Icon, type IconName } from '@/components/landing/Icons';
 import {
   ShowcaseRow, BalanceVisual, GuestsVisual, SeatsVisual, ScanVisual,
 } from '@/components/landing/Showcase';
-import { formatNumber } from '@/lib/format';
+import { formatNumber, formatPlain } from '@/lib/format';
 import type { Package } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -29,13 +29,13 @@ const FEATURES: { t: string; d: string; ic: IconName }[] = [
   { t: 'تقارير الحضور', ic: 'chart', d: 'من قبِل، ومن اعتذر، ومن حضر — أرقامٌ واضحة لحظياً.' },
 ];
 
-const OCCASIONS = [
-  { t: 'حفل زفاف', d: 'قوالب فخمة تليق بليلة العمر.', tag: 'الأكثر استخداماً' },
-  { t: 'خطوبة وملكة', d: 'دعواتٌ راقية لبداية الفرح.', tag: 'قوائم متوسطة' },
-  { t: 'عقد قران', d: 'مناسبةٌ خاصة بحضورٍ منتقى.', tag: 'قوائم مختصرة' },
-  { t: 'حفل تخرّج', d: 'احتفِ بالإنجاز مع من تحب.', tag: 'موسم الصيف' },
-  { t: 'مولودٌ جديد', d: 'شارك بشرى الفرح الصغير.', tag: 'دعواتٌ مصغّرة' },
-  { t: 'مناسبات رسمية', d: 'حفلاتٌ ومؤتمرات بتنظيمٍ دقيق.', tag: 'قوائم كبيرة' },
+const OCCASIONS: { t: string; d: string; tag: string; ic: IconName }[] = [
+  { t: 'حفل زفاف', ic: 'heart', d: 'قوالب فخمة تليق بليلة العمر.', tag: 'الأكثر استخداماً' },
+  { t: 'خطوبة وملكة', ic: 'ring', d: 'دعواتٌ راقية لبداية الفرح.', tag: 'قوائم متوسطة' },
+  { t: 'عقد قران', ic: 'contract', d: 'مناسبةٌ خاصة بحضورٍ منتقى.', tag: 'قوائم مختصرة' },
+  { t: 'حفل تخرّج', ic: 'cap', d: 'احتفِ بالإنجاز مع من تحب.', tag: 'موسم الصيف' },
+  { t: 'مولودٌ جديد', ic: 'baby', d: 'شارك بشرى الفرح الصغير.', tag: 'دعواتٌ مصغّرة' },
+  { t: 'مناسبات رسمية', ic: 'home', d: 'حفلاتٌ ومؤتمرات بتنظيمٍ دقيق.', tag: 'قوائم كبيرة' },
 ];
 
 const PLANS = [
@@ -100,6 +100,7 @@ export default async function LandingPage() {
             <a href="#how" className="hover:text-gold">كيف تعمل</a>
             <a href="#features" className="hover:text-gold">المميزات</a>
             <a href="#platform" className="hover:text-gold">داخل المنصة</a>
+            <a href="#occasions" className="hover:text-gold">المناسبات</a>
             <a href="#pricing" className="hover:text-gold">الباقات</a>
             <a href="#faq" className="hover:text-gold">الأسئلة</a>
           </nav>
@@ -165,7 +166,7 @@ export default async function LandingPage() {
       </div>
 
       {/* ————— كيف تعمل ————— */}
-      <section id="how" className="bg-paper py-20">
+      <section id="how" className="bg-paper py-section">
         <div className="mx-auto max-w-6xl px-5">
           <p className="eyebrow">تجربة الاستخدام</p>
           <h2 className="sec-h">من الدعوة إلى باب الحفل</h2>
@@ -185,12 +186,11 @@ export default async function LandingPage() {
               aria-hidden
             />
             {STEPS.map((s) => (
-              <div key={s.n} className="relative z-10 text-center">
+              <div key={s.n} className="step">
                 <div className="mb-3.5 font-display text-[15px] font-bold tracking-[2px] text-gold num">
                   {s.n}
                 </div>
-                <div className="mx-auto mb-5 grid h-[68px] w-[68px] place-items-center rounded-full
-                                border border-gold-line bg-surface text-brand">
+                <div className="step-ic">
                   <Icon name={s.ic} className="h-7 w-7" />
                 </div>
                 <h3 className="font-display text-[20px] font-bold text-brand">{s.t}</h3>
@@ -202,7 +202,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ————— المميزات ————— */}
-      <section id="features" className="mx-auto max-w-6xl px-5 py-20">
+      <section id="features" className="mx-auto max-w-[1160px] px-6 py-section">
         <p className="eyebrow">المميزات</p>
         <h2 className="sec-h">كل ما تحتاجه لإدارة الحضور</h2>
         <GoldRule />
@@ -223,7 +223,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ————— داخل المنصة ————— */}
-      <section id="platform" className="bg-paper py-20">
+      <section id="platform" className="bg-paper py-section">
         <div className="mx-auto max-w-6xl px-5">
           <p className="eyebrow">داخل المنصة</p>
           <h2 className="sec-h">لوحةٌ تُريك كل شيء</h2>
@@ -264,6 +264,7 @@ export default async function LandingPage() {
               body: 'أنشئ حساب مسحٍ لكل باب — بوابة الرجال، بوابة النساء — يفتحه المنظّم على جواله ويمسح الباركود. المقاعد تُخصم مع كل مسحة، والكود المستهلك يُرفض تلقائياً.',
               points: ['حسابات مسح متعددة بلا تعارض', 'يمنع دخول كودٍ مستخدم أو غير صالح', 'عدّاد الحضور يتحدّث لحظياً في لوحتك'],
               visual: <ScanVisual />,
+              bare: true,
               flip: true,
             }} />
           </div>
@@ -271,132 +272,114 @@ export default async function LandingPage() {
       </section>
 
       {/* ————— أنواع الاحتفالات ————— */}
-      <section className="mx-auto max-w-6xl px-5 py-20">
+      <section id="occasions" className="border-y border-line bg-paper py-section">
+        <div className="mx-auto max-w-[1160px] px-6">
         <p className="eyebrow">لكل مناسبةٍ برقيّتها</p>
         <h2 className="sec-h">أنواع الاحتفالات</h2>
         <GoldRule />
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-10 grid gap-[18px] sm:grid-cols-2 lg:grid-cols-3">
           {OCCASIONS.map((o) => (
-            <div key={o.t} className="border border-gold-line bg-white px-6 py-7">
-              <h4 className="font-display text-[22px] font-bold text-brand">{o.t}</h4>
-              <p className="mt-1.5 text-[13px] leading-7 text-muted">{o.d}</p>
-              <span className="mt-4 inline-block border border-gold-line bg-paper px-2.5 py-1 text-[11px] text-gold">
-                {o.tag}
-              </span>
+            <div key={o.t} className="occ">
+              <div className="occ-ic">
+                <Icon name={o.ic} className="h-6 w-6" />
+              </div>
+              <h4>{o.t}</h4>
+              <p>{o.d}</p>
+              <div className="occ-meta">{o.tag}</div>
             </div>
           ))}
         </div>
-        <p className="mt-8 text-center text-[13px] text-muted">
-          لكل نوعٍ قوالبه المعتمدة — تختارها عند إنشاء مناسبتك.
-        </p>
+        <p className="occ-foot">لكل نوعٍ قوالبه المعتمدة — تختارها عند إنشاء مناسبتك.</p>
+        </div>
       </section>
 
       {/* ————— الباقات ————— */}
-      <section id="pricing" className="bg-paper py-20">
-        <div className="mx-auto max-w-6xl px-5">
+      <section id="pricing" className="pricing-sec">
+        <div className="mx-auto max-w-[1160px] px-6">
           <p className="eyebrow">الأسعار</p>
           <h2 className="sec-h">باقاتٌ بعدد المقاعد</h2>
           <GoldRule />
-          <p className="sec-sub">
+          <p className="price-note">
             ادفع مرةً واحدة لكل مناسبة — لا اشتراكات. المقعد الواحد = ضيفٌ واحد يدخل الحفل،
             وكل باقة مستقلة لمناسبتها.
           </p>
 
-          <div className="mt-12 grid items-start gap-5 md:grid-cols-3">
+          <div className="plans">
             {plans.map((p) => (
-              <div
-                key={p.name}
-                className={`border bg-white px-7 py-9 ${
-                  p.featured ? 'border-gold shadow-pop md:-my-4 md:py-12' : 'border-gold-line'
-                }`}
-              >
-                {p.featured ? (
-                  <span className="mb-3 inline-block bg-gold px-3 py-1 text-[11px] font-semibold tracking-wider text-white">
-                    الأكثر طلباً
-                  </span>
-                ) : null}
-                <h3 className="font-display text-[26px] font-bold text-brand">{p.name}</h3>
-                <p className="mt-1.5 text-[13px] leading-6 text-muted">{p.desc}</p>
+              <div key={p.name} className={`plan-card ${p.featured ? 'featured' : ''}`}>
+                {p.featured ? <div className="plan-tag">الأكثر طلباً</div> : null}
+                <div className="plan-name">{p.name}</div>
+                <div className="plan-desc">{p.desc}</div>
 
-                <div className="mt-5 flex items-baseline gap-1.5 border-t border-gold-line pt-5">
-                  <span className="font-display text-[44px] font-bold leading-none text-brand num">
-                    {formatNumber(p.price)}
-                  </span>
-                  <span className="text-[13px] text-muted">ر.س</span>
+                <div className="plan-price">
+                  <b className="num">{formatPlain(p.price)}</b>
+                  <span>﷼</span>
                 </div>
-                <p className="mt-1 text-[13px] font-semibold text-gold num">{formatNumber(p.seats)} مقعد</p>
+                <div className="plan-seats num">{formatNumber(p.seats)} مقعد</div>
 
-                <ul className="mt-5 space-y-2.5 border-t border-gold-line pt-5">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-[13px] leading-6 text-ink">
-                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gold" />
-                      {f}
-                    </li>
-                  ))}
+                <ul className="plan-list">
+                  {p.features.map((f) => <li key={f}>{f}</li>)}
                 </ul>
 
-                <Link href="/signup"
-                  className={`mt-7 w-full !rounded-[2px] ${p.featured ? 'btn-gold' : 'btn-primary'}`}>
+                <Link
+                  href="/signup"
+                  className={`${p.featured ? 'btn-primary' : 'btn-ghost'} !rounded-[2px]`}
+                >
                   {p.cta}
                 </Link>
               </div>
             ))}
           </div>
 
-          <p className="mt-8 text-center text-[13px] text-muted">
+          <p className="pricing-foot">
             تحتاج مقاعد إضافية بعد الشراء؟ تقدر ترقّي باقتك في أي وقت قبل المناسبة.
           </p>
         </div>
       </section>
 
       {/* ————— الأسئلة ————— */}
-      <section id="faq" className="mx-auto max-w-3xl px-5 py-20">
+      <section id="faq" className="mx-auto max-w-[1160px] px-6 py-section">
         <p className="eyebrow">قبل أن تبدأ</p>
         <h2 className="sec-h">أسئلة يسألها الجميع</h2>
         <GoldRule />
-        <div className="mt-8 divide-y divide-gold-line border-y border-gold-line">
+        <div className="faq-grid">
           {FAQ.map((f) => (
-            <details key={f.q} className="group py-5">
-              <summary className="flex cursor-pointer items-center justify-between gap-4 font-display text-[17px] font-bold text-brand marker:content-['']">
-                {f.q}
-                <span className="shrink-0 text-gold transition-transform group-open:rotate-45">+</span>
-              </summary>
-              <p className="mt-3 text-[14px] leading-8 text-muted">{f.a}</p>
-            </details>
+            <div key={f.q} className="qa">
+              <h4>{f.q}</h4>
+              <p>{f.a}</p>
+            </div>
           ))}
         </div>
       </section>
 
       {/* ————— دعوة ختامية ————— */}
-      <section className="bg-brand py-20 text-center text-white">
-        <div className="mx-auto max-w-2xl px-5">
-          <h2 className="font-display text-[clamp(28px,4vw,42px)] font-bold leading-snug">
-            ابدأ أولى مناسباتك مع برقية
-          </h2>
-          <p className="mt-4 text-[15px] leading-8 text-white/75">
-            جهّز دعوتك خلال دقائق، وجرّبها مجاناً بخمس رسائل قبل الإطلاق.
-          </p>
-          <Link href="/signup" className="btn-gold mt-8 !rounded-[2px]">أنشئ حسابك الآن</Link>
+      <section className="cta-sec">
+        <div className="mx-auto max-w-[1160px] px-6">
+          <div className="mb-6"><GoldRule /></div>
+          <h2>ابدأ أولى مناسباتك مع برقية</h2>
+          <p>جهّز دعوتك خلال دقائق، وجرّبها مجاناً بخمس رسائل قبل الإطلاق.</p>
+          <Link href="/signup" className="btn-gold !rounded-[2px]">أنشئ حسابك الآن</Link>
         </div>
       </section>
 
       {/* ————— تواصل ————— */}
-      <section className="mx-auto max-w-3xl px-5 py-20 text-center">
-        <p className="eyebrow">تواصل</p>
-        <h2 className="sec-h">لديك سؤال قبل أن تبدأ؟</h2>
-        <GoldRule />
-        <p className="text-[14px] leading-8 text-muted">
-          نجيبك على أي استفسار — عن الباقات، أو القوالب، أو تجهيز مناسبتك.
-        </p>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          {[['واتساب', '0500000000'], ['البريد', 'hello@barqiyah.sa']].map(([label, value]) => (
-            <div key={label} className="border border-gold-line bg-white px-6 py-6">
-              <div className="text-[12px] text-muted">{label}</div>
-              <div className="mt-1.5 font-display text-[18px] font-bold text-brand num" dir="ltr">{value}</div>
-            </div>
-          ))}
+      <section className="contact-sec">
+        <div className="mx-auto max-w-[1160px] px-6">
+          <p className="eyebrow">تواصل</p>
+          <h3 className="ct-line">لديك سؤال قبل أن تبدأ؟</h3>
+          <p className="ct-p">
+            نجيبك على أي استفسار — عن الباقات، أو القوالب، أو تجهيز مناسبتك.
+          </p>
+          <a href="https://wa.me/966500000000" className="ct-btn-wa">
+            <span className="ct-l">واتساب</span>
+            <span className="ct-v num" dir="ltr">0500000000</span>
+          </a>
+          <a href="mailto:hello@barqiyah.sa" className="ct-btn">
+            <span className="ct-l">البريد</span>
+            <span className="ct-v" dir="ltr">hello@barqiyah.sa</span>
+          </a>
+          <div className="ct-note">نردّ خلال ساعات العمل · السبت إلى الخميس</div>
         </div>
-        <p className="mt-6 text-[12.5px] text-muted">نردّ خلال ساعات العمل · السبت إلى الخميس</p>
       </section>
 
       {/* ————— الفوتر ————— */}
@@ -411,7 +394,7 @@ export default async function LandingPage() {
           {[
             { t: 'المنصة', links: [['كيف تعمل', '#how'], ['المميزات', '#features'], ['الباقات', '#pricing'], ['المناسبات', '#platform']] },
             { t: 'الحساب', links: [['تسجيل الدخول', '/login'], ['إنشاء حساب', '/signup'], ['لوحة التحكم', '/app']] },
-            { t: 'تواصل', links: [['الدعم', '#faq'], ['الأسئلة الشائعة', '#faq'], ['الشروط والخصوصية', '#faq']] },
+            { t: 'تواصل', links: [['الدعم', '#faq'], ['واتساب', 'https://wa.me/966500000000'], ['الأسئلة الشائعة', '#faq'], ['الشروط والخصوصية', '#faq']] },
           ].map((col) => (
             <div key={col.t}>
               <h4 className="text-[13px] font-bold text-brand">{col.t}</h4>

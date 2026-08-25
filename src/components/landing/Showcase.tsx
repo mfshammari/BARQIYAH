@@ -11,11 +11,13 @@ export interface ShowcaseBlock {
   points: string[];
   visual: React.ReactNode;
   flip?: boolean;
+  /** لوحة الجوّال لا تُحاط بإطار لقطة الشاشة */
+  bare?: boolean;
 }
 
 export function ShowcaseRow({ block }: { block: ShowcaseBlock }) {
   return (
-    <div className={`grid items-center gap-10 lg:grid-cols-2 ${block.flip ? 'lg:[direction:ltr]' : ''}`}>
+    <div className={`sc-row ${block.flip ? 'lg:[direction:ltr]' : ''}`}>
       <div className={block.flip ? 'lg:[direction:rtl]' : ''}>
         <p className="text-[12px] font-semibold tracking-[3px] text-gold">{block.eyebrow}</p>
         <h3 className="mt-3 font-display text-[clamp(22px,3vw,30px)] font-bold leading-snug text-brand">
@@ -32,10 +34,14 @@ export function ShowcaseRow({ block }: { block: ShowcaseBlock }) {
         </ul>
       </div>
       <div className={block.flip ? 'lg:[direction:rtl]' : ''}>
-        <div className="sc-shot" style={{ boxShadow: '0 24px 48px -28px rgba(21,58,43,.4)' }}>
-          <div className="shot-bar" aria-hidden><i /><i /><i /></div>
-          {block.visual}
-        </div>
+        {block.bare ? (
+          block.visual
+        ) : (
+          <div className="sc-shot" style={{ boxShadow: '0 24px 48px -28px rgba(21,58,43,.4)' }}>
+            <div className="shot-bar" aria-hidden><i /><i /><i /></div>
+            {block.visual}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -140,16 +146,14 @@ export function SeatsVisual() {
 /** معاينة شاشة المسح عند الباب. */
 export function ScanVisual() {
   return (
-    <div className="bg-brand p-5 text-center text-white">
-      <div className="text-[11.5px] text-white/60">بوابة الرجال</div>
-      <div className="mx-auto mt-4 grid h-28 w-28 grid-cols-5 grid-rows-5 gap-[3px] rounded-xl bg-white p-2">
-        {[1,0,1,1,0, 0,1,1,0,1, 1,1,0,1,1, 1,0,1,0,0, 0,1,1,1,0].map((on, i) => (
-          <span key={i} className={on ? 'bg-brand' : ''} />
-        ))}
-      </div>
-      <div className="mt-4 rounded-xl bg-white/10 px-4 py-3">
-        <div className="font-ui text-[15px] font-bold">خالد الفهد</div>
-        <div className="mt-1 text-[12px] text-gold-soft num">مسح ٢ من ٤ · حضر</div>
+    <div className="ph">
+      <div className="ph-in">
+        <div className="ph-t">بوابة الرجال</div>
+        <div className="ph-box" aria-hidden>✓</div>
+        <div className="ph-res">
+          خالد الفهد
+          <span className="num">مسح ٢ من ٤ · حضر</span>
+        </div>
       </div>
     </div>
   );

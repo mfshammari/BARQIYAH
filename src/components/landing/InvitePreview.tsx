@@ -22,8 +22,9 @@ export function InvitePreview({
   badge?: string;
 }) {
   return (
+    <div className="invite-wrap">
     <div
-      className="relative mx-auto w-full max-w-[330px] px-7 py-9 text-center"
+      className="relative px-7 py-9 text-center"
       style={{
         background: 'linear-gradient(160deg,#1A4433,#123528)',
         boxShadow: '0 30px 60px -20px rgba(21,58,43,.5)',
@@ -73,6 +74,7 @@ export function InvitePreview({
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }
