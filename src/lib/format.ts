@@ -23,6 +23,11 @@ export function formatNumber(n: number | null | undefined): string {
   return new Intl.NumberFormat('ar-SA').format(n ?? 0);
 }
 
+/** رقم بلا فاصل آلاف — للأسعار المعروضة كوحدة واحدة: ١١٩٩ لا ١٬١٩٩. */
+export function formatPlain(n: number | null | undefined): string {
+  return new Intl.NumberFormat('ar-SA', { useGrouping: false }).format(n ?? 0);
+}
+
 export function formatCurrency(n: number | null | undefined): string {
   return `${new Intl.NumberFormat('ar-SA', { maximumFractionDigits: 2 }).format(n ?? 0)} ر.س`;
 }
