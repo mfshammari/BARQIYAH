@@ -10,6 +10,7 @@ import {
 } from '@/components/ui';
 import { InviteEditor } from './InviteEditor';
 import { InviterGuests } from './InviterGuests';
+import { InviterRemindButton } from './RemindButton';
 import { formatDate, formatEventLine, formatHijri, formatNumber, formatTime } from '@/lib/format';
 import { OCCASION_LABELS, type Contact, type EventBalance, type EventRow, type Guest, type Inviter, type Template } from '@/lib/types';
 
@@ -84,6 +85,12 @@ export default async function InviterWorkspace({
 
   const days = daysUntil(event.event_date);
   const noResponse = guests.filter((g) => g.status === 'sent').length;
+  // المؤهّلون للتذكير داخل حصته وحده (SPEC §4.1)
+  const { data: dueCount } = await supabase.rpc('reminder_due_count', {
+    p_event_id: inviter.event_id,
+    p_inviter_id: id,
+  });
+  const dueForReminder = Number(dueCount ?? 0);
   const drafts = guests.filter((g) => g.status === 'draft').length;
 
   return (
@@ -193,12 +200,14 @@ export default async function InviterWorkspace({
             }
           />
           <TodoCard
-            count={formatNumber(noResponse)}
-            label="لم يردّوا بعد"
+            count={formatNumber(dueForReminder)}
+            label="لم يردّوا منذ ٥ أيام"
             action={
-              <Link href={`/inviter/${id}?tab=guests`} className="btn-ghost btn-sm">
-                تابعهم
-              </Link>
+              dueForReminder > 0 ? (
+                <InviterRemindButton inviterId={id} count={dueForReminder} />
+              ) : (
+                <span className="btn-ghost btn-sm pointer-events-none opacity-60">ذُكّروا ✓</span>
+              )
             }
           />
           <TodoCard

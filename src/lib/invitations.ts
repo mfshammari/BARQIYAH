@@ -294,3 +294,79 @@ export async function sendQrToGuest(guestId: string): Promise<{ ok: boolean; err
 
   return { ok: result.ok, error: result.error };
 }
+
+/* ============================================================
+   التذكير — رسالة واحدة لمن لم يردّ (SPEC §4.1)
+   ============================================================ */
+
+export interface ReminderOutcome {
+  sent: number;
+  failed: number;
+  /** لم يكن هناك مؤهّل أصلاً */
+  none: boolean;
+}
+
+/**
+ * تذكير من لم يردّ. الاستحقاق والقيد «مرة واحدة» محسومان في القاعدة:
+ * `mark_reminders_sent` تقفل الصفوف وتضبط `reminded_at` وترجع من
+ * عُلِّم فعلاً — فالضغط مرّتين لا يذكّر أحداً مرّتين.
+ *
+ * التذكير لا يغيّر الحالة ولا يحرّر المقاعد: المدعو يبقى `sent`.
+ * مع `inviterId` يقتصر على مدعوّي ذلك الداعي وحده.
+ */
+export async function sendReminders(
+  supabase: SupabaseClient,
+  eventId: string,
+  inviterId?: string,
+): Promise<ReminderOutcome> {
+  const { data: event } = await supabase
+    .from('events').select('*').eq('id', eventId).maybeSingle<EventRow>();
+  if (!event) return { sent: 0, failed: 0, none: true };
+
+  // التعليم أولاً: من عُلِّم هنا هو من نرسل له — لا أحد غيره
+  const { data: marked, error } = await supabase.rpc('mark_reminders_sent', {
+    p_event_id: eventId,
+    p_inviter_id: inviterId ?? null,
+  });
+
+  if (error) return { sent: 0, failed: 0, none: true };
+
+  const due = (marked ?? []) as {
+    guest_id: string; name: string; phone: string; max_seats: number; inviter_id: string | null;
+  }[];
+  if (due.length === 0) return { sent: 0, failed: 0, none: true };
+
+  const eventLine = formatEventLine({
+    dateGregorian: event.event_date,
+    dateHijri: event.event_date_hijri,
+    weekday: event.event_weekday,
+    time: event.event_time,
+    venue: event.venue,
+  });
+
+  const provider = await getWhatsAppProvider();
+  let sent = 0;
+  let failed = 0;
+
+  for (const g of due) {
+    const text =
+      `تذكير بدعوة ${event.host_name} — ${eventLine}.\n` +
+      'هل ستشرّفنا بالحضور؟ ردّ بـ«نعم» أو «أعتذر».';
+
+    const res = await provider.sendText({ to: g.phone, text });
+    if (res.ok) sent += 1;
+    else failed += 1;
+
+    await logMessage({
+      event_id: eventId,
+      guest_id: g.guest_id,
+      direction: 'outbound',
+      template_name: 'reminder',
+      meta_message_id: res.messageId ?? null,
+      status: res.ok ? 'sent' : 'failed',
+      error_code: res.ok ? null : (res.error ?? 'SEND_FAILED'),
+    });
+  }
+
+  return { sent, failed, none: false };
+}

@@ -3,9 +3,9 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth';
-import { normalizePhone, isValidPhone } from '@/lib/format';
+import { normalizePhone, isValidPhone, formatNumber } from '@/lib/format';
 import { validateInviteVars, type InviteVars } from '@/lib/inviteVars';
-import { sendInvitations } from '@/lib/invitations';
+import { sendInvitations, sendReminders } from '@/lib/invitations';
 import type { Guest, Inviter } from '@/lib/types';
 
 export interface ActionState { error?: string; notice?: string }
@@ -185,4 +185,25 @@ export async function deleteInviterGuest(formData: FormData) {
   await supabase.from('guests').delete()
     .eq('id', String(formData.get('guest_id') ?? '')).eq('inviter_id', inviterId);
   revalidateInviter(inviterId);
+}
+
+/**
+ * الداعي يذكّر مدعوّيه هو فقط — الاستعلام مقيّد بـinviter_id،
+ * ورسالة واحدة أبداً لكل مدعو (SPEC §4.1).
+ */
+export async function remindInviterPending(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const inviterId = String(formData.get('inviter_id') ?? '');
+  const { supabase, inviter } = await guardInviter(inviterId);
+
+  const result = await sendReminders(supabase, inviter.event_id, inviterId);
+  revalidateInviter(inviterId);
+
+  if (result.none) return { notice: 'لا أحد من مدعوّيك مؤهّل للتذكير الآن.' };
+  if (result.failed > 0) {
+    return { notice: `ذُكِّر ${formatNumber(result.sent)}، وتعذّر إرسال ${formatNumber(result.failed)}.` };
+  }
+  return { notice: `أُرسل التذكير إلى ${formatNumber(result.sent)} مدعواً — مرة واحدة فقط.` };
 }

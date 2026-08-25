@@ -8,6 +8,7 @@ import {
 import { formatHijri, formatNumber, formatEventLine } from '@/lib/format';
 import { metaConfigured } from '@/lib/env';
 import { OCCASION_LABELS, type EventRow, type Guest } from '@/lib/types';
+import { RemindButton } from './RemindButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,9 +27,8 @@ export default async function EventDashboard({ params }: { params: Promise<{ id:
   const balance = await fetchEventBalance(supabase, id);
   const days = daysUntil(e.event_date);
 
-  // «لم يردّوا» = مُرسل ومضى على إرساله ثلاثة أيام فأكثر
-  const staleBefore = new Date(Date.now() - 3 * 86_400_000).toISOString();
-  const [{ data: latest }, { count: staleCount }] = await Promise.all([
+  // المؤهّلون للتذكير: مضى ٥ أيام والحالة sent ولم يُذكَّروا (SPEC §4.1)
+  const [{ data: latest }, { data: dueCount }] = await Promise.all([
     supabase
       .from('guests')
       .select('id, name, max_seats, confirmed_seats, status')
@@ -36,13 +36,10 @@ export default async function EventDashboard({ params }: { params: Promise<{ id:
       .order('created_at', { ascending: false })
       .limit(6)
       .returns<Guest[]>(),
-    supabase
-      .from('guests')
-      .select('id', { count: 'exact', head: true })
-      .eq('event_id', id)
-      .eq('status', 'sent')
-      .lt('sent_at', staleBefore),
+    supabase.rpc('reminder_due_count', { p_event_id: id }),
   ]);
+
+  const dueForReminder = Number(dueCount ?? 0);
 
   const recent = latest ?? [];
 
@@ -102,9 +99,15 @@ export default async function EventDashboard({ params }: { params: Promise<{ id:
           action={<Link href={`/e/${id}/guests?status=draft`} className="btn-primary btn-sm">أرسلها الآن</Link>}
         />
         <TodoCard
-          count={formatNumber(staleCount ?? 0)}
-          label="لم يردّوا منذ ٣ أيام"
-          action={<Link href={`/e/${id}/guests?status=sent`} className="btn-ghost btn-sm">ذكّرهم</Link>}
+          count={formatNumber(dueForReminder)}
+          label="لم يردّوا منذ ٥ أيام"
+          action={
+            dueForReminder > 0 ? (
+              <RemindButton eventId={id} count={dueForReminder} />
+            ) : (
+              <span className="btn-ghost btn-sm pointer-events-none opacity-60">ذُكّروا ✓</span>
+            )
+          }
         />
         <TodoCard
           count={formatNumber(balance.available)}

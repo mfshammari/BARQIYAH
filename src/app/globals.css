@@ -141,6 +141,14 @@ body {
 
   .table-wrap { @apply overflow-x-auto -mx-4 sm:mx-0; }
   .tbl { @apply w-full text-sm border-collapse min-w-[640px]; }
+  /* جدول مضغوط لعمود ضيّق — بلا عرض أدنى يفرض التمرير */
+  .tbl-tight { @apply w-full border-collapse text-sm; }
+  .tbl-tight thead th {
+    @apply whitespace-nowrap border-b border-line bg-panel px-3 py-2.5
+           text-right text-[12px] font-semibold text-muted;
+  }
+  .tbl-tight tbody td { @apply border-b border-line/70 px-3 py-3 align-middle; }
+  .tbl-tight tbody tr:hover { @apply bg-panel/60; }
   .tbl thead th {
     @apply text-right text-[12px] font-semibold text-muted bg-panel
            px-3 py-2.5 border-b border-line whitespace-nowrap;
@@ -516,7 +524,10 @@ body {
   .task .t-m { @apply mb-3 text-[12px] text-muted; }
 
   /* عمودان غير متساويين */
-  .two-col { @apply grid items-start gap-3.5 lg:grid-cols-[1.25fr_.75fr]; }
+  .two-col {
+    @apply grid items-start gap-3.5
+           lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.75fr)];
+  }
 
   /* أدوات دفتر العناوين */
   .bk-note { @apply mt-3.5 text-center text-[12.5px] text-muted; }

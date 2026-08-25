@@ -83,8 +83,6 @@ export function AppShell({
             <Link href={backHref} className="back-acct">← {backLabel ?? 'رجوع'}</Link>
           ) : null}
 
-          {search ? <div className="mb-3"><CommandSearch /></div> : null}
-
           {host ? (
             <div className="side-host">
               <div className="l">{host.label}</div>
@@ -92,6 +90,8 @@ export function AppShell({
               {host.sub ? <div className="o">{host.sub}</div> : null}
             </div>
           ) : null}
+
+          {search ? <div className="mb-3"><CommandSearch /></div> : null}
 
           <nav className="flex flex-col gap-0.5">
             {groups.map((g) => (

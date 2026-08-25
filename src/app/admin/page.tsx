@@ -1,13 +1,26 @@
 import Link from 'next/link';
 import { requireUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { EmptyState, EventStatusBadge, SecLabel, NoticeBar, TaskCardBox } from '@/components/ui';
+import { EmptyState, SecLabel, NoticeBar, TaskCardBox } from '@/components/ui';
 import { can } from '@/lib/permissions';
-import { formatCurrency, formatDate, formatHijri, formatNumber } from '@/lib/format';
+import { formatCurrency, formatHijri, formatNumber } from '@/lib/format';
+import { computeBalance } from '@/lib/balance';
 import { metaConfigured } from '@/lib/env';
-import { OCCASION_LABELS, type EventRow, type Guest, type Template, type Transaction } from '@/lib/types';
+import type { EventRow, Guest, Template, Transaction } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
+
+/** الموعد بصيغة قريبة: اليوم · غداً · بعد ٣ أيام (كما في النموذج). */
+function relativeDay(dateStr: string): string {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const target = new Date(`${dateStr}T00:00:00`);
+  const d = Math.round((target.getTime() - today.getTime()) / 86_400_000);
+  if (d < 0) return 'مضت';
+  if (d === 0) return 'اليوم';
+  if (d === 1) return 'غداً';
+  if (d === 2) return 'بعد يومين';
+  return `بعد ${formatNumber(d)} أيام`;
+}
 
 /** أقدمية المهمة بالأيام — البند الأقدم أولى بالانتباه. */
 function ageDays(iso: string): number {
@@ -155,35 +168,38 @@ export default async function AdminToday() {
             <EmptyState title="لا مناسبات قريبة" description="ستظهر هنا المناسبات المفعّلة خلال الأسبوع القادم." />
           </div>
         ) : (
-          <div className="table-wrap">
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th>الدعوة باسم</th><th>النوع</th><th>هجري</th><th>ميلادي</th>
-                  <th>الجاهزية</th><th>الحالة</th>
-                </tr>
-              </thead>
-              <tbody>
-                {upcoming.map((e) => {
-                  const r = readiness(e);
-                  return (
-                    <tr key={e.id}>
-                      <td className="font-semibold">
-                        <Link href={`/admin/events/${e.id}`} className="hover:text-brand">
-                          {e.internal_name || e.host_name}
-                        </Link>
-                      </td>
-                      <td className="text-[12.5px] text-muted">{OCCASION_LABELS[e.occasion_type]}</td>
-                      <td className="num text-[12.5px]">{e.event_date_hijri || formatHijri(e.event_date)}</td>
-                      <td className="num text-[12.5px] text-muted">{formatDate(e.event_date)}</td>
-                      <td><span className={`badge ${r.cls}`}>{r.label}</span></td>
-                      <td><EventStatusBadge status={e.status} /></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <table className="tbl-tight">
+            <thead>
+              <tr>
+                <th>المناسبة</th><th>التاريخ</th><th>المقاعد</th><th>الجاهزية</th>
+              </tr>
+            </thead>
+            <tbody>
+              {upcoming.map((e) => {
+                const r = readiness(e);
+                const b = computeBalance(e.guests as Guest[], e.seats_quota);
+                return (
+                  <tr key={e.id}>
+                    <td>
+                      <Link href={`/admin/events/${e.id}`} className="font-semibold hover:text-brand">
+                        {e.internal_name || e.host_name}
+                      </Link>
+                      <span className="block text-[11.5px] text-muted num">
+                        {e.event_date_hijri || formatHijri(e.event_date)}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap text-[12.5px] text-muted num">
+                      {relativeDay(e.event_date)}
+                    </td>
+                    <td className="whitespace-nowrap text-[12.5px] num">
+                      {formatNumber(b.confirmed + b.held)}/{formatNumber(e.seats_quota)}
+                    </td>
+                    <td><span className={`badge ${r.cls}`}>{r.label}</span></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
 

@@ -144,6 +144,8 @@ export interface Guest {
   invite_token: string;
   qr_token: string | null;
   scans_used: number;
+  /** وقت التذكير الوحيد — غير فارغ يعني ذُكِّر ولا يُذكَّر ثانيةً (SPEC §4.1) */
+  reminded_at: string | null;
   sent_at: string | null;
   responded_at: string | null;
   attended_at: string | null;
