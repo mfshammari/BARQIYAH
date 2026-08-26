@@ -577,6 +577,13 @@ body {
   .no-print { display: none !important; }
 }
 
+/* هزّة خفيفة عند رمز خاطئ */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
+}
+
 /* من يطلب تقليل الحركة في نظامه لا تتحرّك له الواجهة (كما في النموذج) */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

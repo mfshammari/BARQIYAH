@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSessionUser, homePathForRole } from '@/lib/auth';
 import { supabaseConfigured } from '@/lib/env';
-import { LoginForm } from './LoginForm';
+import { LoginTabs } from './LoginTabs';
 import { Logo } from '@/components/ui';
 import { SetupNotice } from '@/components/SetupNotice';
 
@@ -21,10 +21,10 @@ export default async function LoginPage({
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
           <Logo size="lg" />
-          <p className="text-[13px] text-muted mt-2">لوحة إدارة دعوات المناسبات</p>
+          <p className="text-[13px] text-muted mt-2">حساب واحد يجمع كل مناسباتك</p>
         </div>
         <div className="card card-pad">
-          <LoginForm next={next ?? ''} />
+          <LoginTabs next={next ?? ''} />
         </div>
         <p className="text-center text-[12px] text-muted mt-5">
           حساب الماسح؟{' '}

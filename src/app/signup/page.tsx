@@ -3,14 +3,14 @@ import { redirect } from 'next/navigation';
 import { getSessionUser, homePathForRole } from '@/lib/auth';
 import { supabaseConfigured } from '@/lib/env';
 import { SetupNotice } from '@/components/SetupNotice';
-import { SignupForm } from './SignupForm';
+import { PhoneSignup } from './PhoneSignup';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SignupPage({
   searchParams,
 }: { searchParams: Promise<{ next?: string }> }) {
-  const { next } = await searchParams;
+  await searchParams;
   if (!supabaseConfigured) return <SetupNotice />;
 
   const user = await getSessionUser();
@@ -27,7 +27,7 @@ export default async function SignupPage({
         </div>
 
         <div className="border border-gold-line bg-white p-6">
-          <SignupForm next={next ?? ''} />
+          <PhoneSignup />
         </div>
 
         <p className="mt-5 text-center text-[12.5px] text-muted">
