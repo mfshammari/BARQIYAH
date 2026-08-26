@@ -1,67 +1,16 @@
 'use client';
 
-import { useActionState, useEffect, useRef, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFormStatus } from 'react-dom';
 import Link from 'next/link';
 import {
   startPhoneSignup, resendOtp, verifyPhoneCode,
   type OtpState, type VerifyState,
 } from './otpActions';
+import {
+  Dots, Submit, PhoneField, CodeBoxes, UnifiedNotice, useCountdown, mmss,
+} from './otpUi';
 import { formatNumber } from '@/lib/format';
-
-/** دول الخليج بترتيب الاستخدام، والسعودية أولاً. */
-const COUNTRIES = [
-  { flag: '🇸🇦', name: 'السعودية', dial: '966' },
-  { flag: '🇦🇪', name: 'الإمارات', dial: '971' },
-  { flag: '🇰🇼', name: 'الكويت', dial: '965' },
-  { flag: '🇶🇦', name: 'قطر', dial: '974' },
-  { flag: '🇧🇭', name: 'البحرين', dial: '973' },
-  { flag: '🇴🇲', name: 'عُمان', dial: '968' },
-];
-
-function Dots({ step }: { step: 1 | 2 | 3 }) {
-  return (
-    <div className="mb-6 flex justify-center gap-2" aria-label={`الخطوة ${step} من ٣`}>
-      {[1, 2, 3].map((n) => (
-        <span
-          key={n}
-          className={`h-2 w-2 rounded-full transition-colors ${
-            n === step ? 'bg-gold' : 'bg-line'
-          }`}
-        />
-      ))}
-    </div>
-  );
-}
-
-function Submit({ label, pendingLabel, disabled }: {
-  label: string; pendingLabel: string; disabled?: boolean;
-}) {
-  const { pending } = useFormStatus();
-  return (
-    <button type="submit" className="btn-primary !rounded-[2px] w-full" disabled={pending || disabled}>
-      {pending ? pendingLabel : label}
-    </button>
-  );
-}
-
-/** عدّاد تنازلي بصيغة m:ss. */
-function useCountdown(seconds: number, key: number) {
-  const [left, setLeft] = useState(seconds);
-  useEffect(() => {
-    setLeft(seconds);
-    const t = setInterval(() => setLeft((v) => (v > 0 ? v - 1 : 0)), 1000);
-    return () => clearInterval(t);
-  }, [seconds, key]);
-  return left;
-}
-
-function mmss(total: number): string {
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  return `${formatNumber(m)}:${formatNumber(s).padStart(2, '٠')}`;
-}
 
 export function PhoneSignup() {
   const router = useRouter();
@@ -73,7 +22,6 @@ export function PhoneSignup() {
   const [phone, setPhone] = useState('');
   const [consent, setConsent] = useState(false);
   const [name, setName] = useState('');
-  const [shake, setShake] = useState(false);
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -92,7 +40,7 @@ export function PhoneSignup() {
   if (done) {
     return (
       <>
-        <Dots step={3} />
+        <Dots step={3} total={3} />
         <h1 className="text-center font-display text-[24px] font-bold text-brand">تم إنشاء حسابك</h1>
 
         {verify.recoveryCode ? (
@@ -171,27 +119,16 @@ export function PhoneSignup() {
 
     return (
       <>
-        <Dots step={2} />
+        <Dots step={2} total={3} />
         <h1 className="text-center font-display text-[24px] font-bold text-brand">أدخل رمز التحقق</h1>
         <p className="mt-2 text-center text-[13px] leading-7 text-muted">
           أرسلنا رمزاً إلى واتساب على الرقم{' '}
-          <span dir="ltr" className="num text-ink">+{dial}{phone.replace(/^0+/, '')}</span>
+          <span dir="ltr" className="num text-ink">+{dial}{phone}</span>
         </p>
 
-        {unified ? (
-          <div className="mt-4 rounded-xl bg-info-soft px-3.5 py-3 text-[12.5px] leading-7 text-info">
-            <b>وضع المحاكاة:</b> مفاتيح واتساب غير مربوطة بعد، فالرمز موحّد ولا يُرسل فعلاً.
-            الرمز: <b dir="ltr" className="font-mono tracking-[2px]">{unified}</b>
-          </div>
-        ) : null}
+        {unified ? <UnifiedNotice code={unified} /> : null}
 
-        <CodeBoxes
-          action={verifyAction}
-          disabled={expired || Boolean(locked)}
-          shake={shake}
-          onShake={setShake}
-          error={verify.error}
-        />
+        <CodeBoxes action={verifyAction} disabled={expired || Boolean(locked)} error={verify.error} />
 
         {verify.error ? (
           <p className="mt-3 text-center text-[12.5px] font-semibold text-danger">
@@ -230,12 +167,12 @@ export function PhoneSignup() {
   }
 
   // ————— الخطوة الأولى: البيانات —————
-  const phoneOk = phone.replace(/\D/g, '').replace(/^0+/, '').length >= 8;
+  const phoneOk = phone.length >= 8;
   const ready = name.trim().length >= 3 && phoneOk && consent;
 
   return (
     <>
-      <Dots step={1} />
+      <Dots step={1} total={3} />
       <h1 className="text-center font-display text-[24px] font-bold text-brand">أنشئ حسابك</h1>
       <p className="mt-2 text-center text-[13px] text-muted">سنرسل لك رمز تحقق عبر واتساب</p>
 
@@ -248,35 +185,7 @@ export function PhoneSignup() {
           />
         </div>
 
-        <div>
-          <label className="label" htmlFor="s-phone">رقم الجوال</label>
-          <div className="flex gap-2">
-            <select
-              name="dial"
-              className="field !rounded-[2px] w-[122px] shrink-0"
-              value={dial}
-              onChange={(e) => setDial(e.target.value)}
-              aria-label="مفتاح الدولة"
-            >
-              {COUNTRIES.map((c) => (
-                <option key={c.dial} value={c.dial}>
-                  {c.flag} +{c.dial}
-                </option>
-              ))}
-            </select>
-            <input
-              id="s-phone" name="phone" dir="ltr" inputMode="tel" autoComplete="tel"
-              className="field !rounded-[2px] text-end"
-              placeholder="5xxxxxxxx"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').replace(/^0+/, ''))}
-              required
-            />
-          </div>
-          {phoneOk ? (
-            <p className="hint num" dir="ltr">+{dial}{phone}</p>
-          ) : null}
-        </div>
+        <PhoneField id="s-phone" dial={dial} setDial={setDial} phone={phone} setPhone={setPhone} />
 
         <div>
           <label className="label" htmlFor="s-email">
@@ -313,80 +222,11 @@ export function PhoneSignup() {
       </form>
 
       <p className="mt-4 text-center text-[12.5px] text-muted">
-        لديك حساب؟ ادخل برقمك — نفس الخطوات.
+        لديك حساب؟{' '}
+        <Link href="/login" className="font-semibold text-brand hover:underline">
+          ادخل برقمك
+        </Link>
       </p>
     </>
-  );
-}
-
-/** ست خانات للرمز: تنقّل تلقائي، ولصق كامل، وإرسال ذاتي عند اكتمالها. */
-function CodeBoxes({
-  action, disabled, shake, onShake, error,
-}: {
-  action: (fd: FormData) => void;
-  disabled: boolean;
-  shake: boolean;
-  onShake: (v: boolean) => void;
-  error?: string;
-}) {
-  const [digits, setDigits] = useState<string[]>(Array(6).fill(''));
-  const refs = useRef<(HTMLInputElement | null)[]>([]);
-  const formRef = useRef<HTMLFormElement>(null);
-
-  // رمز خاطئ: نهزّ الخانات ونفرّغها
-  useEffect(() => {
-    if (!error) return;
-    onShake(true);
-    setDigits(Array(6).fill(''));
-    const t = setTimeout(() => { onShake(false); refs.current[0]?.focus(); }, 400);
-    return () => clearTimeout(t);
-  }, [error, onShake]);
-
-  const submitIfComplete = (next: string[]) => {
-    if (next.every((d) => d !== '')) {
-      // الإرسال الذاتي فور اكتمال الست خانات — بلا زر تأكيد
-      setTimeout(() => formRef.current?.requestSubmit(), 0);
-    }
-  };
-
-  return (
-    <form ref={formRef} action={action} className="mt-6">
-      <input type="hidden" name="code" value={digits.join('')} />
-      <div className={`flex justify-center gap-2 ${shake ? 'animate-[shake_.4s]' : ''}`} dir="ltr">
-        {digits.map((d, i) => (
-          <input
-            key={i}
-            ref={(el) => { refs.current[i] = el; }}
-            value={d}
-            disabled={disabled}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={1}
-            aria-label={`الخانة ${i + 1}`}
-            className="field !rounded-[2px] h-12 w-11 p-0 text-center font-mono text-[19px]"
-            onChange={(e) => {
-              const v = e.target.value.replace(/\D/g, '');
-              const next = [...digits];
-              next[i] = v.slice(-1);
-              setDigits(next);
-              if (v && i < 5) refs.current[i + 1]?.focus();
-              submitIfComplete(next);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Backspace' && !digits[i] && i > 0) refs.current[i - 1]?.focus();
-            }}
-            onPaste={(e) => {
-              const text = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-              if (text.length < 2) return;
-              e.preventDefault();
-              const next = text.padEnd(6, '').split('').slice(0, 6);
-              setDigits(next);
-              refs.current[Math.min(text.length, 5)]?.focus();
-              submitIfComplete(next);
-            }}
-          />
-        ))}
-      </div>
-    </form>
   );
 }

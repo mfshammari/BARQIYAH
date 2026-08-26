@@ -82,9 +82,18 @@ export type VerifyOtpResult =
   | { ok: true; userId: string; isNewUser: boolean; recoveryCode?: string }
   | {
       ok: false;
-      error: 'INVALID_CODE' | 'EXPIRED' | 'TOO_MANY_ATTEMPTS' | 'UNAVAILABLE';
+      error: 'INVALID_CODE' | 'EXPIRED' | 'TOO_MANY_ATTEMPTS' | 'UNAVAILABLE' | 'NO_ACCOUNT';
       attemptsLeft: number;
     };
+
+/** هل لهذا الجوال حساب في المنصة؟ يُستخدم قبل إرسال رمز دخول. */
+export async function phoneHasAccount(phoneE164: string): Promise<boolean> {
+  if (!adminClientAvailable) return false;
+  const admin = createAdminClient();
+  const target = phoneToEmail(phoneE164).toLowerCase();
+  const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  return Boolean(data?.users.some((u) => u.email?.toLowerCase() === target));
+}
 
 /**
  * يتحقّق من الرمز، ثم ينشئ الحساب إن كان جديداً ويفتح الجلسة.
@@ -97,6 +106,8 @@ export async function verifyOtpAndSignIn(
   code: string,
   fullName?: string,
   email?: string,
+  /** الدخول لا يُنشئ حساباً: رقم بلا حساب يُوجَّه للتسجيل */
+  options: { createIfMissing?: boolean } = { createIfMissing: true },
 ): Promise<VerifyOtpResult> {
   if (!adminClientAvailable) return { ok: false, error: 'UNAVAILABLE', attemptsLeft: 0 };
 
@@ -122,33 +133,41 @@ export async function verifyOtpAndSignIn(
   let userId: string | null = null;
   let isNewUser = false;
 
-  const created = await admin.auth.admin.createUser({
-    email: authEmail,
-    email_confirm: true,
-    phone_confirm: false,
-    user_metadata: { full_name: fullName ?? null, phone: phoneE164, contact_email: email ?? null },
-  });
+  if (options.createIfMissing) {
+    const created = await admin.auth.admin.createUser({
+      email: authEmail,
+      email_confirm: true,
+      phone_confirm: false,
+      user_metadata: { full_name: fullName ?? null, phone: phoneE164, contact_email: email ?? null },
+    });
 
-  if (created.data?.user) {
-    userId = created.data.user.id;
-    isNewUser = true;
-  } else {
-    // موجود مسبقاً — نبحث عنه
+    if (created.data?.user) {
+      userId = created.data.user.id;
+      isNewUser = true;
+    }
+  }
+
+  if (!userId) {
+    // موجود مسبقاً، أو الدخول لا يُنشئ
     const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
     userId = list?.users.find((u) => u.email?.toLowerCase() === authEmail)?.id ?? null;
   }
 
-  if (!userId) return { ok: false, error: 'UNAVAILABLE', attemptsLeft: 0 };
+  if (!userId) {
+    return {
+      ok: false,
+      error: options.createIfMissing ? 'UNAVAILABLE' : 'NO_ACCOUNT',
+      attemptsLeft: 0,
+    };
+  }
 
-  // الملف الشخصي: الاسم والجوال. الدور لا يُمرَّر أبداً من هنا.
-  await admin.from('profiles').upsert(
-    {
-      id: userId,
-      full_name: fullName ?? undefined,
-      phone: phoneE164,
-    },
-    { onConflict: 'id' },
-  );
+  // الملف الشخصي عند التسجيل وحده. الدور لا يُمرَّر أبداً من هنا.
+  if (isNewUser) {
+    await admin.from('profiles').upsert(
+      { id: userId, full_name: fullName ?? undefined, phone: phoneE164 },
+      { onConflict: 'id' },
+    );
+  }
 
   // فتح الجلسة: رابط سحري يُولَّد ويُستهلك في الخادم بلا إرسال
   const { data: link, error: linkError } = await admin.auth.admin.generateLink({
