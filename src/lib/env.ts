@@ -29,6 +29,8 @@ export const env = {
   appUrl: process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
   moyasarSecretKey: process.env.MOYASAR_SECRET_KEY ?? '',
   moyasarWebhookSecret: process.env.MOYASAR_WEBHOOK_SECRET ?? '',
+  /** الرمز الموحّد في وضع المحاكاة — يعمل حتى تُربط Meta */
+  mockOtpCode: (process.env.MOCK_OTP_CODE ?? '123456').trim(),
 };
 
 /** هل إعدادات Supabase مكتملة؟ الواجهة تعرض شاشة إعداد إن لم تكن. */
@@ -36,6 +38,13 @@ export const supabaseConfigured = Boolean(env.supabaseUrl && env.supabaseAnonKey
 
 /** هل مفاتيح Meta مكتملة؟ إن لا → مزوّد واتساب يعمل بوضع Mock. */
 export const metaConfigured = Boolean(env.metaPhoneNumberId && env.metaAccessToken);
+
+/**
+ * وضع الرمز الموحّد: ما دامت Meta غير مربوطة فلا سبيل لإيصال رمز
+ * عبر واتساب، فيُقبل رمز واحد معروف (MOCK_OTP_CODE) ويُعرض في الشاشة.
+ * بمجرد ضبط مفاتيح Meta يتحوّل تلقائياً إلى رمز عشوائي يُرسَل فعلاً.
+ */
+export const otpUnified = !metaConfigured;
 
 /** هل بوابة الدفع مضبوطة؟ إن لا → تفعيل يدوي من الفريق. */
 export const paymentConfigured = Boolean(env.moyasarSecretKey);

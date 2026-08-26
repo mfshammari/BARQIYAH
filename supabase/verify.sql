@@ -67,7 +67,21 @@ with checks(ord, migration, proves, ok) as (
     (11, '0011_owner_not_inviter', 'المالك لا يُحسب داعياً في مناسبته',
       exists (select 1 from pg_indexes
                where schemaname='public' and indexname='inviters_event_profile_key')
-      and to_regproc('public.guard_owner_inviter_claim') is not null)
+      and to_regproc('public.guard_owner_inviter_claim') is not null),
+
+    (12, '0012_reminders', 'تذكير واحد لمن لم يردّ',
+      exists (select 1 from information_schema.columns
+               where table_schema='public' and table_name='guests'
+                 and column_name='reminded_at')
+      and to_regproc('public.mark_reminders_sent') is not null),
+
+    (13, '0013_phone_otp', 'دخول العميل بالجوال ورمز الاسترجاع',
+      to_regclass('public.otp_requests') is not null
+      and to_regproc('public.request_otp') is not null
+      and to_regproc('public.verify_otp') is not null
+      and exists (select 1 from information_schema.columns
+                   where table_schema='public' and table_name='profiles'
+                     and column_name='recovery_hash'))
 )
 select
   case when ok then '✓' else '✗' end as "حالة",
@@ -110,7 +124,13 @@ with checks(ok) as (
                    and prosrc not like '%raw_user_meta_data ->> ''role''%')),
     (exists (select 1 from pg_indexes
               where schemaname='public' and indexname='inviters_event_profile_key')
-      and to_regproc('public.guard_owner_inviter_claim') is not null)
+      and to_regproc('public.guard_owner_inviter_claim') is not null),
+    (exists (select 1 from information_schema.columns
+              where table_schema='public' and table_name='guests' and column_name='reminded_at')
+      and to_regproc('public.mark_reminders_sent') is not null),
+    (to_regclass('public.otp_requests') is not null
+      and to_regproc('public.request_otp') is not null
+      and to_regproc('public.verify_otp') is not null)
 )
 select
   count(*) filter (where ok) || ' من ' || count(*) || ' ترحيل مطبَّق'
