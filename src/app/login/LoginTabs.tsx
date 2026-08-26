@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import { LoginForm } from './LoginForm';
-import { PhoneSignup } from '@/app/signup/PhoneSignup';
+import { PhoneLogin } from './PhoneLogin';
 
 /**
  * مساران للدخول:
- *  - **العميل بجواله** عبر رمز يصله على واتساب (نفس خطوات التسجيل —
- *    الرقم المعروف يدخل مباشرةً بلا إنشاء حساب جديد).
+ *  - **العميل بجواله**: خطوتان — الرقم ثم الرمز. لا اسم ولا بريد،
+ *    ولا يُنشئ حساباً: رقم بلا حساب يُوجَّه إلى التسجيل.
  *  - **الفريق بالبريد وكلمة المرور** — مسار موثوق لا يعتمد على قناة
  *    خارجية، فلا يُقفل الباب على الإدارة إن تعطّل واتساب.
  */
@@ -34,7 +34,7 @@ export function LoginTabs({ next }: { next: string }) {
       </div>
 
       {tab === 'phone' ? (
-        <PhoneSignup />
+        <PhoneLogin next={next} />
       ) : (
         <>
           <LoginForm next={next} />
