@@ -30,6 +30,8 @@ export async function createEvent(_prev: ActionState, formData: FormData): Promi
   const venue = String(formData.get('venue') ?? '').trim() || null;
   const eventTime = String(formData.get('event_time') ?? '').trim() || null;
   const packageId = String(formData.get('package_id') ?? '') || null;
+  const qtyRaw = Math.floor(Number(formData.get('package_qty') ?? 0));
+  const packageQty = packageId && qtyRaw > 0 ? qtyRaw : null;
   const templateId = String(formData.get('template_id') ?? '') || null;
   const imageUrl = String(formData.get('image_url') ?? '').trim() || null;
 
@@ -46,6 +48,7 @@ export async function createEvent(_prev: ActionState, formData: FormData): Promi
     .insert({
       owner_id: user.id,
       package_id: packageId,
+      package_qty: packageQty,
       occasion_type: occasion,
       event_date: eventDate,
       event_date_hijri: formatHijri(eventDate),

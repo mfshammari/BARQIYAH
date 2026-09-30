@@ -513,25 +513,42 @@ export async function requestUpgrade(_prev: ActionState, formData: FormData): Pr
 
   const packageId = String(formData.get('package_id') ?? '');
   if (!packageId) return { error: 'اختر الباقة المطلوبة.' };
+  const qtyRaw = Math.floor(Number(formData.get('package_qty') ?? 0));
 
   const { data: pkg } = await supabase
     .from('packages').select('*').eq('id', packageId).maybeSingle<Package>();
   if (!pkg) return { error: 'الباقة غير متاحة.' };
 
-  // عملية معلّقة يعود معرّفها في الـwebhook (أو في المحاكاة)
+  const qty = pkg.kind === 'custom' ? (qtyRaw > 0 ? qtyRaw : null) : null;
+  if (pkg.kind === 'custom' && !qty) return { error: 'حدّد عدد الدعوات للباقة المخصّصة.' };
+
+  // عملية معلّقة يتجمّد فيها السعر والمقاعد لحظة الشراء، ويعود معرّفها في الـwebhook
   const { data: txId, error: txError } = await supabase.rpc('create_pending_payment', {
     p_event_id: eventId,
     p_package_id: packageId,
+    p_qty: qty,
   });
-  if (txError || !txId) return { error: 'تعذّر بدء عملية الدفع.' };
+  if (txError || !txId) {
+    if (txError?.message.includes('QTY_BELOW_MIN')) {
+      return { error: `أقل كمية للباقة المخصّصة ${pkg.min_qty ?? 0} دعوة.` };
+    }
+    return { error: 'تعذّر بدء عملية الدفع.' };
+  }
+
+  const { data: tx } = await supabase
+    .from('transactions').select('amount, seats_added').eq('id', txId).maybeSingle<{ amount: number; seats_added: number }>();
+  const amount = Number(tx?.amount ?? 0);
+
+  // نتذكّر الباقة والكمية المختارة على المناسبة
+  await supabase.from('events').update({ package_id: packageId, package_qty: qty }).eq('id', eventId);
 
   const provider = getPaymentProvider();
   const result = await provider.createCheckout({
     eventId,
     packageId,
     transactionId: String(txId),
-    amount: Number(pkg.price),
-    description: `برقية — ${pkg.name} لمناسبة ${event.host_name}`,
+    amount,
+    description: `برقية — ${pkg.name}${qty ? ` (${qty} دعوة)` : ''} لمناسبة ${event.host_name}`,
     callbackUrl: appUrl(`/e/${eventId}/info?paid=1`),
   });
 

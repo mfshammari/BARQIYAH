@@ -28,13 +28,38 @@ export interface Profile {
   created_at: string;
 }
 
+export type PackageKind = 'fixed' | 'custom';
+
 export interface Package {
   id: string;
   name: string;
+  /** ثابتة بمقاعد وسعر، أو مخصّصة بتسعير متدرّج يضبطه الأدمن */
+  kind: PackageKind;
   seats: number;
   price: number;
   active: boolean;
+  description: string | null;
+  features: string[];
+  is_featured: boolean;
+  sort_order: number;
+  /** للمخصّصة: أقل كمية */
+  min_qty: number | null;
+  updated_at: string;
   created_at: string;
+}
+
+/** شريحة الباقة المخصّصة: من كمية / سعر الدعوة */
+export interface PackageTier {
+  id: string;
+  package_id: string;
+  min_qty: number;
+  unit_price: number;
+}
+
+/** الباقات كما تُقرأ من القاعدة: الثابتة مرتّبة، والمخصّصة بشرائحها */
+export interface PackageCatalog {
+  fixed: Package[];
+  custom: (Package & { tiers: PackageTier[] }) | null;
 }
 
 export interface Template {
@@ -54,6 +79,8 @@ export interface EventRow {
   id: string;
   owner_id: string;
   package_id: string | null;
+  /** الكمية المختارة للباقة المخصّصة عند الإنشاء — تُدفع لاحقاً */
+  package_qty: number | null;
   occasion_type: OccasionType;
   /** التاريخ الميلادي (event_date_gregorian في المواصفة) */
   event_date: string;

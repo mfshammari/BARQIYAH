@@ -3,8 +3,9 @@
 import { useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { createEvent, type ActionState } from '../actions';
-import { formatCurrency, formatEventLine, formatNumber } from '@/lib/format';
-import { CELEBRANT_LABELS, OCCASION_LABELS, hasTwoCelebrants, type OccasionType, type Package, type Template } from '@/lib/types';
+import { formatEventLine } from '@/lib/format';
+import { PackagePicker } from '@/components/PackagePicker';
+import { CELEBRANT_LABELS, OCCASION_LABELS, hasTwoCelebrants, type OccasionType, type PackageCatalog, type Template } from '@/lib/types';
 
 const STEPS = ['التفاصيل', 'الباقة', 'القالب', 'الدفع'] as const;
 
@@ -18,8 +19,8 @@ function Submit() {
 }
 
 export function NewEventForm({
-  packages, templates,
-}: { packages: Package[]; templates: Template[] }) {
+  catalog, templates,
+}: { catalog: PackageCatalog; templates: Template[] }) {
   const [state, formAction] = useActionState<ActionState, FormData>(createEvent, {});
   const [step, setStep] = useState(0);
 
@@ -31,7 +32,6 @@ export function NewEventForm({
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [venue, setVenue] = useState('');
-  const [packageId, setPackageId] = useState('');
 
   const two = hasTwoCelebrants(occasion);
   const celebrantLabel = CELEBRANT_LABELS[occasion];
@@ -145,26 +145,8 @@ export function NewEventForm({
           <h2 className="sec-title">اختر الباقة</h2>
           <p className="text-[13px] text-muted">الرصيد بالمقاعد (عدد الأشخاص) لا بعدد الدعوات.</p>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            {packages.map((p) => (
-              <label key={p.id}
-                className={`cursor-pointer rounded-xl border p-4 transition-colors ${
-                  packageId === p.id ? 'border-brand bg-brand-soft' : 'border-line hover:bg-panel'
-                }`}>
-                <input type="radio" name="package_id" value={p.id} className="sr-only"
-                  checked={packageId === p.id} onChange={() => setPackageId(p.id)} />
-                <div className="font-ui font-bold">{p.name}</div>
-                <div className="mt-1 font-ui text-2xl font-extrabold num">{formatNumber(p.seats)}</div>
-                <div className="text-[12px] text-muted">مقعداً</div>
-                <div className="mt-2 border-t border-line pt-2 text-[13px] font-semibold text-gold num">
-                  {formatCurrency(p.price)}
-                </div>
-              </label>
-            ))}
-          </div>
-          {packages.length === 0 ? (
-            <p className="text-[13px] text-warn">لا توجد باقات متاحة حالياً — تواصل مع الإدارة.</p>
-          ) : null}
+          <PackagePicker catalog={catalog} />
+          <p className="hint">السعر يتجمّد لحظة الشراء — تعديل الباقات لاحقاً لا يغيّر فاتورتك.</p>
 
           <div className="flex gap-2">
             <button type="button" className="btn-ghost" onClick={() => setStep(0)}>رجوع</button>

@@ -2,14 +2,16 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSessionUser, homePathForRole } from '@/lib/auth';
 import { supabaseConfigured } from '@/lib/env';
-import { createClient } from '@/lib/supabase/server';
+import { createAnonClient } from '@/lib/supabase/anon';
+import { loadPackageCatalog } from '@/lib/packagesData';
+import { lowestUnitPrice } from '@/lib/packages';
 import { InvitePreview, GoldRule } from '@/components/landing/InvitePreview';
 import { Icon, type IconName } from '@/components/landing/Icons';
 import {
   ShowcaseRow, BalanceVisual, GuestsVisual, SeatsVisual, ScanVisual,
 } from '@/components/landing/Showcase';
-import { formatNumber, formatPlain } from '@/lib/format';
-import type { Package } from '@/lib/types';
+import { formatCurrency, formatNumber, formatPlain } from '@/lib/format';
+import type { PackageCatalog } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,24 +40,6 @@ const OCCASIONS: { t: string; d: string; tag: string; ic: IconName }[] = [
   { t: 'مناسبات رسمية', ic: 'home', d: 'حفلاتٌ ومؤتمرات بتنظيمٍ دقيق.', tag: 'قوائم كبيرة' },
 ];
 
-const PLANS = [
-  {
-    name: 'أساسية', desc: 'مثالية للمناسبات العائلية والقوائم الصغيرة.',
-    price: 299, seats: 100, cta: 'اختر الأساسية', featured: false,
-    features: ['قوالب دعوات معتمدة', 'إرسال عبر واتساب', 'باركود لكل مدعو', '٥ رسائل تجريبية مجانية'],
-  },
-  {
-    name: 'قياسية', desc: 'الخيار الأنسب لأغلب حفلات الزفاف.',
-    price: 699, seats: 300, cta: 'اختر القياسية', featured: true,
-    features: ['كل مزايا الباقة الأساسية', 'إدارة الدعاة وتوزيع القوائم', 'حسابات مسح متعددة للأبواب', 'تقارير حضورٍ لحظية', 'طلب قالبٍ خاص بك'],
-  },
-  {
-    name: 'مميزة', desc: 'للحفلات الكبيرة والقوائم الطويلة.',
-    price: 1199, seats: 600, cta: 'اختر المميزة', featured: false,
-    features: ['كل مزايا الباقة القياسية', 'أولوية في اعتماد القوالب', 'حدٌّ أعلى للدعاة والماسحين', 'دعمٌ مخصّص طوال المناسبة'],
-  },
-];
-
 const FAQ = [
   { q: 'هل يحتاج المدعو تطبيقاً أو حساباً؟', a: 'لا. تصله الدعوة على واتساب، ويؤكّد بضغطة زر — بلا تحميل ولا تسجيل.' },
   { q: 'هل بيانات مدعوّيّ محفوظة؟', a: 'أرقام ضيوفك تُستخدم لإرسال دعوتك فقط — لا تُشارك ولا تُستخدم لأي تسويق.' },
@@ -71,22 +55,16 @@ export default async function LandingPage() {
     if (user) redirect(homePathForRole(user.profile.role));
   }
 
-  // الباقات من القاعدة إن وُجدت، وإلا باقات التصميم
-  let dbPackages: Package[] = [];
+  // الباقات من جدول packages وحده — بعميل anon فتنجح للزائر غير المسجّل
+  let catalog: PackageCatalog = { fixed: [], custom: null };
   if (supabaseConfigured) {
     try {
-      const supabase = await createClient();
-      const { data } = await supabase.from('packages').select('*').eq('active', true)
-        .order('seats', { ascending: true }).returns<Package[]>();
-      dbPackages = data ?? [];
-    } catch { /* الهبوط يعمل بلا قاعدة */ }
+      catalog = await loadPackageCatalog(createAnonClient());
+    } catch { /* الهبوط يعمل بلا قاعدة: قسم الباقات يعرض «تواصل معنا» */ }
   }
-
-  const plans = dbPackages.length >= 3
-    ? dbPackages.slice(0, 3).map((p, i) => ({
-        ...PLANS[i], name: p.name, price: Number(p.price), seats: p.seats,
-      }))
-    : PLANS;
+  const { fixed, custom } = catalog;
+  const lowest = custom ? lowestUnitPrice(custom.tiers) : null;
+  const hasPlans = fixed.length > 0 || Boolean(custom);
 
   return (
     <main className="bg-ivory">
@@ -304,12 +282,21 @@ export default async function LandingPage() {
             وكل باقة مستقلة لمناسبتها.
           </p>
 
+          {!hasPlans ? (
+            <div className="mt-12 border border-gold-soft/30 px-6 py-10 text-center">
+              <h3 className="font-display text-[22px] font-bold text-white">تواصل معنا لمعرفة الباقات</h3>
+              <p className="mt-2 text-[14px] text-ivory/70">نصمّم لك باقة تناسب حجم مناسبتك وعدد ضيوفك.</p>
+              <a href="https://wa.me/966500000000" className="btn-gold !rounded-[2px] mt-5 inline-flex">
+                تواصل عبر واتساب
+              </a>
+            </div>
+          ) : (
           <div className="plans">
-            {plans.map((p) => (
-              <div key={p.name} className={`plan-card ${p.featured ? 'featured' : ''}`}>
-                {p.featured ? <div className="plan-tag">الأكثر طلباً</div> : null}
+            {fixed.map((p) => (
+              <div key={p.id} className={`plan-card ${p.is_featured ? 'featured' : ''}`}>
+                {p.is_featured ? <div className="plan-tag">الأكثر طلباً</div> : null}
                 <div className="plan-name">{p.name}</div>
-                <div className="plan-desc">{p.desc}</div>
+                <div className="plan-desc">{p.description ?? ''}</div>
 
                 <div className="plan-price">
                   <b className="num">{formatPlain(p.price)}</b>
@@ -323,13 +310,38 @@ export default async function LandingPage() {
 
                 <Link
                   href="/signup"
-                  className={`${p.featured ? 'btn-primary' : 'btn-ghost'} !rounded-[2px]`}
+                  className={`${p.is_featured ? 'btn-primary' : 'btn-ghost'} !rounded-[2px]`}
                 >
-                  {p.cta}
+                  اختر {p.name}
                 </Link>
               </div>
             ))}
+
+            {custom ? (
+              <div className="plan-card">
+                <div className="plan-name">{custom.name}</div>
+                <div className="plan-desc">{custom.description ?? 'للقوائم الكبيرة — سعر الدعوة ينخفض كلما زاد العدد.'}</div>
+
+                <div className="plan-price">
+                  <b className="num">{lowest != null ? formatPlain(lowest) : '—'}</b>
+                  <span>﷼ / دعوة</span>
+                </div>
+                <div className="plan-seats num">ابتداءً من {formatNumber(custom.min_qty ?? 0)} دعوة</div>
+
+                <ul className="plan-list">
+                  {custom.tiers.map((t) => (
+                    <li key={t.id} className="num">
+                      من {formatNumber(t.min_qty)} دعوة: {formatCurrency(t.unit_price)} للدعوة
+                    </li>
+                  ))}
+                  {custom.features.map((f) => <li key={f}>{f}</li>)}
+                </ul>
+
+                <Link href="/signup" className="btn-ghost !rounded-[2px]">اختر {custom.name}</Link>
+              </div>
+            ) : null}
           </div>
+          )}
 
           <p className="pricing-foot">
             تحتاج مقاعد إضافية بعد الشراء؟ تقدر ترقّي باقتك في أي وقت قبل المناسبة.

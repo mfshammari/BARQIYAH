@@ -3,33 +3,106 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { requireAdmin, requireAdminPermission } from '@/lib/auth';
-import type { TransactionType, WhatsAppCategory } from '@/lib/types';
+import { parseFeatures, validateTiers, type TierLike } from '@/lib/packages';
+import type { PackageKind, TransactionType, WhatsAppCategory } from '@/lib/types';
 
 export interface ActionState { error?: string; notice?: string }
 
 // ————————————————————— الباقات —————————————————————
+/** الباقات تنعكس فوراً على كل الشاشات التي تقرأها. */
+function revalidatePackages() {
+  revalidatePath('/admin/packages');
+  revalidatePath('/');
+  revalidatePath('/app/events/new');
+  revalidatePath('/e/[id]/info', 'layout');
+}
+
+/**
+ * حفظ باقة (إضافة أو تعديل بـ id مخفي). الثابتة: مقاعد وسعر.
+ * المخصّصة: أقل كمية وشرائح تُتحقق هنا وفي القاعدة (TIERS_INVALID).
+ */
 export async function savePackage(_prev: ActionState, formData: FormData): Promise<ActionState> {
   await requireAdmin();
   const supabase = await createClient();
 
   const id = String(formData.get('id') ?? '');
   const name = String(formData.get('name') ?? '').trim();
-  const seats = Number(formData.get('seats') ?? 0);
-  const price = Number(formData.get('price') ?? 0);
+  const kind = (String(formData.get('kind') ?? 'fixed') === 'custom' ? 'custom' : 'fixed') as PackageKind;
+  const description = String(formData.get('description') ?? '').trim() || null;
+  const features = parseFeatures(String(formData.get('features') ?? ''));
+  const isFeatured = formData.get('is_featured') === 'on';
+  const sortOrder = Math.floor(Number(formData.get('sort_order') ?? 0)) || 0;
   const active = formData.get('active') === 'on';
 
   if (!name) return { error: 'اسم الباقة مطلوب.' };
-  if (!Number.isInteger(seats) || seats <= 0) return { error: 'عدد المقاعد يجب أن يكون رقماً موجباً.' };
-  if (price < 0) return { error: 'السعر غير صالح.' };
 
-  const payload = { name, seats, price, active };
-  const { error } = id
-    ? await supabase.from('packages').update(payload).eq('id', id)
-    : await supabase.from('packages').insert(payload);
+  let seats = 0;
+  let price = 0;
+  let minQty: number | null = null;
+  let tiers: TierLike[] = [];
 
-  if (error) return { error: 'تعذّر حفظ الباقة.' };
-  revalidatePath('/admin/packages');
-  return { notice: id ? 'تم تحديث الباقة.' : 'تمت إضافة الباقة.' };
+  if (kind === 'fixed') {
+    seats = Number(formData.get('seats') ?? 0);
+    price = Number(formData.get('price') ?? 0);
+    if (!Number.isInteger(seats) || seats <= 0) return { error: 'عدد المقاعد يجب أن يكون رقماً موجباً.' };
+    if (!Number.isFinite(price) || price < 0) return { error: 'السعر غير صالح.' };
+  } else {
+    minQty = Math.floor(Number(formData.get('min_qty') ?? 0));
+    try {
+      const raw = JSON.parse(String(formData.get('tiers') ?? '[]')) as { min_qty: unknown; unit_price: unknown }[];
+      tiers = (Array.isArray(raw) ? raw : []).map((t) => ({
+        min_qty: Math.floor(Number(t.min_qty)), unit_price: Number(t.unit_price),
+      }));
+    } catch {
+      return { error: 'الشرائح غير مقروءة.' };
+    }
+    const issue = validateTiers(tiers, minQty);
+    if (issue) return { error: issue };
+    seats = minQty;   // للمخصّصة: أقل كمية، والسعر من الشرائح
+    price = 0;
+  }
+
+  // «مميّزة» واحدة فقط: تُلغى عن البقية قبل الحفظ
+  if (isFeatured) {
+    await supabase.from('packages').update({ is_featured: false }).eq('is_featured', true);
+  }
+
+  const payload = {
+    name, kind, seats, price, active, description, features,
+    is_featured: isFeatured, sort_order: sortOrder,
+    // min_qty للمخصّصة يُضبط داخل set_package_tiers مع الشرائح (يتحقق دفعةً واحدة)
+    ...(kind === 'fixed' ? { min_qty: null } : {}),
+  };
+
+  let packageId = id;
+  if (id) {
+    const { error } = await supabase.from('packages').update(payload).eq('id', id);
+    if (error) return { error: describePackageError(error.message) };
+  } else {
+    const { data, error } = await supabase.from('packages').insert(payload).select('id').single();
+    if (error || !data) return { error: describePackageError(error?.message ?? '') };
+    packageId = data.id;
+  }
+
+  if (kind === 'custom') {
+    const { error } = await supabase.rpc('set_package_tiers', {
+      p_package_id: packageId, p_min_qty: minQty, p_tiers: tiers,
+    });
+    if (error) return { error: describePackageError(error.message) };
+  } else if (id) {
+    // تحوّلت من مخصّصة إلى ثابتة: تُحذف شرائحها
+    await supabase.from('package_tiers').delete().eq('package_id', id);
+  }
+
+  revalidatePackages();
+  return { notice: id ? 'تم تحديث الباقة — انعكست على الصفحة الرئيسية.' : 'تمت إضافة الباقة.' };
+}
+
+function describePackageError(message: string): string {
+  if (message.includes('TIERS_INVALID')) return 'الشرائح غير صالحة: مرتّبة تصاعدياً بالكمية وتنازلياً بالسعر، وأولها من أقل كمية.';
+  if (message.includes('packages_single_custom')) return 'توجد باقة مخصّصة واحدة بالفعل — عدّلها بدل إضافة ثانية.';
+  if (message.includes('packages_single_featured')) return 'باقة مميّزة واحدة فقط.';
+  return 'تعذّر حفظ الباقة.';
 }
 
 export async function togglePackage(formData: FormData) {
@@ -38,7 +111,7 @@ export async function togglePackage(formData: FormData) {
   const id = String(formData.get('id') ?? '');
   const active = String(formData.get('active') ?? '') === 'true';
   await supabase.from('packages').update({ active: !active }).eq('id', id);
-  revalidatePath('/admin/packages');
+  revalidatePackages();
 }
 
 // ————————————————————— القوالب العامة —————————————————————
@@ -124,6 +197,8 @@ export async function activateEvent(_prev: ActionState, formData: FormData): Pro
   const packageId = String(formData.get('package_id') ?? '');
   const type = (String(formData.get('type') ?? 'manual_activation') || 'manual_activation') as TransactionType;
   const note = String(formData.get('note') ?? '').trim() || null;
+  const qtyRaw = Math.floor(Number(formData.get('qty') ?? 0));
+  const qty = qtyRaw > 0 ? qtyRaw : null;
 
   if (!eventId || !packageId) return { error: 'اختر الباقة أولاً.' };
 
@@ -132,11 +207,19 @@ export async function activateEvent(_prev: ActionState, formData: FormData): Pro
     p_package_id: packageId,
     p_type: type,
     p_note: note,
+    p_qty: qty,
   });
 
   if (error) return { error: 'تعذّر تفعيل المناسبة.' };
   const res = data as { ok: boolean; reason?: string; seats_quota?: number };
-  if (!res?.ok) return { error: 'تعذّر التفعيل: ' + (res?.reason ?? 'سبب غير معروف') };
+  if (!res?.ok) {
+    const reasons: Record<string, string> = {
+      QTY_REQUIRED: 'الباقة المخصّصة تحتاج عدد الدعوات.',
+      PACKAGE_NOT_FOUND: 'الباقة غير موجودة.',
+      EVENT_NOT_FOUND: 'المناسبة غير موجودة.',
+    };
+    return { error: 'تعذّر التفعيل: ' + (reasons[res?.reason ?? ''] ?? res?.reason ?? 'سبب غير معروف') };
+  }
 
   revalidatePath('/admin/events');
   revalidatePath(`/e/${eventId}`);
