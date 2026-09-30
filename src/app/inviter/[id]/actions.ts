@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth';
 import { normalizePhone, isValidPhone, formatNumber } from '@/lib/format';
-import { validateInviteVars, type InviteVars } from '@/lib/inviteVars';
+import { validateInviteVars, hasInviteVars, type InviteVars } from '@/lib/inviteVars';
 import { sendInvitations, sendReminders } from '@/lib/invitations';
 import type { Guest, Inviter } from '@/lib/types';
 
@@ -27,7 +27,7 @@ function revalidateInviter(id: string) {
   revalidatePath('/app');
 }
 
-/** الداعي يحفظ قالبه ونصّه وصورته — يملكها وحده. */
+/** الداعي يحفظ نصّه وصورته — يملكها وحده. القالب واحد للمنصة. */
 export async function saveInviteContent(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const inviterId = String(formData.get('inviter_id') ?? '');
   const { supabase } = await guardInviter(inviterId);
@@ -36,16 +36,14 @@ export async function saveInviteContent(_prev: ActionState, formData: FormData):
     host: String(formData.get('host') ?? '').trim(),
     occasion: String(formData.get('occasion') ?? '').trim(),
   };
-  const templateId = String(formData.get('template_id') ?? '') || null;
   const imageUrl = String(formData.get('image_url') ?? '').trim() || null;
 
   const issues = validateInviteVars(vars);
   if (issues.length > 0) return { error: issues[0].message };
-  if (!templateId) return { error: 'اختر قالباً من المكتبة أولاً.' };
 
   const { error } = await supabase
     .from('inviters')
-    .update({ invite_vars: vars, template_id: templateId, image_url: imageUrl })
+    .update({ invite_vars: vars, image_url: imageUrl })
     .eq('id', inviterId);
 
   if (error) return { error: 'تعذّر حفظ دعوتك.' };
@@ -136,8 +134,8 @@ export async function sendInviterInvitations(_prev: ActionState, formData: FormD
   const inviterId = String(formData.get('inviter_id') ?? '');
   const { supabase, inviter } = await guardInviter(inviterId);
 
-  if (!inviter.template_id || !inviter.invite_vars?.host) {
-    return { error: 'اكتب نصّ دعوتك واختر قالبك قبل الإرسال.' };
+  if (!hasInviteVars(inviter.invite_vars as Partial<InviteVars>)) {
+    return { error: 'اكتب نصّ دعوتك قبل الإرسال.' };
   }
 
   const scope = String(formData.get('scope') ?? 'selected');
@@ -158,7 +156,6 @@ export async function sendInviterInvitations(_prev: ActionState, formData: FormD
     inviterId,
     inviteVars: inviter.invite_vars as unknown as InviteVars,
     imageUrl: inviter.image_url,
-    templateId: inviter.template_id,
     reasons: REASONS,
   });
 

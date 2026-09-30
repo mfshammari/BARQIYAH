@@ -7,7 +7,8 @@ import { requireUser, isAdminRole } from '@/lib/auth';
 import { sendInvitations, sendReminders } from '@/lib/invitations';
 import { formatNumber } from '@/lib/format';
 import { normalizePhone, isValidPhone } from '@/lib/format';
-import type { EventRow, Guest, OccasionType, Package, WhatsAppCategory } from '@/lib/types';
+import type { EventRow, Guest, OccasionType, Package } from '@/lib/types';
+import { validateInviteVars, type InviteVars } from '@/lib/inviteVars';
 import { getPaymentProvider } from '@/lib/payments';
 import { appUrl } from '@/lib/env';
 import { redirect } from 'next/navigation';
@@ -373,43 +374,28 @@ export async function deleteInviter(formData: FormData) {
   revalidateEvent(eventId);
 }
 
-// ————————————————————— القالب —————————————————————
-export async function selectTemplate(_prev: ActionState, formData: FormData): Promise<ActionState> {
+// ————————————————————— دعوتي (القالب الموحّد) —————————————————————
+/** المالك يكتب متغيّريه {{1}} و{{2}} — والموعد يُحقن آلياً. */
+export async function saveEventInvite(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const eventId = String(formData.get('event_id') ?? '');
   const { supabase } = await guardEvent(eventId);
 
-  const templateId = String(formData.get('template_id') ?? '');
-  if (!templateId) return { error: 'اختر قالباً.' };
+  const vars: InviteVars = {
+    host: String(formData.get('host') ?? '').trim(),
+    occasion: String(formData.get('occasion') ?? '').trim(),
+  };
+  const imageUrl = String(formData.get('image_url') ?? '').trim() || null;
+
+  const issues = validateInviteVars(vars);
+  if (issues.length > 0) return { error: issues[0].message };
 
   const { error } = await supabase
-    .from('events').update({ template_id: templateId }).eq('id', eventId);
-  if (error) return { error: 'تعذّر اختيار القالب.' };
+    .from('events').update({ invite_vars: vars, image_url: imageUrl }).eq('id', eventId);
+  if (error) return { error: 'تعذّر حفظ دعوتك.' };
 
-  revalidatePath(`/e/${eventId}/template`);
-  revalidatePath(`/e/${eventId}`);
-  return { notice: 'تم اعتماد القالب لهذه المناسبة.' };
-}
-
-export async function requestCustomTemplate(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const eventId = String(formData.get('event_id') ?? '');
-  const { supabase, user } = await guardEvent(eventId);
-
-  const name = String(formData.get('name') ?? '').trim();
-  const bodyText = String(formData.get('body_text') ?? '').trim();
-  const imageUrl = String(formData.get('image_url') ?? '').trim() || null;
-  const category = String(formData.get('whatsapp_category') ?? 'utility') as WhatsAppCategory;
-
-  if (!name) return { error: 'اسم القالب مطلوب.' };
-  if (!bodyText) return { error: 'نص القالب مطلوب.' };
-
-  const { error } = await supabase.from('templates').insert({
-    owner_id: user.id, name, body_text: bodyText, image_url: imageUrl,
-    whatsapp_category: category, status: 'under_review',
-  });
-
-  if (error) return { error: 'تعذّر تقديم الطلب.' };
-  revalidatePath(`/e/${eventId}/template`);
-  return { notice: 'أُرسل الطلب للمراجعة. سيصلك القرار بعد اعتماد القالب لدى Meta.' };
+  revalidatePath(`/e/${eventId}/invite`);
+  revalidateEvent(eventId);
+  return { notice: 'حُفظت دعوتك — جاهزة للإرسال.' };
 }
 
 // ————————————————————— حسابات المسح —————————————————————

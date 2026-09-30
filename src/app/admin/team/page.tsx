@@ -11,7 +11,8 @@ export const dynamic = 'force-dynamic';
 
 const TEAM_ROLES: UserRole[] = ['admin_owner', 'admin_support', 'admin_reviewer', 'admin_finance'];
 const ALL_PERMISSIONS: Permission[] = [
-  'manual_activation', 'review_templates', 'impersonate', 'finance', 'whatsapp_settings', 'manage_team',
+  // review_templates غير مستخدمة بعد توحيد القالب — تبقى في المصفوفة لا في الواجهة
+  'manual_activation', 'impersonate', 'finance', 'whatsapp_settings', 'manage_team',
 ];
 
 export default async function TeamPage() {

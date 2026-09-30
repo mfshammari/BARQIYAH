@@ -9,7 +9,6 @@ const ICONS: Record<string, string> = {
   '/admin': '▤',
   '/admin/whatsapp': '◉',
   '/admin/events': '☰',
-  '/admin/template-requests': '✉',
   '/admin/support': '☎',
   '/admin/clients': '◑',
   '/admin/finance': '₪',

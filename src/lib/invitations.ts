@@ -3,9 +3,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient, adminClientAvailable } from '@/lib/supabase/admin';
 import { appUrl } from '@/lib/env';
 import { buildButtonPayloads, buildSeatsPayload, getWhatsAppProvider } from '@/lib/whatsapp';
-import { OCCASION_LABELS, type EventRow, type Guest, type Template } from '@/lib/types';
-import { formatDate, formatEventLine } from '@/lib/format';
-import { renderInvite, type InviteVars } from '@/lib/inviteVars';
+import type { EventRow, Guest, Template, WhatsAppCategory } from '@/lib/types';
+import { formatEventLine } from '@/lib/format';
+import {
+  buildInviteParams, hasInviteVars, renderInvite, DEFAULT_META_TEMPLATE_NAME, type InviteVars,
+} from '@/lib/inviteVars';
 
 
 export interface SendOutcome {
@@ -29,6 +31,7 @@ const RESERVE_REASONS: Record<string, string> = {
   GUEST_NOT_FOUND: 'المدعو غير موجود.',
   ALREADY_SENT: 'الدعوة مُرسلة مسبقاً.',
   INSUFFICIENT_SEATS: 'الرصيد لا يكفي لحجز مقاعد هذه الدعوة.',
+  INVITE_TEXT_MISSING: 'اكتب نصّ دعوتك من صفحة دعوتي قبل الإرسال.',
 };
 
 /** سطر سجل الرسائل — يُكتب بـ service role حتى لا تحجبه سياسات RLS. */
@@ -41,30 +44,31 @@ async function logMessage(row: Record<string, unknown>) {
   }
 }
 
-function buildBodyParams(event: EventRow, template: Template | null): string[] {
-  // {{1}} اسم المُضيف — {{2}} أصحاب المناسبة — {{3}} التاريخ — {{4}} نوع المناسبة
-  const params = [
-    event.host_name,
-    event.buyer_name || event.host_name,
-    formatDate(event.event_date),
-    OCCASION_LABELS[event.occasion_type],
-  ];
-  // نمرّر بقدر ما يطلبه نص القالب فقط
-  const needed = template ? countPlaceholders(template.body_text) : params.length;
-  return params.slice(0, Math.max(needed, 1));
+/**
+ * القالب الموحّد الوحيد للمنصة: اسمه في Meta وتصنيفه من الصف is_default.
+ * في المحاكاة (أو قبل تشغيل الترحيل) يبقى الاسم الافتراضي barqiyah_invite.
+ */
+export async function loadDefaultTemplate(
+  supabase: SupabaseClient,
+): Promise<{ metaName: string; category: WhatsAppCategory }> {
+  try {
+    const { data } = await supabase
+      .from('templates').select('meta_template_name, whatsapp_category')
+      .eq('is_default', true).maybeSingle<Pick<Template, 'meta_template_name' | 'whatsapp_category'>>();
+    return {
+      metaName: data?.meta_template_name || DEFAULT_META_TEMPLATE_NAME,
+      category: data?.whatsapp_category ?? 'utility',
+    };
+  } catch {
+    return { metaName: DEFAULT_META_TEMPLATE_NAME, category: 'utility' };
+  }
 }
 
-export function countPlaceholders(body: string): number {
-  const found = new Set(Array.from(body.matchAll(/\{\{(\d+)\}\}/g)).map((m) => m[1]));
-  return found.size;
-}
-
-/** إرسال باسم داعٍ: بحصته ونصّه وصورته وقالبه. */
+/** إرسال باسم داعٍ: بحصته ونصّه وصورته — والقالب واحد للجميع. */
 export interface InviterContext {
   inviterId: string;
   inviteVars: InviteVars;
   imageUrl: string | null;
-  templateId: string;
   reasons?: Record<string, string>;
 }
 
@@ -72,8 +76,9 @@ export interface InviterContext {
  * إرسال دعوات: يحجز المقاعد ذرّياً في قاعدة البيانات أولاً،
  * ثم يرسل عبر واتساب، ويحرّر الحجز عند فشل الإرسال.
  *
- * مع سياق داعٍ: الحجز من حصته، والنص والصورة والقالب من اختياره —
- * وسطر الموعد والمكان يُحقن من بيانات المناسبة ولا يحرّره (SPEC §6).
+ * القالب واحد للجميع بثلاثة متغيّرات: [host, occasion, eventLine].
+ * مع سياق داعٍ: الحجز من حصته، والنص والصورة من عنده؛ وإلا من المالك
+ * (events.invite_vars) — وسطر الموعد يُحقن من بيانات المناسبة (SPEC §6).
  */
 export async function sendInvitations(
   supabase: SupabaseClient,
@@ -87,14 +92,22 @@ export async function sendInvitations(
     .from('events').select('*').eq('id', eventId).maybeSingle<EventRow>();
   if (!event) return guestIds.map((id) => ({ guestId: id, name: '', ok: false, reason: 'المناسبة غير موجودة.' }));
 
-  const { data: template } = event.template_id
-    ? await supabase.from('templates').select('*').eq('id', event.template_id).maybeSingle<Template>()
-    : { data: null as Template | null };
+  // المتغيّران: من الداعي أو من المالك — وبدونهما لا إرسال
+  const vars: Partial<InviteVars> = inviterCtx
+    ? inviterCtx.inviteVars
+    : ((event.invite_vars ?? {}) as Partial<InviteVars>);
 
   const { data: guests } = await supabase
     .from('guests').select('*').in('id', guestIds).eq('event_id', eventId)
     .returns<Guest[]>();
   const guestMap = new Map((guests ?? []).map((g) => [g.id, g]));
+
+  if (!hasInviteVars(vars)) {
+    return guestIds.map((id) => ({
+      guestId: id, name: guestMap.get(id)?.name ?? '', ok: false,
+      reason: RESERVE_REASONS.INVITE_TEXT_MISSING,
+    }));
+  }
 
   // 1) الحجز الذرّي — من حصة الداعي إن وُجد سياقه، وإلا من رصيد المناسبة
   const { data: reserved, error: reserveError } = inviterCtx
@@ -137,15 +150,7 @@ export async function sendInvitations(
   // 2) الإرسال الفعلي
   const provider = await getWhatsAppProvider();
 
-  // قالب الداعي إن وُجد، وإلا قالب المناسبة
-  let activeTemplate = template;
-  if (inviterCtx && inviterCtx.templateId !== event.template_id) {
-    const { data: t } = await supabase
-      .from('templates').select('*').eq('id', inviterCtx.templateId).maybeSingle<Template>();
-    if (t) activeTemplate = t;
-  }
-
-  const templateName = activeTemplate?.meta_template_name || 'barqiyah_invite_default';
+  const { metaName: templateName } = await loadDefaultTemplate(supabase);
 
   // سطر الموعد والمكان: من حقول المناسبة وحدها، مصدره واحد لكل الدعاة
   const eventLine = formatEventLine({
@@ -156,11 +161,11 @@ export async function sendInvitations(
     venue: event.venue,
   });
 
-  const bodyParams = inviterCtx
-    ? [inviterCtx.inviteVars.host, inviterCtx.inviteVars.occasion, eventLine]
-    : buildBodyParams(event, activeTemplate);
+  // دائماً ثلاثة متغيّرات — للمالك والداعي والمحاكاة وMeta
+  const bodyParams = buildInviteParams(vars, eventLine);
 
-  const headerImage = inviterCtx?.imageUrl ?? event.image_url ?? activeTemplate?.image_url ?? null;
+  // الداعي بصورته، والمالك بصورته — لا fallback إلى صورة قالب
+  const headerImage = inviterCtx ? inviterCtx.imageUrl : (event.image_url ?? null);
 
   for (const row of toSend) {
     const guest = guestMap.get(row.guest_id);
@@ -184,7 +189,7 @@ export async function sendInvitations(
       status: result.ok ? 'sent' : 'failed',
       message_id: result.messageId ?? null, error: result.error ?? null,
       payload: {
-        rendered: inviterCtx ? renderInvite(inviterCtx.inviteVars, eventLine) : null,
+        rendered: renderInvite(vars, eventLine),
         rsvp_url: appUrl(`/rsvp/${guest.invite_token}`),
         body_params: bodyParams,
       },

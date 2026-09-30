@@ -6,7 +6,7 @@ import { can } from '@/lib/permissions';
 import { formatCurrency, formatHijri, formatNumber } from '@/lib/format';
 import { computeBalance } from '@/lib/balance';
 import { metaConfigured } from '@/lib/env';
-import type { EventRow, Guest, Template, Transaction } from '@/lib/types';
+import type { EventRow, Guest, Transaction } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,15 +42,12 @@ export default async function AdminToday() {
 
   const [
     { data: unpaidData },
-    { data: pendingTemplates },
     { data: upcomingData },
     { data: recentGuests },
     { data: txData },
   ] = await Promise.all([
     supabase.from('events').select('*').in('status', ['unpaid', 'pending'])
       .order('created_at', { ascending: true }).returns<EventRow[]>(),
-    supabase.from('templates').select('id, created_at, name').eq('status', 'under_review')
-      .order('created_at', { ascending: true }).returns<Pick<Template, 'id' | 'created_at' | 'name'>[]>(),
     supabase.from('events').select('*, guests (status, max_seats, confirmed_seats)')
       .eq('status', 'active')
       .gte('event_date', todayIso)
@@ -62,7 +59,6 @@ export default async function AdminToday() {
   ]);
 
   const unpaid = unpaidData ?? [];
-  const templates = pendingTemplates ?? [];
   const upcoming = upcomingData ?? [];
   const guests = recentGuests ?? [];
 
@@ -127,22 +123,6 @@ export default async function AdminToday() {
             ) : null
           }
         />
-        {can(role, 'review_templates') ? (
-          <TaskCardBox
-            count={formatNumber(templates.length)}
-            title="قوالب قيد المراجعة"
-            meta={
-              templates[0]
-                ? `أقدمها منذ ${formatNumber(ageDays(templates[0].created_at))} يوماً`
-                : 'لا قوالب تنتظر ✓'
-            }
-            action={
-              templates.length > 0 ? (
-                <Link href="/admin/template-requests" className="btn-primary btn-sm">راجع</Link>
-              ) : null
-            }
-          />
-        ) : null}
         <TaskCardBox
           count={formatNumber(upcoming.length)}
           title="مناسبات خلال ٧ أيام"

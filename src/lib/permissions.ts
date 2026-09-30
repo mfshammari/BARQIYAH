@@ -3,7 +3,7 @@ import type { UserRole } from '@/lib/types';
 /** الصلاحيات كما تحدّدها مصفوفة SPEC §10. */
 export type Permission =
   | 'manual_activation'   // تفعيل يدوي للمناسبات غير المدفوعة
-  | 'review_templates'    // مراجعة القوالب
+  | 'review_templates'    // مراجعة القوالب — غير مستخدمة بعد توحيد القالب (تبقى في المصفوفة)
   | 'impersonate'         // الدخول كالعميل
   | 'finance'             // المالية والتقارير
   | 'whatsapp_settings'   // إعدادات واتساب ومراقبة الجودة
@@ -58,7 +58,6 @@ export const ADMIN_NAV: AdminNavItem[] = [
   { href: '/admin', label: 'اليوم', group: 'daily' },
   { href: '/admin/events', label: 'المناسبات', group: 'daily' },
   { href: '/admin/whatsapp', label: 'مراقبة واتساب', group: 'daily', requires: 'whatsapp_settings' },
-  { href: '/admin/template-requests', label: 'طلبات القوالب', group: 'daily', requires: 'review_templates' },
   { href: '/admin/support', label: 'الدعم', group: 'daily' },
   { href: '/admin/clients', label: 'العملاء', group: 'management' },
   { href: '/admin/finance', label: 'المالية', group: 'management', requires: 'finance' },

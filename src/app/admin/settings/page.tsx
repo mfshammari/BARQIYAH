@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 const SECTIONS = [
   { href: '/admin/integration', title: 'تكامل واتساب', desc: 'مفاتيح Meta ورابط الـWebhook.' },
   { href: '/admin/packages', title: 'الباقات', desc: 'إنشاء وتسعير باقات المقاعد.' },
-  { href: '/admin/templates', title: 'مكتبة القوالب', desc: 'القوالب العامة المعتمدة لدى Meta.' },
+  { href: '/admin/templates', title: 'القالب الموحّد', desc: 'اسم القالب في Meta وتصنيفه وحالة اعتماده.' },
 ];
 
 export default async function AdminSettingsPage() {

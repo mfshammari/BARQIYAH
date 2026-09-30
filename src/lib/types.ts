@@ -72,6 +72,10 @@ export interface Template {
   rejection_reason: string | null;
   whatsapp_category: WhatsAppCategory;
   meta_template_name: string | null;
+  /** حالة القالب لدى Meta كما قُرئت آخر مرة (APPROVED / PENDING / REJECTED) */
+  meta_status: string | null;
+  /** القالب الموحّد للمنصة — صف واحد فقط */
+  is_default: boolean;
   created_at: string;
 }
 
@@ -101,6 +105,8 @@ export interface EventRow {
   buyer_name: string | null;
   buyer_phone: string | null;
   template_id: string | null;
+  /** متغيّرا القالب الموحّد للمالك {host, occasion} */
+  invite_vars: Record<string, string>;
   image_url: string | null;
   seats_quota: number;
   status: EventStatus;

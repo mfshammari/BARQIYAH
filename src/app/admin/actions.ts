@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { requireAdmin, requireAdminPermission } from '@/lib/auth';
 import { parseFeatures, validateTiers, type TierLike } from '@/lib/packages';
+import { UNIFIED_TEMPLATE_BODY, DEFAULT_META_TEMPLATE_NAME } from '@/lib/inviteVars';
+import { fetchMetaTemplateStatus } from '@/lib/whatsapp/templates';
 import type { PackageKind, TransactionType, WhatsAppCategory } from '@/lib/types';
 
 export interface ActionState { error?: string; notice?: string }
@@ -114,78 +116,63 @@ export async function togglePackage(formData: FormData) {
   revalidatePackages();
 }
 
-// ————————————————————— القوالب العامة —————————————————————
-export async function saveGlobalTemplate(_prev: ActionState, formData: FormData): Promise<ActionState> {
+// ————————————————————— القالب الموحّد —————————————————————
+/** الأدمن يحرّر اسم القالب في Meta وتصنيفه فقط — النصّ ثابت للمنصة كلها. */
+export async function saveDefaultTemplate(_prev: ActionState, formData: FormData): Promise<ActionState> {
   await requireAdminPermission('whatsapp_settings');
   const supabase = await createClient();
 
-  const id = String(formData.get('id') ?? '');
-  const name = String(formData.get('name') ?? '').trim();
-  const body_text = String(formData.get('body_text') ?? '').trim();
-  const image_url = String(formData.get('image_url') ?? '').trim() || null;
-  const meta_template_name = String(formData.get('meta_template_name') ?? '').trim() || null;
+  const meta_template_name = String(formData.get('meta_template_name') ?? '').trim();
   const whatsapp_category = String(formData.get('whatsapp_category') ?? 'utility') as WhatsAppCategory;
-  const approved = formData.get('approved') === 'on';
 
-  if (!name) return { error: 'اسم القالب مطلوب.' };
-  if (!body_text) return { error: 'نص القالب مطلوب.' };
+  if (!/^[a-z0-9_]{2,512}$/.test(meta_template_name)) {
+    return { error: 'اسم القالب في Meta: حروف إنجليزية صغيرة وأرقام وشرطة سفلية فقط.' };
+  }
+  if (!['utility', 'marketing'].includes(whatsapp_category)) return { error: 'تصنيف غير صالح.' };
 
-  const payload = {
-    owner_id: null,
-    name, body_text, image_url, meta_template_name, whatsapp_category,
-    status: approved ? ('approved' as const) : ('draft' as const),
-  };
+  const { data: existing } = await supabase
+    .from('templates').select('id').eq('is_default', true).maybeSingle();
 
-  const { error } = id
-    ? await supabase.from('templates').update(payload).eq('id', id)
-    : await supabase.from('templates').insert(payload);
+  const { error } = existing
+    ? await supabase.from('templates')
+        .update({ meta_template_name, whatsapp_category }).eq('id', existing.id)
+    : await supabase.from('templates').insert({
+        owner_id: null, name: 'قالب برقية الموحّد', body_text: UNIFIED_TEMPLATE_BODY,
+        status: 'approved', whatsapp_category, meta_template_name, is_default: true,
+      });
 
-  if (error) return { error: 'تعذّر حفظ القالب.' };
+  if (error) return { error: 'تعذّر حفظ إعدادات القالب.' };
   revalidatePath('/admin/templates');
-  return { notice: id ? 'تم تحديث القالب.' : 'تمت إضافة القالب.' };
+  return { notice: 'حُفظت إعدادات القالب الموحّد.' };
 }
 
-export async function deleteTemplate(formData: FormData) {
+/** يقرأ حالة القالب لدى Meta ويخزّنها في meta_status. */
+export async function checkMetaTemplateStatus(_prev: ActionState, _formData: FormData): Promise<ActionState> {
   await requireAdminPermission('whatsapp_settings');
   const supabase = await createClient();
-  await supabase.from('templates').delete().eq('id', String(formData.get('id') ?? ''));
+
+  const { data: tpl } = await supabase
+    .from('templates').select('id, meta_template_name').eq('is_default', true).maybeSingle();
+  const name = tpl?.meta_template_name || DEFAULT_META_TEMPLATE_NAME;
+
+  const res = await fetchMetaTemplateStatus(name);
+  if (!res.ok) {
+    if (res.error === 'MOCK_MODE') {
+      return { notice: 'وضع المحاكاة — لا اتصال بـ Meta. اضبط مفاتيح واتساب أولاً.' };
+    }
+    return { error: `تعذّر القراءة من Meta: ${res.error ?? ''}` };
+  }
+
+  const status = res.status ?? 'NOT_FOUND';
+  if (tpl) {
+    await supabase.from('templates').update({ meta_status: status }).eq('id', tpl.id);
+  }
   revalidatePath('/admin/templates');
-}
-
-// ————————————————————— طلبات القوالب الخاصة —————————————————————
-export async function reviewTemplateRequest(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireAdminPermission('review_templates');
-  const supabase = await createClient();
-
-  const id = String(formData.get('id') ?? '');
-  const decision = String(formData.get('decision') ?? '');
-  const reason = String(formData.get('rejection_reason') ?? '').trim();
-  const metaName = String(formData.get('meta_template_name') ?? '').trim() || null;
-
-  if (!id) return { error: 'الطلب غير موجود.' };
-
-  if (decision === 'approve') {
-    const { error } = await supabase
-      .from('templates')
-      .update({ status: 'approved', rejection_reason: null, meta_template_name: metaName })
-      .eq('id', id);
-    if (error) return { error: 'تعذّر اعتماد القالب.' };
-    revalidatePath('/admin/template-requests');
-    return { notice: 'تم اعتماد القالب.' };
-  }
-
-  if (decision === 'reject') {
-    if (!reason) return { error: 'اكتب سبب الرفض ليصل لصاحب المناسبة.' };
-    const { error } = await supabase
-      .from('templates')
-      .update({ status: 'rejected', rejection_reason: reason })
-      .eq('id', id);
-    if (error) return { error: 'تعذّر رفض القالب.' };
-    revalidatePath('/admin/template-requests');
-    return { notice: 'تم رفض القالب مع إرسال السبب.' };
-  }
-
-  return { error: 'قرار غير معروف.' };
+  return {
+    notice: res.status
+      ? `حالة القالب «${name}» لدى Meta: ${res.status}${res.category ? ` · ${res.category}` : ''}`
+      : `لم يُعثر على قالب باسم «${name}» لدى Meta.`,
+  };
 }
 
 // ————————————————————— تفعيل المناسبات —————————————————————

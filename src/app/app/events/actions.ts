@@ -5,7 +5,8 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth';
 import { formatHijri, formatWeekday } from '@/lib/format';
-import { hasTwoCelebrants, type OccasionType } from '@/lib/types';
+import { hasTwoCelebrants, OCCASION_LABELS, type OccasionType } from '@/lib/types';
+import { defaultOccasionText, validateInviteVars, type InviteVars } from '@/lib/inviteVars';
 
 export interface ActionState { error?: string; notice?: string }
 
@@ -32,16 +33,21 @@ export async function createEvent(_prev: ActionState, formData: FormData): Promi
   const packageId = String(formData.get('package_id') ?? '') || null;
   const qtyRaw = Math.floor(Number(formData.get('package_qty') ?? 0));
   const packageQty = packageId && qtyRaw > 0 ? qtyRaw : null;
-  const templateId = String(formData.get('template_id') ?? '') || null;
   const imageUrl = String(formData.get('image_url') ?? '').trim() || null;
 
   if (!OCCASIONS.includes(occasion)) return { error: 'نوع المناسبة غير صالح.' };
   if (!eventDate) return { error: 'حدّد تاريخ المناسبة.' };
   if (!hostName) return { error: 'اكتب الجهة الداعية («الدعوة باسم»).' };
   if (!celebrant1) return { error: 'اكتب اسم صاحب المناسبة.' };
-  if (hasTwoCelebrants(occasion) && !celebrant2) {
-    // العروس اختيارية حسب المواصفة، فلا نمنع — نكمل
-  }
+
+  // متغيّرا القالب الموحّد: من الخطوة الثالثة، أو ابتداءً من التفاصيل
+  const inviteVars: InviteVars = {
+    host: String(formData.get('host') ?? '').trim() || hostName,
+    occasion: String(formData.get('occasion') ?? '').trim()
+      || defaultOccasionText(OCCASION_LABELS[occasion], hasTwoCelebrants(occasion) ? [celebrant1, celebrant2] : [celebrant1]),
+  };
+  const issues = validateInviteVars(inviteVars);
+  if (issues.length > 0) return { error: issues[0].message };
 
   const { data, error } = await supabase
     .from('events')
@@ -61,7 +67,7 @@ export async function createEvent(_prev: ActionState, formData: FormData): Promi
       celebrant_secondary: hasTwoCelebrants(occasion) ? celebrant2 : null,
       buyer_name: user.profile.full_name,
       buyer_phone: user.profile.phone,
-      template_id: templateId,
+      invite_vars: inviteVars,
       image_url: imageUrl,
       seats_quota: 0,          // يُضبط عند التفعيل بعد الدفع
       status: 'unpaid',
