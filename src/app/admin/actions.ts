@@ -2,14 +2,14 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import { requireRole } from '@/lib/auth';
+import { requireAdmin, requireAdminPermission } from '@/lib/auth';
 import type { TransactionType, WhatsAppCategory } from '@/lib/types';
 
 export interface ActionState { error?: string; notice?: string }
 
 // ————————————————————— الباقات —————————————————————
 export async function savePackage(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireRole('admin');
+  await requireAdmin();
   const supabase = await createClient();
 
   const id = String(formData.get('id') ?? '');
@@ -33,7 +33,7 @@ export async function savePackage(_prev: ActionState, formData: FormData): Promi
 }
 
 export async function togglePackage(formData: FormData) {
-  await requireRole('admin');
+  await requireAdmin();
   const supabase = await createClient();
   const id = String(formData.get('id') ?? '');
   const active = String(formData.get('active') ?? '') === 'true';
@@ -43,7 +43,7 @@ export async function togglePackage(formData: FormData) {
 
 // ————————————————————— القوالب العامة —————————————————————
 export async function saveGlobalTemplate(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireRole('admin');
+  await requireAdminPermission('whatsapp_settings');
   const supabase = await createClient();
 
   const id = String(formData.get('id') ?? '');
@@ -73,7 +73,7 @@ export async function saveGlobalTemplate(_prev: ActionState, formData: FormData)
 }
 
 export async function deleteTemplate(formData: FormData) {
-  await requireRole('admin');
+  await requireAdminPermission('whatsapp_settings');
   const supabase = await createClient();
   await supabase.from('templates').delete().eq('id', String(formData.get('id') ?? ''));
   revalidatePath('/admin/templates');
@@ -81,7 +81,7 @@ export async function deleteTemplate(formData: FormData) {
 
 // ————————————————————— طلبات القوالب الخاصة —————————————————————
 export async function reviewTemplateRequest(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireRole('admin');
+  await requireAdminPermission('review_templates');
   const supabase = await createClient();
 
   const id = String(formData.get('id') ?? '');
@@ -117,7 +117,7 @@ export async function reviewTemplateRequest(_prev: ActionState, formData: FormDa
 
 // ————————————————————— تفعيل المناسبات —————————————————————
 export async function activateEvent(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireRole('admin');
+  await requireAdminPermission('manual_activation');
   const supabase = await createClient();
 
   const eventId = String(formData.get('event_id') ?? '');
@@ -144,7 +144,7 @@ export async function activateEvent(_prev: ActionState, formData: FormData): Pro
 }
 
 export async function setEventStatus(formData: FormData) {
-  await requireRole('admin');
+  await requireAdminPermission('manual_activation');
   const supabase = await createClient();
   const id = String(formData.get('event_id') ?? '');
   const status = String(formData.get('status') ?? '');
@@ -155,7 +155,7 @@ export async function setEventStatus(formData: FormData) {
 
 // ————————————————————— إعدادات Meta —————————————————————
 export async function saveIntegration(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireRole('admin');
+  await requireAdminPermission('whatsapp_settings');
   const supabase = await createClient();
 
   const payload = {

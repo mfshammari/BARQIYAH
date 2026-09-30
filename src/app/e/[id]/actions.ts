@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient, adminClientAvailable } from '@/lib/supabase/admin';
-import { requireUser } from '@/lib/auth';
+import { requireUser, isAdminRole } from '@/lib/auth';
 import { sendInvitations, sendReminders } from '@/lib/invitations';
 import { formatNumber } from '@/lib/format';
 import { normalizePhone, isValidPhone } from '@/lib/format';
@@ -21,7 +21,7 @@ async function guardEvent(eventId: string) {
   const { data: event } = await supabase
     .from('events').select('*').eq('id', eventId).maybeSingle<EventRow>();
   if (!event) throw new Error('EVENT_NOT_FOUND');
-  if (event.owner_id !== user.id && user.profile.role !== 'admin') throw new Error('FORBIDDEN');
+  if (event.owner_id !== user.id && !isAdminRole(user.profile.role)) throw new Error('FORBIDDEN');
   return { user, supabase, event };
 }
 

@@ -1,8 +1,6 @@
 import Link from 'next/link';
-import { requireUser } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+import { requireAdminPermission } from '@/lib/auth';
 import { PageHeader } from '@/components/ui';
-import { can } from '@/lib/permissions';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,8 +11,7 @@ const SECTIONS = [
 ];
 
 export default async function AdminSettingsPage() {
-  const user = await requireUser();
-  if (!can(user.profile.role, 'whatsapp_settings')) redirect('/admin');
+  await requireAdminPermission('whatsapp_settings');
 
   return (
     <>
