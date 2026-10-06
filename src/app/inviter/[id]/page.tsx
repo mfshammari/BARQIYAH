@@ -71,7 +71,8 @@ export default async function InviterWorkspace({
   const guests = guestsData ?? [];
   const vars = (inviter.invite_vars ?? {}) as { host?: string; occasion?: string };
   const ready = Boolean(vars.host && vars.occasion);
-  const canSend = event.status === 'active';
+  const trialLeft = user.profile.trial_invites_left ?? 0;
+  const canSend = event.status === 'active' || ((event.status === 'unpaid' || event.status === 'pending') && trialLeft > 0);
   const active = tab === 'guests' ? 'guests' : 'invite';
 
   const eventLine = formatEventLine({
@@ -220,6 +221,14 @@ export default async function InviterWorkspace({
           />
         </div>
       </div>
+
+      {trialLeft > 0 && event.status !== 'active' ? (
+        <div className="mb-5">
+          <Alert tone="info" title={`لديك ${formatNumber(trialLeft)} دعوات تجريبية`}>
+            جرّب الإرسال قبل تفعيل صاحب المناسبة للباقة — لا تُحسب على الحصة.
+          </Alert>
+        </div>
+      ) : null}
 
       {!ready ? (
         <div className="mb-5">

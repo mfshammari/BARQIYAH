@@ -28,7 +28,8 @@ interface ReserveRow {
 }
 
 const RESERVE_REASONS: Record<string, string> = {
-  EVENT_NOT_ACTIVE: 'المناسبة غير مفعّلة — تواصل مع الإدارة لتفعيل الباقة.',
+  EVENT_NOT_ACTIVE: 'المناسبة غير مفعّلة — فعّل الباقة للمتابعة.',
+  TRIAL_EXHAUSTED: 'انتهت دعواتك التجريبية — فعّل الباقة للمتابعة.',
   GUEST_NOT_FOUND: 'المدعو غير موجود.',
   ALREADY_SENT: 'الدعوة مُرسلة مسبقاً.',
   INSUFFICIENT_SEATS: 'الرصيد لا يكفي لحجز مقاعد هذه الدعوة.',

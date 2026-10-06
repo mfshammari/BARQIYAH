@@ -22,9 +22,10 @@ function daysUntil(dateStr: string): number {
 
 export default async function EventDashboard({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { event, supabase } = await requireEventAccess(id);
+  const { event, supabase, user } = await requireEventAccess(id);
   const e = event as EventRow;
   const balance = await fetchEventBalance(supabase, id);
+  const trialLeft = user.profile.trial_invites_left ?? 0;
   const days = daysUntil(e.event_date);
 
   // المؤهّلون للتذكير: مضى ٥ أيام والحالة sent ولم يُذكَّروا (SPEC §4.1)
@@ -56,11 +57,18 @@ export default async function EventDashboard({ params }: { params: Promise<{ id:
         }
       />
 
-      {e.status === 'pending' ? (
+      {trialLeft > 0 ? (
+        <div className="mb-5">
+          <Alert tone="info" title={`لديك ${formatNumber(trialLeft)} دعوات تجريبية`}>
+            جرّب الإرسال قبل الدفع — تصل كما ستصل دعواتك، ولا تُحسب على رصيد المقاعد.
+          </Alert>
+        </div>
+      ) : null}
+
+      {(e.status === 'pending' || e.status === 'unpaid') && trialLeft === 0 ? (
         <div className="mb-5">
           <Alert tone="warn" title="المناسبة بانتظار التفعيل">
-            لا يمكن إرسال الدعوات قبل أن تفعّل الإدارة الباقة ويُضاف رصيد المقاعد.
-            يمكنك الآن تجهيز قائمة المدعوين والدعاة والقالب.
+            انتهت دعواتك التجريبية — فعّل الباقة من «بيانات المناسبة» ليُضاف رصيد المقاعد ويبدأ الإرسال.
           </Alert>
         </div>
       ) : null}

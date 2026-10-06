@@ -24,10 +24,12 @@ export async function fetchEventBalance(
  * يطابق منطق دالة event_balance تماماً.
  */
 export function computeBalance(guests: Guest[], seatsQuota: number): EventBalance {
-  const held = guests
+  // الدعوات التجريبية لا تُحسب على رصيد المقاعد (المرحلة ٧)
+  const paid = guests.filter((g) => !g.is_trial);
+  const held = paid
     .filter((g) => g.status === 'sent')
     .reduce((s, g) => s + g.max_seats, 0);
-  const confirmed = guests
+  const confirmed = paid
     .filter((g) => g.status === 'accepted' || g.status === 'attended')
     .reduce((s, g) => s + (g.confirmed_seats ?? 0), 0);
 

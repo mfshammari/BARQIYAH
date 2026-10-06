@@ -124,6 +124,7 @@ export async function addFromContacts(_prev: ActionState, formData: FormData): P
 
 const REASONS: Record<string, string> = {
   EVENT_NOT_ACTIVE: 'المناسبة غير مفعّلة بعد — راجع صاحب المناسبة.',
+  TRIAL_EXHAUSTED: 'انتهت دعواتك التجريبية — فعّل الباقة للمتابعة.',
   GUEST_NOT_FOUND: 'المدعو غير موجود.',
   ALREADY_SENT: 'الدعوة مُرسلة مسبقاً.',
   INSUFFICIENT_QUOTA: 'حصتك لا تكفي — راجع صاحب المناسبة لزيادتها.',

@@ -10,7 +10,7 @@ export type EventStatus = 'pending' | 'unpaid' | 'active' | 'closed';
 export type TemplateStatus = 'draft' | 'under_review' | 'approved' | 'rejected';
 export type WhatsAppCategory = 'marketing' | 'utility';
 export type GuestStatus = 'draft' | 'sent' | 'accepted' | 'declined' | 'expired' | 'attended' | 'failed';
-export type TransactionType = 'purchase' | 'upgrade' | 'manual_activation';
+export type TransactionType = 'purchase' | 'upgrade' | 'manual_activation' | 'trial';
 /** صورة الدعوة: تُولَّد من بيانات الدعوة، أو يرفعها المستخدم */
 export type ImageMode = 'generated' | 'uploaded';
 export type TransactionStatus = 'pending' | 'paid' | 'failed' | 'refunded';
@@ -27,6 +27,8 @@ export interface Profile {
   /** إيقاف إرسال العميل مؤقتاً — حماية الرقم المشترك (SPEC §6) */
   sending_paused: boolean;
   paused_reason: string | null;
+  /** الدعوات التجريبية المتبقية — ٥ لكل حساب جديد، تُرسل قبل الدفع */
+  trial_invites_left: number;
   created_at: string;
 }
 
@@ -175,6 +177,8 @@ export interface Guest {
   inviter_id: string | null;
   contact_id: string | null;
   failure_reason: string | null;
+  /** دعوة تجريبية — لا تُحسب على رصيد المقاعد */
+  is_trial: boolean;
   name: string;
   phone: string;
   max_seats: number;
@@ -315,4 +319,5 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   purchase: 'شراء',
   upgrade: 'ترقية',
   manual_activation: 'تفعيل يدوي',
+  trial: 'دعوات تجريبية',
 };
