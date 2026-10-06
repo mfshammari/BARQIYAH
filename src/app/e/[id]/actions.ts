@@ -4,9 +4,9 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient, adminClientAvailable } from '@/lib/supabase/admin';
 import { requireUser, isAdminRole } from '@/lib/auth';
-import { sendInvitations, sendReminders } from '@/lib/invitations';
+import { sendInvitations, sendReminders, sendInviterInviteLink } from '@/lib/invitations';
 import { formatNumber, formatHijri, formatWeekday, normalizePhone, isValidPhone } from '@/lib/format';
-import { hasTwoCelebrants, type EventRow, type Guest, type OccasionType, type Package } from '@/lib/types';
+import { hasTwoCelebrants, type EventRow, type Guest, type Inviter, type OccasionType, type Package } from '@/lib/types';
 import { validateInviteVars, type InviteVars } from '@/lib/inviteVars';
 import { readImageFields } from '@/lib/inviteImage';
 import { getPaymentProvider } from '@/lib/payments';
@@ -322,7 +322,7 @@ export async function addInviter(_prev: ActionState, formData: FormData): Promis
       side_label: sideLabel, seats_quota: seatsQuota, profile_id: profileId,
       joined_at: profileId ? new Date().toISOString() : null,
     })
-    .select('invite_token')
+    .select('id, invite_token')
     .single();
 
   if (error) {
@@ -335,11 +335,38 @@ export async function addInviter(_prev: ActionState, formData: FormData): Promis
   }
 
   revalidateEvent(eventId);
+
+  if (profileId) return { notice: `أُضيف ${name} — المناسبة ظهرت في حسابه مباشرة.` };
+
+  // لا حساب له: يصله رابط الانضمام على واتساب (المرحلة ٦.٤)
+  const sent = data
+    ? await sendInviterInviteLink(
+        { id: data.id, event_id: eventId, name, phone, invite_token: data.invite_token },
+        event,
+      )
+    : { ok: false };
   return {
-    notice: profileId
-      ? `أُضيف ${name} — المناسبة ظهرت في حسابه مباشرة.`
+    notice: sent.ok
+      ? `أُضيف ${name} — وصله رابط الدخول على واتساب ليكتب دعوته.`
       : `أُضيف ${name} — شارك معه رابط الدخول ليكتب دعوته.`,
   };
+}
+
+/** إعادة إرسال رابط الانضمام لداعٍ لم ينضم بعد. */
+export async function resendInviterLink(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const eventId = String(formData.get('event_id') ?? '');
+  const { supabase, event } = await guardEvent(eventId);
+
+  const inviterId = String(formData.get('inviter_id') ?? '');
+  const { data: inviter } = await supabase
+    .from('inviters').select('*').eq('id', inviterId).eq('event_id', eventId).maybeSingle<Inviter>();
+  if (!inviter) return { error: 'الداعي غير موجود.' };
+  if (inviter.profile_id) return { notice: 'هذا الداعي انضمّ بالفعل.' };
+
+  const sent = await sendInviterInviteLink(inviter, event);
+  return sent.ok
+    ? { notice: `أُعيد إرسال الرابط إلى ${inviter.name}.` }
+    : { error: sent.error ? `تعذّر الإرسال: ${sent.error}` : 'تعذّر إرسال الرابط.' };
 }
 
 /** تعديل حصة داعٍ — المالك وحده يوزّع (SPEC §8.2). */

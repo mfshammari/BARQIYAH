@@ -1,9 +1,11 @@
 'use server';
 
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { requestOtp, verifyOtpAndSignIn } from '@/lib/otp';
 import { normalizePhone, isValidPhone } from '@/lib/format';
 import { otpUnified } from '@/lib/env';
+import { NEXT_COOKIE, NEXT_COOKIE_MAX_AGE, isSafeNextPath, safeNextPath } from '@/lib/safeNext';
 
 /**
  * تدفّق دخول العميل بالجوال. بيانات الخطوة الأولى تُحفَظ في كوكي
@@ -46,6 +48,7 @@ export async function startPhoneSignup(_prev: OtpState, formData: FormData): Pro
   const dial = String(formData.get('dial') ?? '966').trim();
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const consent = formData.get('consent') === 'on';
+  const next = String(formData.get('next') ?? '');
 
   if (name.length < 3) return { error: 'اكتب اسمك الكامل.' };
   if (!consent) return { error: 'يجب الموافقة للمتابعة' };
@@ -68,6 +71,15 @@ export async function startPhoneSignup(_prev: OtpState, formData: FormData): Pro
     path: '/',
   });
 
+  // مسار العودة (رابط انضمام داعٍ مثلاً) — داخلي فقط، ١٥ دقيقة
+  if (isSafeNextPath(next)) {
+    jar.set(NEXT_COOKIE, safeNextPath(next), {
+      httpOnly: true, sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: NEXT_COOKIE_MAX_AGE, path: '/',
+    });
+  }
+
   return { step: 'code', unifiedCode: res.unifiedCode };
 }
 
@@ -89,6 +101,8 @@ export interface VerifyState {
   recoveryCode?: string;
   done?: boolean;
   hasEmail?: boolean;
+  /** المسار الذي يعود إليه بعد حفظ رمز الاسترجاع */
+  next?: string;
 }
 
 /** الخطوة الثانية: التحقق من الرمز ← فتح الجلسة. */
@@ -107,12 +121,17 @@ export async function verifyPhoneCode(_prev: VerifyState, formData: FormData): P
 
   const jar = await cookies();
   jar.delete(PENDING);
+  const next = safeNextPath(jar.get(NEXT_COOKIE)?.value, '');
+  jar.delete(NEXT_COOKIE);
 
-  // الحساب القائم يدخل مباشرةً؛ الجديد يرى رمز الاسترجاع أولاً
+  // الحساب القائم يدخل مباشرةً إلى مساره؛ الجديد يرى رمز الاسترجاع أولاً
+  if (!res.recoveryCode) redirect(next || '/app');
+
   return {
     done: true,
     recoveryCode: res.recoveryCode,
     hasEmail: Boolean(pending.email),
+    next: next || undefined,
   };
 }
 

@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { homePathForRole } from '@/lib/auth';
 import { DEFAULT_CLIENT_ROLE } from '@/lib/roles';
+import { safeNextPath } from '@/lib/safeNext';
 import type { Profile } from '@/lib/types';
 
 export interface AuthState { error?: string; notice?: string }
@@ -30,7 +31,7 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
     .maybeSingle<Profile>();
 
   revalidatePath('/', 'layout');
-  redirect(next || homePathForRole(profile?.role ?? DEFAULT_CLIENT_ROLE));
+  redirect(safeNextPath(next, homePathForRole(profile?.role ?? DEFAULT_CLIENT_ROLE)));
 }
 
 export async function signOut() {

@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { getSessionUser } from '@/lib/auth';
+import { getSessionUser, isAdminRole } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient, adminClientAvailable } from '@/lib/supabase/admin';
 import { supabaseConfigured } from '@/lib/env';
 import { SetupNotice } from '@/components/SetupNotice';
-import { formatDate, formatHijri } from '@/lib/format';
+import { formatHijri, normalizePhone } from '@/lib/format';
 import { OCCASION_LABELS, type EventRow, type Inviter } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -93,6 +93,24 @@ export default async function JoinPage({ params }: { params: Promise<{ token: st
     .maybeSingle<{ id: string }>();
 
   if (existing && existing.id !== inviter.id) redirect(`/inviter/${existing.id}`);
+
+  // الرابط لرقم بعينه: لا يُربط بحساب رقمه مختلف (الأدمن مستثنى)
+  const myPhone = user.profile.phone ? normalizePhone(user.profile.phone) : null;
+  const rowPhone = inviter.phone ? normalizePhone(inviter.phone) : null;
+  if (!inviter.profile_id && rowPhone && rowPhone !== myPhone && !isAdminRole(user.profile.role)) {
+    const last4 = rowPhone.slice(-4);
+    return (
+      <Shell>
+        <p className="text-[14px] font-semibold">هذا الرابط لرقم آخر</p>
+        <p className="mt-2 text-[13px] leading-7 text-muted">
+          الرابط مرتبط برقم ينتهي بـ <span dir="ltr" className="num text-ink">••••{last4}</span>.
+          سجّل دخولك بالرقم المضاف عند صاحب المناسبة.
+        </p>
+        <Link href={`/login?next=/join/${token}`} className="btn-primary mt-5 w-full">الدخول برقم آخر</Link>
+        <Link href="/app" className="btn-ghost mt-2 w-full">إلى مناسباتي</Link>
+      </Shell>
+    );
+  }
 
   // مسجّل: نربط حسابه إن لم يكن مرتبطاً
   if (!inviter.profile_id) {

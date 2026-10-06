@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient, adminClientAvailable } from '@/lib/supabase/admin';
 import { appUrl } from '@/lib/env';
 import { buildButtonPayloads, buildSeatsPayload, getWhatsAppProvider } from '@/lib/whatsapp';
-import type { EventRow, Guest, ImageMode, Template, WhatsAppCategory } from '@/lib/types';
+import type { EventRow, Guest, ImageMode, Inviter, Template, WhatsAppCategory } from '@/lib/types';
 import { resolveHeaderImage } from '@/lib/inviteImage';
 import { formatEventLine } from '@/lib/format';
 import {
@@ -310,6 +310,47 @@ export async function sendQrToGuest(guestId: string): Promise<{ ok: boolean; err
     status: result.ok ? 'sent' : 'failed',
     message_id: result.messageId ?? null, error: result.error ?? null,
     payload: { page_url: pageUrl, image_url: imageUrl, seats },
+  });
+
+  return { ok: result.ok, error: result.error };
+}
+
+/* ============================================================
+   رابط انضمام الداعي عبر واتساب (المرحلة ٦)
+   ============================================================ */
+
+/** اسم قالب رابط الانضمام في Meta: متغيّران — اسم المناسبة والرابط. */
+export const INVITER_INVITE_TEMPLATE = 'barqiyah_inviter_invite';
+
+/**
+ * يرسل للداعي الذي لا حساب له رابط انضمامه عبر قالب barqiyah_inviter_invite
+ * ويسجّله في message_logs بـ kind='inviter_invite'. في المحاكاة يُطبع.
+ */
+export async function sendInviterInviteLink(
+  inviter: Pick<Inviter, 'id' | 'event_id' | 'name' | 'phone' | 'invite_token'>,
+  event: Pick<EventRow, 'internal_name' | 'host_name'>,
+): Promise<{ ok: boolean; error?: string }> {
+  if (!inviter.phone) return { ok: false, error: 'الداعي بلا جوال.' };
+
+  const provider = await getWhatsAppProvider();
+  const link = appUrl(`/join/${inviter.invite_token}`);
+  const eventName = event.internal_name || event.host_name;
+
+  const result = await provider.sendTemplate({
+    to: inviter.phone,
+    templateName: INVITER_INVITE_TEMPLATE,
+    languageCode: 'ar',
+    bodyParams: [eventName, link],
+  });
+
+  await logMessage({
+    event_id: inviter.event_id, guest_id: null, inviter_id: inviter.id, kind: 'inviter_invite',
+    template_name: INVITER_INVITE_TEMPLATE,
+    meta_message_id: result.messageId ?? null,
+    provider: result.provider, to_phone: inviter.phone,
+    status: result.ok ? 'sent' : 'failed',
+    message_id: result.messageId ?? null, error: result.error ?? null,
+    payload: { join_url: link, event_name: eventName, inviter_name: inviter.name },
   });
 
   return { ok: result.ok, error: result.error };

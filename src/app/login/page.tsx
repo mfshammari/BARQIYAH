@@ -4,6 +4,7 @@ import { supabaseConfigured } from '@/lib/env';
 import { LoginTabs } from './LoginTabs';
 import { Logo } from '@/components/ui';
 import { SetupNotice } from '@/components/SetupNotice';
+import { isSafeNextPath, safeNextPath } from '@/lib/safeNext';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,8 @@ export default async function LoginPage({
 }: { searchParams: Promise<{ next?: string }> }) {
   if (!supabaseConfigured) return <SetupNotice />;
 
-  const { next } = await searchParams;
+  const { next: rawNext } = await searchParams;
+  const next = isSafeNextPath(rawNext) ? safeNextPath(rawNext) : '';
   const user = await getSessionUser();
   if (user) redirect(next || homePathForRole(user.profile.role));
 
@@ -24,7 +26,7 @@ export default async function LoginPage({
           <p className="text-[13px] text-muted mt-2">حساب واحد يجمع كل مناسباتك</p>
         </div>
         <div className="card card-pad">
-          <LoginTabs next={next ?? ''} />
+          <LoginTabs next={next} />
         </div>
         <p className="text-center text-[12px] text-muted mt-5">
           حساب الماسح؟{' '}

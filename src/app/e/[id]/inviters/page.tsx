@@ -1,7 +1,7 @@
 import { requireEventAccess } from '@/lib/auth';
 import { PageHeader, EmptyState, Alert, QuotaBar } from '@/components/ui';
 import { ActionForm, SubmitButton } from '@/components/ActionForm';
-import { addInviter, deleteInviter, updateInviterQuota } from '../actions';
+import { addInviter, deleteInviter, updateInviterQuota, resendInviterLink } from '../actions';
 import { appUrl } from '@/lib/env';
 import { formatEventLine, formatNumber } from '@/lib/format';
 import { renderInvite, hasInviteVars, type InviteVars } from '@/lib/inviteVars';
@@ -190,8 +190,15 @@ export default async function InvitersPage({ params }: { params: Promise<{ id: s
                           readOnly dir="ltr"
                           className="field text-left text-[11.5px]"
                           value={appUrl(`/join/${inv.invite_token}`)}
-                          onFocus={(e) => e.currentTarget.select()}
                         />
+                        <ActionForm action={resendInviterLink} className="mt-2">
+                          <input type="hidden" name="event_id" value={id} />
+                          <input type="hidden" name="inviter_id" value={inv.id} />
+                          <SubmitButton className="btn-ghost btn-sm" pendingLabel="جارٍ الإرسال…">
+                            إعادة إرسال الرابط عبر واتساب
+                          </SubmitButton>
+                        </ActionForm>
+                        <p className="hint">يُربط تلقائياً بحسابه عند أول دخول بهذا الرقم.</p>
                       </div>
                     ) : null}
                   </div>
