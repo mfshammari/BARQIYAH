@@ -1,7 +1,7 @@
 // دوال خالصة لبناء وتحليل حمولات واتساب — بلا أي اعتماد على البيئة أو قاعدة البيانات
 // (تُختبر مستقلة: npm run test:whatsapp)
 
-import type { InboundReply } from './types';
+import type { InboundReply, MessageStatusUpdate, WebhookEvents } from './types';
 
 /** payload أزرار الرد السريع: يحمل نوع الرد وتوكن الدعوة. */
 export function buildButtonPayloads(inviteToken: string) {
@@ -33,7 +33,13 @@ export function parseButtonPayload(
 
 /** استخراج ردود الأزرار من جسم webhook الوارد من Meta. */
 export function parseWebhookPayload(body: unknown): InboundReply[] {
+  return parseWebhookEvents(body).replies;
+}
+
+/** استخراج الردود وتحديثات الحالة معاً من جسم webhook الوارد من Meta. */
+export function parseWebhookEvents(body: unknown): WebhookEvents {
   const replies: InboundReply[] = [];
+  const statuses: MessageStatusUpdate[] = [];
   const root = body as {
     entry?: {
       changes?: {
@@ -44,11 +50,18 @@ export function parseWebhookPayload(body: unknown): InboundReply[] {
             type?: string;
             text?: { body?: string };
             button?: { payload?: string; text?: string };
+            context?: { id?: string; from?: string };
             interactive?: {
               type?: string;
               button_reply?: { id?: string; title?: string };
               list_reply?: { id?: string; title?: string };
             };
+          }[];
+          statuses?: {
+            id?: string;
+            status?: string;
+            recipient_id?: string;
+            errors?: { code?: number | string; title?: string; message?: string }[];
           }[];
         };
       }[];
@@ -62,6 +75,8 @@ export function parseWebhookPayload(body: unknown): InboundReply[] {
         const messageId = msg.id ?? '';
         if (!from) continue;
 
+        const contextId = msg.context?.id || undefined;
+
         // زر قالب (quick reply) → button.payload
         const rawPayload =
           msg.button?.payload ??
@@ -73,7 +88,7 @@ export function parseWebhookPayload(body: unknown): InboundReply[] {
         if (parsed) {
           replies.push({
             from, messageId, kind: parsed.kind,
-            buttonPayload: rawPayload, seats: parsed.seats,
+            buttonPayload: rawPayload, seats: parsed.seats, contextId,
           });
           continue;
         }
@@ -81,12 +96,24 @@ export function parseWebhookPayload(body: unknown): InboundReply[] {
         // احتياطي: نص الزر أو رسالة حرّة
         const text = (msg.button?.text ?? msg.interactive?.button_reply?.title ?? msg.text?.body ?? '').trim();
         if (text) {
-          replies.push({ from, messageId, kind: classifyText(text), text });
+          replies.push({ from, messageId, kind: classifyText(text), text, contextId });
         }
+      }
+
+      for (const st of change.value?.statuses ?? []) {
+        if (!st.id || !st.status) continue;
+        const err = st.errors?.[0];
+        statuses.push({
+          wamid: st.id,
+          status: st.status,
+          recipient: st.recipient_id,
+          errorCode: err?.code != null ? String(err.code) : undefined,
+          errorTitle: err?.title ?? err?.message ?? undefined,
+        });
       }
     }
   }
-  return replies;
+  return { replies, statuses };
 }
 
 /**

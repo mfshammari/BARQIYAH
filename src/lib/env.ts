@@ -26,6 +26,10 @@ export const env = {
   metaWabaId: process.env.META_WABA_ID ?? '',
   metaAccessToken: process.env.META_ACCESS_TOKEN ?? '',
   metaVerifyToken: process.env.META_WEBHOOK_VERIFY_TOKEN ?? '',
+  /** سرّ تطبيق Meta — توقيع X-Hub-Signature-256 للـwebhook */
+  metaAppSecret: (process.env.META_APP_SECRET ?? '').trim(),
+  /** يحمي مسارات cron (/api/cron/*) */
+  cronSecret: (process.env.CRON_SECRET ?? '').trim(),
   appUrl: process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
   moyasarSecretKey: process.env.MOYASAR_SECRET_KEY ?? '',
   moyasarWebhookSecret: process.env.MOYASAR_WEBHOOK_SECRET ?? '',
