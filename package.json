@@ -8,11 +8,12 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/check-setup-single-tx.mjs && tsc -p tsconfig.test.json && node scripts/fix-test-build.mjs && node tests/whatsapp-parse.test.mjs && node tests/balance.test.mjs && node tests/invite-vars.test.mjs && node tests/payment-signature.test.mjs && node tests/permissions.test.mjs && node tests/auth-roles.test.mjs && node tests/packages.test.mjs &&node tests/event-roles.test.mjs && node tests/otp-codes.test.mjs",
+    "test": "node scripts/check-setup-single-tx.mjs && tsc -p tsconfig.test.json && node scripts/fix-test-build.mjs && node tests/whatsapp-parse.test.mjs && node tests/balance.test.mjs && node tests/invite-vars.test.mjs && node tests/payment-signature.test.mjs && node tests/permissions.test.mjs && node tests/auth-roles.test.mjs && node tests/packages.test.mjs && node tests/invite-card.test.mjs && node tests/event-roles.test.mjs && node tests/otp-codes.test.mjs",
     "test:db": "echo 'شغّل ملفات supabase/migrations ثم supabase/tests/logic.test.sql على قاعدة اختبار'",
     "check:sql": "node scripts/build-setup-sql.mjs && node scripts/check-setup-single-tx.mjs"
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.45.4",
     "@zxing/browser": "^0.1.5",

@@ -7,7 +7,7 @@ import { NewEventForm } from './NewEventForm';
 export const dynamic = 'force-dynamic';
 
 export default async function NewEventPage() {
-  await requireUser();
+  const user = await requireUser();
   const supabase = await createClient();
 
   const catalog = await loadPackageCatalog(supabase);
@@ -18,7 +18,7 @@ export default async function NewEventPage() {
         title="مناسبة جديدة"
         subtitle="أربع خطوات: التفاصيل ← الباقة ← دعوتك ← الدفع. والمعاينة تتحدّث مع كل حرف."
       />
-      <NewEventForm catalog={catalog} />
+      <NewEventForm catalog={catalog} uid={user.id} />
     </>
   );
 }

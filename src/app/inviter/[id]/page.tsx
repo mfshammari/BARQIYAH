@@ -12,6 +12,7 @@ import { InviteEditor } from './InviteEditor';
 import { InviterGuests } from './InviterGuests';
 import { InviterRemindButton } from './RemindButton';
 import { formatDate, formatEventLine, formatHijri, formatNumber, formatTime } from '@/lib/format';
+import { publicImageUrl, resolveHeaderImage } from '@/lib/inviteImage';
 import { OCCASION_LABELS, type Contact, type EventBalance, type EventRow, type Guest, type Inviter } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -240,11 +241,18 @@ export default async function InviterWorkspace({
       {active === 'invite' ? (
         <InviteEditor
           inviterId={id}
+          uid={user.id}
           eventLine={eventLine}
           initial={{
             host: vars.host ?? '',
             occasion: vars.occasion ?? '',
-            imageUrl: inviter.image_url,
+            imageMode: inviter.image_mode ?? 'generated',
+            imagePath: inviter.image_url,
+            imagePublicUrl: inviter.image_url ? publicImageUrl(inviter.image_url) : null,
+            generatedUrl: resolveHeaderImage({
+              kind: 'inviter', id, imageMode: 'generated', imageUrl: null,
+              version: [vars.host, vars.occasion, event.event_date, event.event_time, event.venue],
+            })!,
           }}
         />
       ) : (

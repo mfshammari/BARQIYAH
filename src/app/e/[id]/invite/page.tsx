@@ -3,6 +3,7 @@ import { PageHeader, Alert } from '@/components/ui';
 import { OwnerInviteEditor } from './OwnerInviteEditor';
 import { formatEventLine } from '@/lib/format';
 import { defaultOccasionText } from '@/lib/inviteVars';
+import { publicImageUrl, resolveHeaderImage } from '@/lib/inviteImage';
 import { OCCASION_LABELS, type EventRow } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -10,7 +11,7 @@ export const dynamic = 'force-dynamic';
 /** «دعوتي» للمالك — تحلّ محلّ اختيار القالب: نصّه وصورته ومعاينته. */
 export default async function OwnerInvitePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { event } = await requireEventAccess(id);
+  const { event, user } = await requireEventAccess(id);
   const e = event as EventRow;
   const vars = (e.invite_vars ?? {}) as { host?: string; occasion?: string };
 
@@ -23,6 +24,11 @@ export default async function OwnerInvitePage({ params }: { params: Promise<{ id
   });
 
   const missing = !(vars.host && vars.occasion);
+
+  const generatedUrl = resolveHeaderImage({
+    kind: 'event', id, imageMode: 'generated', imageUrl: null,
+    version: [vars.host, vars.occasion, e.event_date, e.event_time, e.venue, e.host_name],
+  })!;
 
   return (
     <>
@@ -41,13 +47,17 @@ export default async function OwnerInvitePage({ params }: { params: Promise<{ id
 
       <OwnerInviteEditor
         eventId={id}
+        uid={user.id}
         eventLine={eventLine}
         initial={{
           host: vars.host ?? e.host_name ?? '',
           occasion: vars.occasion ?? defaultOccasionText(
             OCCASION_LABELS[e.occasion_type], [e.celebrant_primary, e.celebrant_secondary],
           ),
-          imageUrl: e.image_url,
+          imageMode: e.image_mode ?? 'generated',
+          imagePath: e.image_url,
+          imagePublicUrl: e.image_url ? publicImageUrl(e.image_url) : null,
+          generatedUrl,
         }}
       />
     </>

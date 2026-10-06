@@ -11,6 +11,8 @@ export type TemplateStatus = 'draft' | 'under_review' | 'approved' | 'rejected';
 export type WhatsAppCategory = 'marketing' | 'utility';
 export type GuestStatus = 'draft' | 'sent' | 'accepted' | 'declined' | 'expired' | 'attended' | 'failed';
 export type TransactionType = 'purchase' | 'upgrade' | 'manual_activation';
+/** صورة الدعوة: تُولَّد من بيانات الدعوة، أو يرفعها المستخدم */
+export type ImageMode = 'generated' | 'uploaded';
 export type TransactionStatus = 'pending' | 'paid' | 'failed' | 'refunded';
 export type OccasionType =
   | 'wedding' | 'engagement' | 'engagement_contract'
@@ -107,6 +109,8 @@ export interface EventRow {
   template_id: string | null;
   /** متغيّرا القالب الموحّد للمالك {host, occasion} */
   invite_vars: Record<string, string>;
+  image_mode: ImageMode;
+  /** للمرفوعة: مسار الملف في Storage؛ للمولَّدة null */
   image_url: string | null;
   seats_quota: number;
   status: EventStatus;
@@ -129,6 +133,8 @@ export interface Inviter {
   template_id: string | null;
   /** المتغيّرات التي كتبها بحرية */
   invite_vars: Record<string, string>;
+  image_mode: ImageMode;
+  /** للمرفوعة: مسار الملف في Storage؛ للمولَّدة null */
   image_url: string | null;
   invite_token: string;
   joined_at: string | null;

@@ -3,20 +3,29 @@
 import { useActionState, useState } from 'react';
 import { SubmitButton } from '@/components/ActionForm';
 import { InviteTextEditor } from '@/components/InviteTextEditor';
+import { InviteImagePicker } from '@/components/InviteImagePicker';
 import { saveEventInvite, type ActionState } from '../actions';
 import { validateInviteVars } from '@/lib/inviteVars';
+import type { ImageMode } from '@/lib/types';
 
 /** «دعوتي» للمالك: متغيّرا القالب الموحّد + الصورة + المعاينة. */
 export function OwnerInviteEditor({
-  eventId, eventLine, initial,
+  eventId, uid, eventLine, initial,
 }: {
   eventId: string;
+  uid: string;
   eventLine: string;
-  initial: { host: string; occasion: string; imageUrl: string | null };
+  initial: {
+    host: string; occasion: string;
+    imageMode: ImageMode; imagePath: string | null; imagePublicUrl: string | null; generatedUrl: string;
+  };
 }) {
   const [state, action] = useActionState<ActionState, FormData>(saveEventInvite, {});
   const [host, setHost] = useState(initial.host);
   const [occasion, setOccasion] = useState(initial.occasion);
+  const [preview, setPreview] = useState<string | null>(
+    initial.imageMode === 'uploaded' ? initial.imagePublicUrl : initial.generatedUrl,
+  );
   const issues = validateInviteVars({ host, occasion });
 
   return (
@@ -45,21 +54,25 @@ export function OwnerInviteEditor({
           hostHint="الجهة الداعية كما تظهر في نصّ الدعوة." occasionHint="مثل: زواج محمد وعريب."
           fieldPrefix="ev-"
           image={
-            initial.imageUrl ? (
+            preview ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={initial.imageUrl} alt="" className="mb-2 max-h-32 w-full rounded-lg object-cover" />
+              <img src={preview} alt="" className="mb-2 max-h-40 w-full rounded-lg object-cover" />
             ) : (
               <div className="mb-2 grid h-24 place-items-center rounded-lg bg-panel text-[11px] text-muted">
-                صورة الدعوة
+                بلا صورة
               </div>
             )
           }
         />
 
         <div>
-          <label className="label" htmlFor="ev-img">صورة الدعوة <span className="font-normal text-muted">(اختياري)</span></label>
-          <input id="ev-img" name="image_url" dir="ltr" className="field text-left"
-            defaultValue={initial.imageUrl ?? ''} placeholder="https://…" />
+          <span className="label">صورة الدعوة</span>
+          <InviteImagePicker
+            uid={uid} folder={eventId}
+            initialMode={initial.imageMode} initialPath={initial.imagePath}
+            initialPublicUrl={initial.imagePublicUrl} generatedUrl={initial.generatedUrl}
+            onChange={(v) => setPreview(v.mode === 'uploaded' ? v.publicUrl : initial.generatedUrl)}
+          />
         </div>
 
         <SubmitButton className={`btn-primary ${issues.length > 0 ? 'pointer-events-none opacity-50' : ''}`}>

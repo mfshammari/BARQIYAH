@@ -6,6 +6,7 @@ import { createEvent, type ActionState } from '../actions';
 import { formatEventLine } from '@/lib/format';
 import { PackagePicker } from '@/components/PackagePicker';
 import { InviteTextEditor } from '@/components/InviteTextEditor';
+import { InviteImagePicker } from '@/components/InviteImagePicker';
 import { defaultOccasionText, validateInviteVars, renderInvite } from '@/lib/inviteVars';
 import { CELEBRANT_LABELS, OCCASION_LABELS, hasTwoCelebrants, type OccasionType, type PackageCatalog } from '@/lib/types';
 
@@ -20,7 +21,7 @@ function Submit() {
   );
 }
 
-export function NewEventForm({ catalog }: { catalog: PackageCatalog }) {
+export function NewEventForm({ catalog, uid }: { catalog: PackageCatalog; uid: string }) {
   const [state, formAction] = useActionState<ActionState, FormData>(createEvent, {});
   const [step, setStep] = useState(0);
 
@@ -177,6 +178,18 @@ export function NewEventForm({ catalog }: { catalog: PackageCatalog }) {
             hostHint="يُملأ من «الدعوة باسم» — عدّله كما تريد أن يظهر." occasionHint="يُملأ من نوع المناسبة وأصحابها."
             fieldPrefix="new-"
           />
+
+          <div>
+            <span className="label">صورة الدعوة</span>
+            <InviteImagePicker
+              uid={uid} folder="pending"
+              generatedFallback={
+                <div className="grid h-20 place-items-center rounded-xl bg-panel text-[12px] text-muted">
+                  بطاقة برقية الخضراء الذهبية — كالمعاينة المجاورة — تُولَّد من بيانات دعوتك.
+                </div>
+              }
+            />
+          </div>
 
           <div className="flex gap-2">
             <button type="button" className="btn-ghost" onClick={() => setStep(1)}>رجوع</button>

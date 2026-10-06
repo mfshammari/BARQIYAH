@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth';
 import { normalizePhone, isValidPhone, formatNumber } from '@/lib/format';
 import { validateInviteVars, hasInviteVars, type InviteVars } from '@/lib/inviteVars';
+import { readImageFields } from '@/lib/inviteImage';
 import { sendInvitations, sendReminders } from '@/lib/invitations';
 import type { Guest, Inviter } from '@/lib/types';
 
@@ -36,14 +37,14 @@ export async function saveInviteContent(_prev: ActionState, formData: FormData):
     host: String(formData.get('host') ?? '').trim(),
     occasion: String(formData.get('occasion') ?? '').trim(),
   };
-  const imageUrl = String(formData.get('image_url') ?? '').trim() || null;
+  const { imageMode, imageUrl } = readImageFields(formData);
 
   const issues = validateInviteVars(vars);
   if (issues.length > 0) return { error: issues[0].message };
 
   const { error } = await supabase
     .from('inviters')
-    .update({ invite_vars: vars, image_url: imageUrl })
+    .update({ invite_vars: vars, image_mode: imageMode, image_url: imageUrl })
     .eq('id', inviterId);
 
   if (error) return { error: 'تعذّر حفظ دعوتك.' };
@@ -155,6 +156,7 @@ export async function sendInviterInvitations(_prev: ActionState, formData: FormD
   const outcomes = await sendInvitations(supabase, inviter.event_id, guestIds, {
     inviterId,
     inviteVars: inviter.invite_vars as unknown as InviteVars,
+    imageMode: inviter.image_mode ?? 'generated',
     imageUrl: inviter.image_url,
     reasons: REASONS,
   });

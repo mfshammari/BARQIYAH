@@ -150,7 +150,7 @@ export default async function InvitersPage({ params }: { params: Promise<{ id: s
                           <span>القالب: <b>قالب برقية الموحّد</b></span>
                           <span>
                             الصورة:{' '}
-                            <b>{(isOwnerRow ? e.image_url : inv.image_url) ? 'مرفوعة' : 'لم تُرفع'}</b>
+                            <b>{(isOwnerRow ? e.image_mode : inv.image_mode) === 'uploaded' ? 'مرفوعة' : 'مولَّدة تلقائياً'}</b>
                           </span>
                         </div>
                       </>

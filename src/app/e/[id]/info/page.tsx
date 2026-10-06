@@ -71,11 +71,6 @@ export default async function EventInfoPage({ params }: { params: Promise<{ id: 
                     defaultValue={e.buyer_phone ?? ''} />
                 </div>
               </div>
-              <div>
-                <label className="label" htmlFor="img">رابط صورة الدعوة</label>
-                <input id="img" name="image_url" dir="ltr" className="field text-left"
-                  defaultValue={e.image_url ?? ''} placeholder="https://…" />
-              </div>
               <SubmitButton className="btn-primary">حفظ البيانات</SubmitButton>
             </ActionForm>
           </div>

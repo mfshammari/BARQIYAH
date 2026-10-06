@@ -7,6 +7,7 @@ import { requireUser } from '@/lib/auth';
 import { formatHijri, formatWeekday } from '@/lib/format';
 import { hasTwoCelebrants, OCCASION_LABELS, type OccasionType } from '@/lib/types';
 import { defaultOccasionText, validateInviteVars, type InviteVars } from '@/lib/inviteVars';
+import { readImageFields } from '@/lib/inviteImage';
 
 export interface ActionState { error?: string; notice?: string }
 
@@ -33,7 +34,7 @@ export async function createEvent(_prev: ActionState, formData: FormData): Promi
   const packageId = String(formData.get('package_id') ?? '') || null;
   const qtyRaw = Math.floor(Number(formData.get('package_qty') ?? 0));
   const packageQty = packageId && qtyRaw > 0 ? qtyRaw : null;
-  const imageUrl = String(formData.get('image_url') ?? '').trim() || null;
+  const { imageMode, imageUrl } = readImageFields(formData);
 
   if (!OCCASIONS.includes(occasion)) return { error: 'نوع المناسبة غير صالح.' };
   if (!eventDate) return { error: 'حدّد تاريخ المناسبة.' };
@@ -68,6 +69,7 @@ export async function createEvent(_prev: ActionState, formData: FormData): Promi
       buyer_name: user.profile.full_name,
       buyer_phone: user.profile.phone,
       invite_vars: inviteVars,
+      image_mode: imageMode,
       image_url: imageUrl,
       seats_quota: 0,          // يُضبط عند التفعيل بعد الدفع
       status: 'unpaid',

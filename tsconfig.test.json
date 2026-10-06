@@ -21,6 +21,7 @@
     "src/lib/permissions.ts",
     "src/lib/roles.ts",
     "src/lib/packages.ts",
+    "src/lib/inviteCard.ts",
     "src/lib/eventRoles.ts",
     "src/lib/otpCodes.ts"
   ]

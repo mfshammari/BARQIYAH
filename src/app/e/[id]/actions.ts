@@ -9,6 +9,7 @@ import { formatNumber } from '@/lib/format';
 import { normalizePhone, isValidPhone } from '@/lib/format';
 import type { EventRow, Guest, OccasionType, Package } from '@/lib/types';
 import { validateInviteVars, type InviteVars } from '@/lib/inviteVars';
+import { readImageFields } from '@/lib/inviteImage';
 import { getPaymentProvider } from '@/lib/payments';
 import { appUrl } from '@/lib/env';
 import { redirect } from 'next/navigation';
@@ -384,13 +385,13 @@ export async function saveEventInvite(_prev: ActionState, formData: FormData): P
     host: String(formData.get('host') ?? '').trim(),
     occasion: String(formData.get('occasion') ?? '').trim(),
   };
-  const imageUrl = String(formData.get('image_url') ?? '').trim() || null;
+  const { imageMode, imageUrl } = readImageFields(formData);
 
   const issues = validateInviteVars(vars);
   if (issues.length > 0) return { error: issues[0].message };
 
   const { error } = await supabase
-    .from('events').update({ invite_vars: vars, image_url: imageUrl }).eq('id', eventId);
+    .from('events').update({ invite_vars: vars, image_mode: imageMode, image_url: imageUrl }).eq('id', eventId);
   if (error) return { error: 'تعذّر حفظ دعوتك.' };
 
   revalidatePath(`/e/${eventId}/invite`);
@@ -471,14 +472,13 @@ export async function updateEventInfo(_prev: ActionState, formData: FormData): P
   const occasion = String(formData.get('occasion_type') ?? 'wedding') as OccasionType;
   const buyerName = String(formData.get('buyer_name') ?? '').trim() || null;
   const buyerPhone = String(formData.get('buyer_phone') ?? '').trim() || null;
-  const imageUrl = String(formData.get('image_url') ?? '').trim() || null;
 
   if (!hostName) return { error: 'اسم صاحب الدعوة مطلوب.' };
   if (!eventDate) return { error: 'تاريخ المناسبة مطلوب.' };
 
   const { error } = await supabase.from('events').update({
     host_name: hostName, event_date: eventDate, occasion_type: occasion,
-    buyer_name: buyerName, buyer_phone: buyerPhone, image_url: imageUrl,
+    buyer_name: buyerName, buyer_phone: buyerPhone,
   }).eq('id', eventId);
 
   if (error) return { error: 'تعذّر حفظ بيانات المناسبة.' };

@@ -3,7 +3,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient, adminClientAvailable } from '@/lib/supabase/admin';
 import { appUrl } from '@/lib/env';
 import { buildButtonPayloads, buildSeatsPayload, getWhatsAppProvider } from '@/lib/whatsapp';
-import type { EventRow, Guest, Template, WhatsAppCategory } from '@/lib/types';
+import type { EventRow, Guest, ImageMode, Template, WhatsAppCategory } from '@/lib/types';
+import { resolveHeaderImage } from '@/lib/inviteImage';
 import { formatEventLine } from '@/lib/format';
 import {
   buildInviteParams, hasInviteVars, renderInvite, DEFAULT_META_TEMPLATE_NAME, type InviteVars,
@@ -68,6 +69,7 @@ export async function loadDefaultTemplate(
 export interface InviterContext {
   inviterId: string;
   inviteVars: InviteVars;
+  imageMode: ImageMode;
   imageUrl: string | null;
   reasons?: Record<string, string>;
 }
@@ -164,8 +166,21 @@ export async function sendInvitations(
   // دائماً ثلاثة متغيّرات — للمالك والداعي والمحاكاة وMeta
   const bodyParams = buildInviteParams(vars, eventLine);
 
-  // الداعي بصورته، والمالك بصورته — لا fallback إلى صورة قالب
-  const headerImage = inviterCtx ? inviterCtx.imageUrl : (event.image_url ?? null);
+  // الداعي بصورته، والمالك بصورته — لا fallback إلى صورة قالب.
+  // المرفوعة رابط Storage العام، والمولَّدة مسار التوليد ببصمة البيانات.
+  const headerImage = resolveHeaderImage(
+    inviterCtx
+      ? {
+          kind: 'inviter', id: inviterCtx.inviterId,
+          imageMode: inviterCtx.imageMode, imageUrl: inviterCtx.imageUrl,
+          version: [vars.host, vars.occasion, event.event_date, event.event_time, event.venue],
+        }
+      : {
+          kind: 'event', id: event.id,
+          imageMode: event.image_mode, imageUrl: event.image_url,
+          version: [vars.host, vars.occasion, event.event_date, event.event_time, event.venue, event.host_name],
+        },
+  );
 
   for (const row of toSend) {
     const guest = guestMap.get(row.guest_id);
