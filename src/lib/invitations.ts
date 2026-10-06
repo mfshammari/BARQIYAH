@@ -2,7 +2,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient, adminClientAvailable } from '@/lib/supabase/admin';
 import { appUrl } from '@/lib/env';
-import { buildButtonPayloads, buildSeatsPayload, getWhatsAppProvider } from '@/lib/whatsapp';
+import { buildButtonPayloads, buildSeatsPayload, getWhatsAppProvider, getReminderTemplateName } from '@/lib/whatsapp';
 import type { EventRow, Guest, ImageMode, Inviter, Template, WhatsAppCategory } from '@/lib/types';
 import { resolveHeaderImage } from '@/lib/inviteImage';
 import { formatEventLine } from '@/lib/format';
@@ -406,27 +406,49 @@ export async function sendReminders(
     venue: event.venue,
   });
 
+  // {{1}} الجهة الداعية كما كتبها صاحب الدعوة: الداعي لمدعوّيه والمالك لمدعوّيه
+  const ownerVars = (event.invite_vars ?? {}) as Partial<InviteVars>;
+  const inviterIds = Array.from(new Set(due.map((g) => g.inviter_id).filter(Boolean))) as string[];
+  const { data: inviterRows } = inviterIds.length
+    ? await supabase.from('inviters').select('id, profile_id, invite_vars').in('id', inviterIds)
+    : { data: [] as { id: string; profile_id: string | null; invite_vars: Record<string, string> }[] };
+  const hostFor = (inviterId: string | null): string => {
+    const row = (inviterRows ?? []).find((r) => r.id === inviterId);
+    const v = (row?.invite_vars ?? {}) as Partial<InviteVars>;
+    if (row && row.profile_id !== event.owner_id && v.host?.trim()) return v.host.trim();
+    return ownerVars.host?.trim() || event.host_name;
+  };
+
+  // التذكير قالب معتمد لا نصّ حرّ (قرار محسوم): {{1}} الداعي، {{2}} الموعد
+  const templateName = await getReminderTemplateName();
   const provider = await getWhatsAppProvider();
   let sent = 0;
   let failed = 0;
 
   for (const g of due) {
-    const text =
-      `تذكير بدعوة ${event.host_name} — ${eventLine}.\n` +
-      'هل ستشرّفنا بالحضور؟ ردّ بـ«نعم» أو «أعتذر».';
+    const { data: guestRow } = await supabase
+      .from('guests').select('invite_token').eq('id', g.guest_id).maybeSingle<{ invite_token: string }>();
+    const bodyParams = [hostFor(g.inviter_id), eventLine];
 
-    const res = await provider.sendText({ to: g.phone, text });
+    const res = await provider.sendTemplate({
+      to: g.phone,
+      templateName,
+      languageCode: 'ar',
+      bodyParams,
+      buttonPayloads: guestRow ? buildButtonPayloads(guestRow.invite_token) : undefined,
+    });
     if (res.ok) sent += 1;
     else failed += 1;
 
     await logMessage({
-      event_id: eventId,
-      guest_id: g.guest_id,
-      direction: 'outbound',
-      template_name: 'reminder',
+      event_id: eventId, guest_id: g.guest_id, kind: 'reminder',
+      inviter_id: g.inviter_id ?? inviterId ?? null,
+      template_name: templateName,
       meta_message_id: res.messageId ?? null,
+      provider: res.provider, to_phone: g.phone,
       status: res.ok ? 'sent' : 'failed',
-      error_code: res.ok ? null : (res.error ?? 'SEND_FAILED'),
+      message_id: res.messageId ?? null, error: res.error ?? null,
+      payload: { body_params: bodyParams, rsvp_url: guestRow ? appUrl(`/rsvp/${guestRow.invite_token}`) : null },
     });
   }
 

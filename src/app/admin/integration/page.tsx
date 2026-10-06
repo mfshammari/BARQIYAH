@@ -54,6 +54,12 @@ export default async function IntegrationPage() {
               <p className="hint">لا يُعرض التوكن المحفوظ مطلقاً. اتركه فارغاً إن لم ترغب بتغييره.</p>
             </div>
             <div>
+              <label className="label" htmlFor="rt">قالب التذكير في Meta</label>
+              <input id="rt" name="reminder_template" dir="ltr" className="field text-left"
+                defaultValue={data?.reminder_template ?? ''} placeholder="barqiyah_reminder" />
+              <p className="hint">التذكير قالب معتمد لا نصّ حرّ: متغيّران — الجهة الداعية وسطر الموعد، وزرّا التأكيد والاعتذار.</p>
+            </div>
+            <div>
               <label className="label" htmlFor="vt">Webhook Verify Token</label>
               <input id="vt" name="verify_token" dir="ltr" className="field text-left"
                 defaultValue={data?.verify_token ?? ''} placeholder="barqiyah-verify-token" />

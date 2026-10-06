@@ -232,8 +232,12 @@ export async function saveIntegration(_prev: ActionState, formData: FormData): P
     phone_number_id: String(formData.get('phone_number_id') ?? '').trim() || null,
     waba_id: String(formData.get('waba_id') ?? '').trim() || null,
     verify_token: String(formData.get('verify_token') ?? '').trim() || null,
+    reminder_template: String(formData.get('reminder_template') ?? '').trim() || null,
     updated_at: new Date().toISOString(),
   };
+  if (payload.reminder_template && !/^[a-z0-9_]{2,512}$/.test(payload.reminder_template)) {
+    return { error: 'اسم قالب التذكير: حروف إنجليزية صغيرة وأرقام وشرطة سفلية فقط.' };
+  }
   const token = String(formData.get('access_token') ?? '').trim();
 
   const { data: existing } = await supabase

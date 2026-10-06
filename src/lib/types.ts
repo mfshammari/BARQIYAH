@@ -209,6 +209,8 @@ export interface IntegrationSettings {
   waba_id: string | null;
   access_token: string | null;
   verify_token: string | null;
+  /** اسم قالب التذكير المعتمد في Meta (افتراضياً barqiyah_reminder) */
+  reminder_template: string | null;
   updated_at: string;
 }
 
