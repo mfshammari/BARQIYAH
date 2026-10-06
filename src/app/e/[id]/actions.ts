@@ -5,9 +5,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient, adminClientAvailable } from '@/lib/supabase/admin';
 import { requireUser, isAdminRole } from '@/lib/auth';
 import { sendInvitations, sendReminders } from '@/lib/invitations';
-import { formatNumber } from '@/lib/format';
-import { normalizePhone, isValidPhone } from '@/lib/format';
-import type { EventRow, Guest, OccasionType, Package } from '@/lib/types';
+import { formatNumber, formatHijri, formatWeekday, normalizePhone, isValidPhone } from '@/lib/format';
+import { hasTwoCelebrants, type EventRow, type Guest, type OccasionType, type Package } from '@/lib/types';
 import { validateInviteVars, type InviteVars } from '@/lib/inviteVars';
 import { readImageFields } from '@/lib/inviteImage';
 import { getPaymentProvider } from '@/lib/payments';
@@ -465,26 +464,57 @@ export async function deleteScanner(formData: FormData) {
 // ————————————————————— بيانات المناسبة —————————————————————
 export async function updateEventInfo(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const eventId = String(formData.get('event_id') ?? '');
-  const { supabase } = await guardEvent(eventId);
+  const { supabase, event } = await guardEvent(eventId);
 
   const hostName = String(formData.get('host_name') ?? '').trim();
   const eventDate = String(formData.get('event_date') ?? '').trim();
   const occasion = String(formData.get('occasion_type') ?? 'wedding') as OccasionType;
-  const buyerName = String(formData.get('buyer_name') ?? '').trim() || null;
-  const buyerPhone = String(formData.get('buyer_phone') ?? '').trim() || null;
+  const celebrant1 = String(formData.get('celebrant_primary') ?? '').trim() || null;
+  const celebrant2 = String(formData.get('celebrant_secondary') ?? '').trim() || null;
+  const venue = String(formData.get('venue') ?? '').trim() || null;
+  const eventTime = String(formData.get('event_time') ?? '').trim() || null;
+  const internalName = String(formData.get('internal_name') ?? '').trim() || null;
 
   if (!hostName) return { error: 'اسم صاحب الدعوة مطلوب.' };
-  if (!eventDate) return { error: 'تاريخ المناسبة مطلوب.' };
+  if (!eventDate || !/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) return { error: 'تاريخ المناسبة مطلوب.' };
+  if (eventTime && !/^\d{1,2}:\d{2}/.test(eventTime)) return { error: 'الوقت غير صالح.' };
+
+  // عند تغيّر التاريخ يُعاد حساب الهجري واليوم — نفس منطق إنشاء المناسبة
+  const dateChanged = eventDate !== event.event_date;
+  const derived = dateChanged || !event.event_date_hijri
+    ? { event_date_hijri: formatHijri(eventDate), event_weekday: formatWeekday(eventDate) }
+    : {};
 
   const { error } = await supabase.from('events').update({
-    host_name: hostName, event_date: eventDate, occasion_type: occasion,
-    buyer_name: buyerName, buyer_phone: buyerPhone,
+    host_name: hostName,
+    event_date: eventDate,
+    ...derived,
+    event_time: eventTime,
+    venue,
+    occasion_type: occasion,
+    celebrant_primary: celebrant1,
+    celebrant_secondary: hasTwoCelebrants(occasion) ? celebrant2 : null,
+    internal_name: internalName,
   }).eq('id', eventId);
 
   if (error) return { error: 'تعذّر حفظ بيانات المناسبة.' };
+
+  // الموعد ينعكس على دعوات كل الدعاة — نحصيهم ونجدّد مساحاتهم
+  const { count } = await supabase
+    .from('inviters').select('id', { count: 'exact', head: true })
+    .eq('event_id', eventId).neq('profile_id', event.owner_id);
+  const inviterCount = count ?? 0;
+
   revalidatePath(`/e/${eventId}/info`);
-  revalidatePath(`/e/${eventId}`);
-  return { notice: 'تم حفظ البيانات.' };
+  revalidatePath(`/e/${eventId}/invite`);
+  revalidateEvent(eventId);
+  revalidatePath('/inviter/[id]', 'layout');
+  revalidatePath('/app');
+
+  const dateNote = dateChanged || eventTime !== event.event_time || venue !== event.venue
+    ? ` انعكس الموعد على دعوات ${formatNumber(inviterCount)} داعٍ.`
+    : '';
+  return { notice: `تم حفظ البيانات.${dateNote}` };
 }
 
 /**

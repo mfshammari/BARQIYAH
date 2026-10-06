@@ -4,6 +4,7 @@ import { BalancePanel } from '@/components/BalancePanel';
 import { PageHeader, EventStatusBadge, Alert } from '@/components/ui';
 import { ActionForm, SubmitButton } from '@/components/ActionForm';
 import { updateEventInfo, requestUpgrade } from '../actions';
+import { OccasionFields } from './OccasionFields';
 import { formatCurrency, formatDateTime, formatNumber } from '@/lib/format';
 import { loadPackageCatalog } from '@/lib/packagesData';
 import { PackagePicker } from '@/components/PackagePicker';
@@ -38,39 +39,51 @@ export default async function EventInfoPage({ params }: { params: Promise<{ id: 
         <div className="space-y-5">
           <div className="card card-pad">
             <h2 className="sec-title mb-4">التفاصيل</h2>
+            <p className="mb-4 text-[12.5px] text-muted">
+              الموعد والمكان مصدرهما هنا وحده — أي تعديل ينعكس فوراً على دعوات كل الدعاة.
+            </p>
             <ActionForm action={updateEventInfo}>
               <input type="hidden" name="event_id" value={id} />
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="label" htmlFor="occ">نوع المناسبة</label>
-                  <select id="occ" name="occasion_type" className="field" defaultValue={e.occasion_type}>
-                    <option value="wedding">حفل زواج</option>
-                    <option value="engagement">حفل خطوبة</option>
-                    <option value="graduation">حفل تخرّج</option>
-                    <option value="other">مناسبة أخرى</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="label" htmlFor="date">التاريخ</label>
-                  <input id="date" name="event_date" type="date" className="field num"
-                    defaultValue={e.event_date} required />
-                </div>
-              </div>
+
+              <OccasionFields
+                initialOccasion={e.occasion_type}
+                celebrantPrimary={e.celebrant_primary ?? ''}
+                celebrantSecondary={e.celebrant_secondary ?? ''}
+              />
+
               <div>
                 <label className="label" htmlFor="host">الدعوة باسم</label>
                 <input id="host" name="host_name" className="field" defaultValue={e.host_name} required />
+                <p className="hint">الجهة الداعية؛ نصّ دعوتك نفسه تحرّره من صفحة «دعوتي».</p>
               </div>
+
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="label" htmlFor="bn">اسم المشتري</label>
-                  <input id="bn" name="buyer_name" className="field" defaultValue={e.buyer_name ?? ''} />
+                  <label className="label" htmlFor="date">التاريخ الميلادي</label>
+                  <input id="date" name="event_date" type="date" className="field num"
+                    defaultValue={e.event_date} required />
+                  <p className="hint num">
+                    الهجري واليوم يُحسبان تلقائياً: {e.event_weekday ?? ''} {e.event_date_hijri ?? ''}
+                  </p>
                 </div>
                 <div>
-                  <label className="label" htmlFor="bp">جوال المشتري</label>
-                  <input id="bp" name="buyer_phone" dir="ltr" className="field text-left num"
-                    defaultValue={e.buyer_phone ?? ''} />
+                  <label className="label" htmlFor="time">الوقت</label>
+                  <input id="time" name="event_time" type="time" className="field num"
+                    defaultValue={e.event_time ? e.event_time.slice(0, 5) : ''} />
                 </div>
               </div>
+
+              <div>
+                <label className="label" htmlFor="venue">المكان</label>
+                <input id="venue" name="venue" className="field" defaultValue={e.venue ?? ''} placeholder="قصر ٣٣ للاحتفالات" />
+              </div>
+
+              <div>
+                <label className="label" htmlFor="iname">اسم المناسبة الداخلي</label>
+                <input id="iname" name="internal_name" className="field" defaultValue={e.internal_name ?? ''} />
+                <p className="hint">يميّزها في قائمة مناسباتك ولا يظهر للمدعوين.</p>
+              </div>
+
               <SubmitButton className="btn-primary">حفظ البيانات</SubmitButton>
             </ActionForm>
           </div>
