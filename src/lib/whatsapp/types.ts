@@ -55,4 +55,20 @@ export interface InboundReply {
   /** عدد الحاضرين المختار من القائمة التفاعلية */
   seats?: number;
   text?: string;
+  /** معرّف الرسالة الأصلية التي يردّ عليها (context.id) — للربط بـ message_logs */
+  contextId?: string;
+}
+
+/** تحديث حالة رسالة صادرة كما تبلّغه Meta (statuses[]). */
+export interface MessageStatusUpdate {
+  wamid: string;
+  status: 'sent' | 'delivered' | 'read' | 'failed' | string;
+  recipient?: string;
+  errorCode?: string;
+  errorTitle?: string;
+}
+
+export interface WebhookEvents {
+  replies: InboundReply[];
+  statuses: MessageStatusUpdate[];
 }

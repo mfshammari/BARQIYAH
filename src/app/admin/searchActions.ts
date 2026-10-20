@@ -1,6 +1,6 @@
 'use server';
 
-import { requireUser, isAdminRole } from '@/lib/auth';
+import { requireUser, isAdminRole, CLIENT_ROLES } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 
 export interface SearchHit {
@@ -27,7 +27,7 @@ export async function globalSearch(query: string): Promise<SearchHit[]> {
 
   const [clients, events, guests] = await Promise.all([
     supabase.from('profiles').select('id, full_name, phone, role')
-      .in('role', ['user', 'owner'])
+      .in('role', CLIENT_ROLES)
       .or(`full_name.ilike.${like},phone.ilike.${like}`)
       .limit(5),
     supabase.from('events').select('id, host_name, internal_name, event_date, status')

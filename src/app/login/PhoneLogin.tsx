@@ -85,7 +85,7 @@ export function PhoneLogin({ next }: { next: string }) {
           </form>
 
           <p>
-            <Link href="/login" className="hover:underline">تغيير الرقم</Link>
+            <Link href={next ? `/login?next=${encodeURIComponent(next)}` : '/login'} className="hover:underline">تغيير الرقم</Link>
           </p>
         </div>
       </>
@@ -100,13 +100,14 @@ export function PhoneLogin({ next }: { next: string }) {
       <p className="mt-2 text-center text-[13px] text-muted">سنرسل لك رمز دخول عبر واتساب</p>
 
       <form action={startAction} className="mt-6 space-y-4">
+        <input type="hidden" name="next" value={next} />
         <PhoneField id="l-phone" dial={dial} setDial={setDial} phone={phone} setPhone={setPhone} />
 
         {start.error ? (
           <p className="text-[12.5px] font-semibold text-danger">
             {start.error}
             {start.error.includes('لا يوجد حساب') ? (
-              <Link href="/signup" className="mx-1 underline">إنشاء حساب</Link>
+              <Link href={next ? `/signup?next=${encodeURIComponent(next)}` : '/signup'} className="mx-1 underline">إنشاء حساب</Link>
             ) : null}
           </p>
         ) : null}

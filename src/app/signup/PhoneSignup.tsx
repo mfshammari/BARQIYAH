@@ -12,7 +12,7 @@ import {
 } from './otpUi';
 import { formatNumber } from '@/lib/format';
 
-export function PhoneSignup() {
+export function PhoneSignup({ next = '' }: { next?: string }) {
   const router = useRouter();
   const [details, detailsAction] = useActionState<OtpState, FormData>(startPhoneSignup, {});
   const [resent, resendAction] = useActionState<OtpState, FormData>(resendOtp, {});
@@ -159,7 +159,7 @@ export function PhoneSignup() {
           </form>
 
           <p>
-            <Link href="/signup" className="hover:underline">تغيير الرقم</Link>
+            <Link href={next ? `/signup?next=${encodeURIComponent(next)}` : '/signup'} className="hover:underline">تغيير الرقم</Link>
           </p>
         </div>
       </>
@@ -177,6 +177,7 @@ export function PhoneSignup() {
       <p className="mt-2 text-center text-[13px] text-muted">سنرسل لك رمز تحقق عبر واتساب</p>
 
       <form action={detailsAction} className="mt-6 space-y-4">
+        <input type="hidden" name="next" value={next} />
         <div>
           <label className="label" htmlFor="s-name">الاسم الكامل</label>
           <input

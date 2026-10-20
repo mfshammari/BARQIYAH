@@ -19,6 +19,11 @@
     "src/lib/payments/moyasar.ts",
     "src/lib/payments/index.ts",
     "src/lib/permissions.ts",
+    "src/lib/roles.ts",
+    "src/lib/packages.ts",
+    "src/lib/inviteCard.ts",
+    "src/lib/safeNext.ts",
+    "src/lib/whatsapp/signature.ts",
     "src/lib/eventRoles.ts",
     "src/lib/otpCodes.ts"
   ]

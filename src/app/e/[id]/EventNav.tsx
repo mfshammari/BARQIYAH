@@ -21,7 +21,7 @@ export function EventNav({
     { href: base, label: 'لوحة المعلومات', icon: '▤' },
     { href: `${base}/guests`, label: 'المدعوون', icon: '☰' },
     { href: `${base}/inviters`, label: 'الدعاة', icon: '◑' },
-    { href: `${base}/template`, label: 'قالب الدعوة', icon: '▧' },
+    { href: `${base}/invite`, label: 'دعوتي', icon: '▧' },
     { href: `${base}/scanners`, label: 'حسابات المسح', icon: '▦' },
     { href: `${base}/info`, label: 'بيانات المناسبة', icon: '✎' },
   ];

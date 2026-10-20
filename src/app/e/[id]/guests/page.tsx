@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function GuestsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { event, supabase } = await requireEventAccess(id);
+  const { event, supabase, user } = await requireEventAccess(id);
   const e = event as EventRow;
 
   const [{ data: guestsData }, { data: invitersData }, balance] = await Promise.all([
@@ -25,7 +25,9 @@ export default async function GuestsPage({ params }: { params: Promise<{ id: str
 
   const guests = guestsData ?? [];
   const inviters = invitersData ?? [];
-  const canSend = e.status === 'active';
+  // قبل الدفع: الدعوات التجريبية المتبقية في الحساب تسمح بالإرسال
+  const trialLeft = user.profile.trial_invites_left ?? 0;
+  const canSend = e.status === 'active' || ((e.status === 'unpaid' || e.status === 'pending') && trialLeft > 0);
 
   return (
     <>

@@ -12,7 +12,8 @@ import { InviteEditor } from './InviteEditor';
 import { InviterGuests } from './InviterGuests';
 import { InviterRemindButton } from './RemindButton';
 import { formatDate, formatEventLine, formatHijri, formatNumber, formatTime } from '@/lib/format';
-import { OCCASION_LABELS, type Contact, type EventBalance, type EventRow, type Guest, type Inviter, type Template } from '@/lib/types';
+import { publicImageUrl, resolveHeaderImage } from '@/lib/inviteImage';
+import { OCCASION_LABELS, type Contact, type EventBalance, type EventRow, type Guest, type Inviter } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,14 +48,12 @@ export default async function InviterWorkspace({
   // مساحة الداعي لصاحبها وحده
   if (!inviter || inviter.profile_id !== user.id) redirect('/app');
 
-  const [{ data: event }, { data: balanceRows }, { data: guestsData }, { data: templatesData }, { data: contactsData }] =
+  const [{ data: event }, { data: balanceRows }, { data: guestsData }, { data: contactsData }] =
     await Promise.all([
       supabase.from('events').select('*').eq('id', inviter.event_id).maybeSingle<EventRow>(),
       supabase.rpc('inviter_balance', { p_inviter_id: id }),
       supabase.from('guests').select('*').eq('inviter_id', id)
         .order('created_at', { ascending: false }).returns<Guest[]>(),
-      supabase.from('templates').select('*').is('owner_id', null).eq('status', 'approved')
-        .order('created_at', { ascending: true }).returns<Template[]>(),
       supabase.from('contacts').select('*').eq('owner_id', user.id)
         .order('name', { ascending: true }).returns<Contact[]>(),
     ]);
@@ -71,8 +70,9 @@ export default async function InviterWorkspace({
   };
   const guests = guestsData ?? [];
   const vars = (inviter.invite_vars ?? {}) as { host?: string; occasion?: string };
-  const ready = Boolean(inviter.template_id && vars.host && vars.occasion);
-  const canSend = event.status === 'active';
+  const ready = Boolean(vars.host && vars.occasion);
+  const trialLeft = user.profile.trial_invites_left ?? 0;
+  const canSend = event.status === 'active' || ((event.status === 'unpaid' || event.status === 'pending') && trialLeft > 0);
   const active = tab === 'guests' ? 'guests' : 'invite';
 
   const eventLine = formatEventLine({
@@ -222,10 +222,18 @@ export default async function InviterWorkspace({
         </div>
       </div>
 
+      {trialLeft > 0 && event.status !== 'active' ? (
+        <div className="mb-5">
+          <Alert tone="info" title={`لديك ${formatNumber(trialLeft)} دعوات تجريبية`}>
+            جرّب الإرسال قبل تفعيل صاحب المناسبة للباقة — لا تُحسب على الحصة.
+          </Alert>
+        </div>
+      ) : null}
+
       {!ready ? (
         <div className="mb-5">
           <Alert tone="warn" title="لم تكتب نصّ دعوتك بعد">
-            اختر قالبك واكتب كلماتك من تبويب «دعوتي» قبل أن ترسل لأي مدعو.
+            اكتب كلماتك من تبويب «دعوتي» قبل أن ترسل لأي مدعو.
           </Alert>
         </div>
       ) : null}
@@ -234,7 +242,7 @@ export default async function InviterWorkspace({
         title={active === 'invite' ? 'دعوتي' : 'مدعوّوي'}
         subtitle={
           active === 'invite'
-            ? 'قالبك ونصّك وصورتك — تملكها وحدك، ولا يعدّلها صاحب المناسبة.'
+            ? 'نصّك وصورتك — تملكها وحدك، ولا يعدّلها صاحب المناسبة.'
             : 'مدعوّوك وحدهم — لا ترى مدعوّي بقية الدعاة ولا يرون مدعوّيك.'
         }
       />
@@ -242,13 +250,18 @@ export default async function InviterWorkspace({
       {active === 'invite' ? (
         <InviteEditor
           inviterId={id}
-          templates={templatesData ?? []}
+          uid={user.id}
           eventLine={eventLine}
           initial={{
             host: vars.host ?? '',
             occasion: vars.occasion ?? '',
-            templateId: inviter.template_id,
-            imageUrl: inviter.image_url,
+            imageMode: inviter.image_mode ?? 'generated',
+            imagePath: inviter.image_url,
+            imagePublicUrl: inviter.image_url ? publicImageUrl(inviter.image_url) : null,
+            generatedUrl: resolveHeaderImage({
+              kind: 'inviter', id, imageMode: 'generated', imageUrl: null,
+              version: [vars.host, vars.occasion, event.event_date, event.event_time, event.venue],
+            })!,
           }}
         />
       ) : (

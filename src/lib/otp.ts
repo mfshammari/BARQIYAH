@@ -185,6 +185,11 @@ export async function verifyOtpAndSignIn(
   });
   if (verifyError) return { ok: false, error: 'UNAVAILABLE', attemptsLeft: 0 };
 
+  // ربط صفوف الداعي التي أُضيفت بهذا الجوال قبل أن يكون له حساب (المرحلة ٦)
+  try {
+    await admin.rpc('claim_inviter_rows', { p_profile_id: userId });
+  } catch { /* الربط تحسين — لا يوقف الدخول */ }
+
   // رمز الاسترجاع للحسابات الجديدة — يُعرض مرة واحدة وتُخزَّن بصمته
   let recoveryCode: string | undefined;
   if (isNewUser) {

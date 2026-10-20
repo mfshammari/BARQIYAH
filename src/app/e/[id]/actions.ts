@@ -3,11 +3,12 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient, adminClientAvailable } from '@/lib/supabase/admin';
-import { requireUser } from '@/lib/auth';
-import { sendInvitations, sendReminders } from '@/lib/invitations';
-import { formatNumber } from '@/lib/format';
-import { normalizePhone, isValidPhone } from '@/lib/format';
-import type { EventRow, Guest, OccasionType, Package, WhatsAppCategory } from '@/lib/types';
+import { requireUser, isAdminRole } from '@/lib/auth';
+import { sendInvitations, sendReminders, sendInviterInviteLink } from '@/lib/invitations';
+import { formatNumber, formatHijri, formatWeekday, normalizePhone, isValidPhone } from '@/lib/format';
+import { hasTwoCelebrants, type EventRow, type Guest, type Inviter, type OccasionType, type Package } from '@/lib/types';
+import { validateInviteVars, type InviteVars } from '@/lib/inviteVars';
+import { readImageFields } from '@/lib/inviteImage';
 import { getPaymentProvider } from '@/lib/payments';
 import { appUrl } from '@/lib/env';
 import { redirect } from 'next/navigation';
@@ -21,7 +22,7 @@ async function guardEvent(eventId: string) {
   const { data: event } = await supabase
     .from('events').select('*').eq('id', eventId).maybeSingle<EventRow>();
   if (!event) throw new Error('EVENT_NOT_FOUND');
-  if (event.owner_id !== user.id && user.profile.role !== 'admin') throw new Error('FORBIDDEN');
+  if (event.owner_id !== user.id && !isAdminRole(user.profile.role)) throw new Error('FORBIDDEN');
   return { user, supabase, event };
 }
 
@@ -321,7 +322,7 @@ export async function addInviter(_prev: ActionState, formData: FormData): Promis
       side_label: sideLabel, seats_quota: seatsQuota, profile_id: profileId,
       joined_at: profileId ? new Date().toISOString() : null,
     })
-    .select('invite_token')
+    .select('id, invite_token')
     .single();
 
   if (error) {
@@ -334,11 +335,38 @@ export async function addInviter(_prev: ActionState, formData: FormData): Promis
   }
 
   revalidateEvent(eventId);
+
+  if (profileId) return { notice: `أُضيف ${name} — المناسبة ظهرت في حسابه مباشرة.` };
+
+  // لا حساب له: يصله رابط الانضمام على واتساب (المرحلة ٦.٤)
+  const sent = data
+    ? await sendInviterInviteLink(
+        { id: data.id, event_id: eventId, name, phone, invite_token: data.invite_token },
+        event,
+      )
+    : { ok: false };
   return {
-    notice: profileId
-      ? `أُضيف ${name} — المناسبة ظهرت في حسابه مباشرة.`
+    notice: sent.ok
+      ? `أُضيف ${name} — وصله رابط الدخول على واتساب ليكتب دعوته.`
       : `أُضيف ${name} — شارك معه رابط الدخول ليكتب دعوته.`,
   };
+}
+
+/** إعادة إرسال رابط الانضمام لداعٍ لم ينضم بعد. */
+export async function resendInviterLink(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const eventId = String(formData.get('event_id') ?? '');
+  const { supabase, event } = await guardEvent(eventId);
+
+  const inviterId = String(formData.get('inviter_id') ?? '');
+  const { data: inviter } = await supabase
+    .from('inviters').select('*').eq('id', inviterId).eq('event_id', eventId).maybeSingle<Inviter>();
+  if (!inviter) return { error: 'الداعي غير موجود.' };
+  if (inviter.profile_id) return { notice: 'هذا الداعي انضمّ بالفعل.' };
+
+  const sent = await sendInviterInviteLink(inviter, event);
+  return sent.ok
+    ? { notice: `أُعيد إرسال الرابط إلى ${inviter.name}.` }
+    : { error: sent.error ? `تعذّر الإرسال: ${sent.error}` : 'تعذّر إرسال الرابط.' };
 }
 
 /** تعديل حصة داعٍ — المالك وحده يوزّع (SPEC §8.2). */
@@ -373,43 +401,28 @@ export async function deleteInviter(formData: FormData) {
   revalidateEvent(eventId);
 }
 
-// ————————————————————— القالب —————————————————————
-export async function selectTemplate(_prev: ActionState, formData: FormData): Promise<ActionState> {
+// ————————————————————— دعوتي (القالب الموحّد) —————————————————————
+/** المالك يكتب متغيّريه {{1}} و{{2}} — والموعد يُحقن آلياً. */
+export async function saveEventInvite(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const eventId = String(formData.get('event_id') ?? '');
   const { supabase } = await guardEvent(eventId);
 
-  const templateId = String(formData.get('template_id') ?? '');
-  if (!templateId) return { error: 'اختر قالباً.' };
+  const vars: InviteVars = {
+    host: String(formData.get('host') ?? '').trim(),
+    occasion: String(formData.get('occasion') ?? '').trim(),
+  };
+  const { imageMode, imageUrl } = readImageFields(formData);
+
+  const issues = validateInviteVars(vars);
+  if (issues.length > 0) return { error: issues[0].message };
 
   const { error } = await supabase
-    .from('events').update({ template_id: templateId }).eq('id', eventId);
-  if (error) return { error: 'تعذّر اختيار القالب.' };
+    .from('events').update({ invite_vars: vars, image_mode: imageMode, image_url: imageUrl }).eq('id', eventId);
+  if (error) return { error: 'تعذّر حفظ دعوتك.' };
 
-  revalidatePath(`/e/${eventId}/template`);
-  revalidatePath(`/e/${eventId}`);
-  return { notice: 'تم اعتماد القالب لهذه المناسبة.' };
-}
-
-export async function requestCustomTemplate(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const eventId = String(formData.get('event_id') ?? '');
-  const { supabase, user } = await guardEvent(eventId);
-
-  const name = String(formData.get('name') ?? '').trim();
-  const bodyText = String(formData.get('body_text') ?? '').trim();
-  const imageUrl = String(formData.get('image_url') ?? '').trim() || null;
-  const category = String(formData.get('whatsapp_category') ?? 'utility') as WhatsAppCategory;
-
-  if (!name) return { error: 'اسم القالب مطلوب.' };
-  if (!bodyText) return { error: 'نص القالب مطلوب.' };
-
-  const { error } = await supabase.from('templates').insert({
-    owner_id: user.id, name, body_text: bodyText, image_url: imageUrl,
-    whatsapp_category: category, status: 'under_review',
-  });
-
-  if (error) return { error: 'تعذّر تقديم الطلب.' };
-  revalidatePath(`/e/${eventId}/template`);
-  return { notice: 'أُرسل الطلب للمراجعة. سيصلك القرار بعد اعتماد القالب لدى Meta.' };
+  revalidatePath(`/e/${eventId}/invite`);
+  revalidateEvent(eventId);
+  return { notice: 'حُفظت دعوتك — جاهزة للإرسال.' };
 }
 
 // ————————————————————— حسابات المسح —————————————————————
@@ -478,27 +491,57 @@ export async function deleteScanner(formData: FormData) {
 // ————————————————————— بيانات المناسبة —————————————————————
 export async function updateEventInfo(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const eventId = String(formData.get('event_id') ?? '');
-  const { supabase } = await guardEvent(eventId);
+  const { supabase, event } = await guardEvent(eventId);
 
   const hostName = String(formData.get('host_name') ?? '').trim();
   const eventDate = String(formData.get('event_date') ?? '').trim();
   const occasion = String(formData.get('occasion_type') ?? 'wedding') as OccasionType;
-  const buyerName = String(formData.get('buyer_name') ?? '').trim() || null;
-  const buyerPhone = String(formData.get('buyer_phone') ?? '').trim() || null;
-  const imageUrl = String(formData.get('image_url') ?? '').trim() || null;
+  const celebrant1 = String(formData.get('celebrant_primary') ?? '').trim() || null;
+  const celebrant2 = String(formData.get('celebrant_secondary') ?? '').trim() || null;
+  const venue = String(formData.get('venue') ?? '').trim() || null;
+  const eventTime = String(formData.get('event_time') ?? '').trim() || null;
+  const internalName = String(formData.get('internal_name') ?? '').trim() || null;
 
   if (!hostName) return { error: 'اسم صاحب الدعوة مطلوب.' };
-  if (!eventDate) return { error: 'تاريخ المناسبة مطلوب.' };
+  if (!eventDate || !/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) return { error: 'تاريخ المناسبة مطلوب.' };
+  if (eventTime && !/^\d{1,2}:\d{2}/.test(eventTime)) return { error: 'الوقت غير صالح.' };
+
+  // عند تغيّر التاريخ يُعاد حساب الهجري واليوم — نفس منطق إنشاء المناسبة
+  const dateChanged = eventDate !== event.event_date;
+  const derived = dateChanged || !event.event_date_hijri
+    ? { event_date_hijri: formatHijri(eventDate), event_weekday: formatWeekday(eventDate) }
+    : {};
 
   const { error } = await supabase.from('events').update({
-    host_name: hostName, event_date: eventDate, occasion_type: occasion,
-    buyer_name: buyerName, buyer_phone: buyerPhone, image_url: imageUrl,
+    host_name: hostName,
+    event_date: eventDate,
+    ...derived,
+    event_time: eventTime,
+    venue,
+    occasion_type: occasion,
+    celebrant_primary: celebrant1,
+    celebrant_secondary: hasTwoCelebrants(occasion) ? celebrant2 : null,
+    internal_name: internalName,
   }).eq('id', eventId);
 
   if (error) return { error: 'تعذّر حفظ بيانات المناسبة.' };
+
+  // الموعد ينعكس على دعوات كل الدعاة — نحصيهم ونجدّد مساحاتهم
+  const { count } = await supabase
+    .from('inviters').select('id', { count: 'exact', head: true })
+    .eq('event_id', eventId).neq('profile_id', event.owner_id);
+  const inviterCount = count ?? 0;
+
   revalidatePath(`/e/${eventId}/info`);
-  revalidatePath(`/e/${eventId}`);
-  return { notice: 'تم حفظ البيانات.' };
+  revalidatePath(`/e/${eventId}/invite`);
+  revalidateEvent(eventId);
+  revalidatePath('/inviter/[id]', 'layout');
+  revalidatePath('/app');
+
+  const dateNote = dateChanged || eventTime !== event.event_time || venue !== event.venue
+    ? ` انعكس الموعد على دعوات ${formatNumber(inviterCount)} داعٍ.`
+    : '';
+  return { notice: `تم حفظ البيانات.${dateNote}` };
 }
 
 /**
@@ -513,25 +556,42 @@ export async function requestUpgrade(_prev: ActionState, formData: FormData): Pr
 
   const packageId = String(formData.get('package_id') ?? '');
   if (!packageId) return { error: 'اختر الباقة المطلوبة.' };
+  const qtyRaw = Math.floor(Number(formData.get('package_qty') ?? 0));
 
   const { data: pkg } = await supabase
     .from('packages').select('*').eq('id', packageId).maybeSingle<Package>();
   if (!pkg) return { error: 'الباقة غير متاحة.' };
 
-  // عملية معلّقة يعود معرّفها في الـwebhook (أو في المحاكاة)
+  const qty = pkg.kind === 'custom' ? (qtyRaw > 0 ? qtyRaw : null) : null;
+  if (pkg.kind === 'custom' && !qty) return { error: 'حدّد عدد الدعوات للباقة المخصّصة.' };
+
+  // عملية معلّقة يتجمّد فيها السعر والمقاعد لحظة الشراء، ويعود معرّفها في الـwebhook
   const { data: txId, error: txError } = await supabase.rpc('create_pending_payment', {
     p_event_id: eventId,
     p_package_id: packageId,
+    p_qty: qty,
   });
-  if (txError || !txId) return { error: 'تعذّر بدء عملية الدفع.' };
+  if (txError || !txId) {
+    if (txError?.message.includes('QTY_BELOW_MIN')) {
+      return { error: `أقل كمية للباقة المخصّصة ${pkg.min_qty ?? 0} دعوة.` };
+    }
+    return { error: 'تعذّر بدء عملية الدفع.' };
+  }
+
+  const { data: tx } = await supabase
+    .from('transactions').select('amount, seats_added').eq('id', txId).maybeSingle<{ amount: number; seats_added: number }>();
+  const amount = Number(tx?.amount ?? 0);
+
+  // نتذكّر الباقة والكمية المختارة على المناسبة
+  await supabase.from('events').update({ package_id: packageId, package_qty: qty }).eq('id', eventId);
 
   const provider = getPaymentProvider();
   const result = await provider.createCheckout({
     eventId,
     packageId,
     transactionId: String(txId),
-    amount: Number(pkg.price),
-    description: `برقية — ${pkg.name} لمناسبة ${event.host_name}`,
+    amount,
+    description: `برقية — ${pkg.name}${qty ? ` (${qty} دعوة)` : ''} لمناسبة ${event.host_name}`,
     callbackUrl: appUrl(`/e/${eventId}/info?paid=1`),
   });
 

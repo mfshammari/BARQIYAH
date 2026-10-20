@@ -61,4 +61,18 @@ export async function getWebhookVerifyToken(): Promise<string> {
   return '';
 }
 
+/** اسم قالب التذكير المعتمد: من إعدادات الأدمن وإلا الافتراضي. */
+export const DEFAULT_REMINDER_TEMPLATE = 'barqiyah_reminder';
+
+export async function getReminderTemplateName(): Promise<string> {
+  if (adminClientAvailable) {
+    try {
+      const { data } = await createAdminClient()
+        .from('integration_settings').select('reminder_template').limit(1).maybeSingle();
+      if (data?.reminder_template) return data.reminder_template;
+    } catch { /* تجاهل */ }
+  }
+  return DEFAULT_REMINDER_TEMPLATE;
+}
+
 export * from './parse';

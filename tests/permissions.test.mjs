@@ -56,15 +56,15 @@ test('المحاسب لا يرى مراقبة واتساب في قائمته', (
   assert.ok(hrefs.includes('/admin/finance'), 'المالية غائبة عن المحاسب');
 });
 
-test('المراجع يرى طلبات القوالب ولا يرى المالية', () => {
+test('المراجع لا يرى المالية ولا الفريق — وطلبات القوالب أُلغيت بتوحيد القالب', () => {
   const hrefs = navFor('admin_reviewer').map((i) => i.href);
-  assert.ok(hrefs.includes('/admin/template-requests'));
+  assert.ok(!hrefs.includes('/admin/template-requests'));
   assert.ok(!hrefs.includes('/admin/finance'));
   assert.ok(!hrefs.includes('/admin/team'));
 });
 
 test('المدير يرى كل العناصر', () => {
-  assert.equal(navFor('admin_owner').length, 11);
+  assert.equal(navFor('admin_owner').length, 10);
 });
 
 test('العناصر بلا شرط تظهر للجميع', () => {

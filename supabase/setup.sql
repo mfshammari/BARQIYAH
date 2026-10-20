@@ -2219,12 +2219,1242 @@ grant execute on function public.verify_otp(text, text) to service_role;
 grant execute on function public.set_recovery_code(uuid, text) to service_role;
 
 
+-- ==========================================================
+-- ملف: 0014_packages_public.sql
+-- ==========================================================
+
+-- ============================================================
+-- 0014 — الباقات تنعكس من الأدمن: قراءة عامة، باقة مخصّصة بشرائح،
+--        وتجميد السعر والمقاعد لحظة الشراء
+--
+-- مصدر الباقات الوحيد جدول packages. الصفحة الرئيسية تقرأها للزائر غير
+-- المسجّل (anon). ٣ باقات ثابتة + باقة رابعة مخصّصة بتسعير متدرّج
+-- تراكمي يضبطه الأدمن. سعر الباقة يتجمّد في صفّ transactions لحظة
+-- الشراء، والتفعيل يضيف seats_added من الصفّ لا من الباقة.
+-- ============================================================
+
+-- ---------- ١) قراءة الباقات النشطة للجميع ----------
+drop policy if exists packages_read on public.packages;
+drop policy if exists packages_read_public on public.packages;
+create policy packages_read_public on public.packages for select to anon, authenticated
+  using (active or public.is_admin());
+
+-- ---------- ٢) حقول العرض والنوع ----------
+alter table public.packages
+  add column if not exists kind         text not null default 'fixed',
+  add column if not exists description  text,
+  add column if not exists features     text[] not null default '{}',
+  add column if not exists is_featured  boolean not null default false,
+  add column if not exists sort_order   integer not null default 0,
+  add column if not exists min_qty      integer,            -- للمخصّصة: أقل كمية
+  add column if not exists updated_at   timestamptz not null default now();
+
+do $$ begin
+  alter table public.packages
+    add constraint packages_kind_check check (kind in ('fixed', 'custom'));
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  alter table public.packages
+    add constraint packages_custom_min_qty_check
+    check (kind <> 'custom' or (min_qty is not null and min_qty > 0));
+exception when duplicate_object then null; end $$;
+
+-- باقة مخصّصة واحدة فقط، وباقة مميّزة واحدة فقط
+create unique index if not exists packages_single_custom
+  on public.packages(kind) where kind = 'custom';
+create unique index if not exists packages_single_featured
+  on public.packages(is_featured) where is_featured;
+
+-- الكمية التي اختارها العميل للباقة المخصّصة عند إنشاء المناسبة (تُدفع لاحقاً)
+alter table public.events
+  add column if not exists package_qty integer check (package_qty is null or package_qty > 0);
+
+-- ---------- ٣) شرائح الباقة المخصّصة (يدخلها الأدمن) ----------
+create table if not exists public.package_tiers (
+  id          uuid primary key default gen_random_uuid(),
+  package_id  uuid not null references public.packages(id) on delete cascade,
+  min_qty     integer not null check (min_qty > 0),
+  unit_price  numeric(10,2) not null check (unit_price > 0),
+  unique (package_id, min_qty)
+);
+create index if not exists package_tiers_package_idx on public.package_tiers(package_id, min_qty);
+
+alter table public.package_tiers enable row level security;
+
+drop policy if exists tiers_read_public on public.package_tiers;
+create policy tiers_read_public on public.package_tiers for select to anon, authenticated using (true);
+
+drop policy if exists tiers_admin_write on public.package_tiers;
+create policy tiers_admin_write on public.package_tiers for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+-- ---------- ٤) التحقق من الشرائح ----------
+-- مرتّبة تصاعدياً بالكمية وتنازلياً بالسعر، وأول شريحة = min_qty الباقة،
+-- وإلا TIERS_INVALID. القيد في القاعدة لا في الواجهة وحدها.
+create or replace function public.check_package_tiers(p_package_id uuid)
+returns void
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_min   integer;
+  v_first integer;
+  v_bad   integer;
+begin
+  select min_qty into v_first
+  from public.package_tiers where package_id = p_package_id
+  order by min_qty limit 1;
+
+  if v_first is null then
+    return;   -- بلا شرائح: لا شيء يُتحقّق منه
+  end if;
+
+  select min_qty into v_min from public.packages where id = p_package_id;
+  if v_min is null or v_first <> v_min then
+    raise exception 'TIERS_INVALID'
+      using hint = 'أول شريحة يجب أن تبدأ من أقل كمية للباقة.';
+  end if;
+
+  select count(*) into v_bad
+  from (
+    select unit_price, lag(unit_price) over (order by min_qty) as prev
+    from public.package_tiers where package_id = p_package_id
+  ) s
+  where prev is not null and unit_price >= prev;
+
+  if v_bad > 0 then
+    raise exception 'TIERS_INVALID'
+      using hint = 'سعر الدعوة يجب أن ينخفض مع زيادة الكمية.';
+  end if;
+end;
+$$;
+
+create or replace function public.trg_check_package_tiers()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare r record;
+begin
+  for r in select distinct package_id from public.package_tiers loop
+    perform public.check_package_tiers(r.package_id);
+  end loop;
+  return null;
+end;
+$$;
+
+drop trigger if exists package_tiers_validate on public.package_tiers;
+create trigger package_tiers_validate
+  after insert or update or delete on public.package_tiers
+  for each statement execute function public.trg_check_package_tiers();
+
+-- تعديل min_qty بعد وجود شرائح يُعاد التحقق منه (بعد الكتابة كي تُقرأ القيمة الجديدة)
+create or replace function public.trg_check_package_min_qty()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.check_package_tiers(new.id);
+  return null;
+end;
+$$;
+
+drop trigger if exists packages_validate_min_qty on public.packages;
+create trigger packages_validate_min_qty
+  after update of min_qty on public.packages
+  for each row execute function public.trg_check_package_min_qty();
+
+create or replace function public.trg_touch_package()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists packages_touch on public.packages;
+create trigger packages_touch
+  before update on public.packages
+  for each row execute function public.trg_touch_package();
+
+-- ---------- ٥) استبدال شرائح الباقة دفعةً واحدة (الأدمن) ----------
+-- p_tiers: [{"min_qty":1000,"unit_price":1.5}, …]
+create or replace function public.set_package_tiers(
+  p_package_id uuid,
+  p_min_qty    integer,
+  p_tiers      jsonb
+)
+returns void
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+begin
+  if not (public.is_admin() or auth.uid() is null) then
+    raise exception 'FORBIDDEN';
+  end if;
+
+  delete from public.package_tiers where package_id = p_package_id;
+
+  update public.packages set min_qty = p_min_qty where id = p_package_id;
+
+  insert into public.package_tiers (package_id, min_qty, unit_price)
+  select p_package_id, (t ->> 'min_qty')::integer, (t ->> 'unit_price')::numeric
+  from jsonb_array_elements(coalesce(p_tiers, '[]'::jsonb)) as t;
+end;
+$$;
+
+-- ---------- ٦) تسعير الكمية المخصّصة: تدرّج تراكمي ----------
+-- كل شريحة تسعّر ما يقع داخلها: الأولى من ١ إلى ما قبل الثانية، وهكذا.
+-- الحساب تراكمي حتى لا تنخفض الفاتورة بزيادة الكمية (قرار جلسة الباقات).
+create or replace function public.custom_package_price(p_qty integer)
+returns numeric
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with t as (
+    select pt.min_qty,
+           pt.unit_price,
+           lead(pt.min_qty) over (order by pt.min_qty) as next_min,
+           row_number()     over (order by pt.min_qty) as rn
+    from public.package_tiers pt
+    join public.packages p on p.id = pt.package_id and p.kind = 'custom'
+  )
+  select case
+    when p_qty is null or p_qty <= 0 then 0::numeric
+    else coalesce((
+      select sum(
+        unit_price * greatest(
+          0,
+          least(p_qty, coalesce(next_min - 1, p_qty))
+            - (case when rn = 1 then 1 else min_qty end) + 1
+        )
+      ) from t
+    ), 0::numeric)
+  end;
+$$;
+
+-- ---------- ٧) تجميد السعر والمقاعد لحظة الشراء ----------
+drop function if exists public.create_pending_payment(uuid, uuid);
+
+create or replace function public.create_pending_payment(
+  p_event_id   uuid,
+  p_package_id uuid,
+  p_qty        integer default null
+)
+returns uuid
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare
+  v_pkg    public.packages%rowtype;
+  v_event  public.events%rowtype;
+  v_tx     uuid;
+  v_amount numeric;
+  v_seats  integer;
+  v_type   text;
+begin
+  if not (public.owns_event(p_event_id) or public.is_admin() or auth.uid() is null) then
+    raise exception 'FORBIDDEN';
+  end if;
+
+  select * into v_event from public.events where id = p_event_id;
+  if not found then
+    raise exception 'EVENT_NOT_FOUND';
+  end if;
+
+  select * into v_pkg from public.packages where id = p_package_id and active;
+  if not found then
+    raise exception 'PACKAGE_NOT_FOUND';
+  end if;
+
+  -- الإضافة على مناسبة قائمة (لها رصيد) ترقية، وإلا شراء أول
+  v_type := case when v_event.seats_quota > 0 then 'upgrade' else 'purchase' end;
+
+  if v_pkg.kind = 'custom' then
+    if p_qty is null or p_qty < 1 then
+      raise exception 'QTY_REQUIRED';
+    end if;
+    if v_type = 'purchase' and p_qty < coalesce(v_pkg.min_qty, 1) then
+      raise exception 'QTY_BELOW_MIN'
+        using hint = format('أقل كمية للباقة المخصّصة %s دعوة.', v_pkg.min_qty);
+    end if;
+    -- الترقية تُسعَّر بالشرائح الحيّة على الإجمالي التراكمي
+    if v_type = 'upgrade' then
+      v_amount := public.custom_package_price(v_event.seats_quota + p_qty)
+                - public.custom_package_price(v_event.seats_quota);
+    else
+      v_amount := public.custom_package_price(p_qty);
+    end if;
+    v_seats := p_qty;
+  else
+    v_amount := v_pkg.price;
+    v_seats  := v_pkg.seats;
+  end if;
+
+  insert into public.transactions
+    (event_id, package_id, amount, type, status, method, seats_added, note)
+  values
+    (p_event_id, p_package_id, v_amount, v_type::transaction_type, 'pending', 'gateway', v_seats,
+     'بانتظار السداد عبر البوابة')
+  returning id into v_tx;
+
+  return v_tx;
+end;
+$$;
+
+-- التفعيل بعد السداد: يضيف seats_added من صفّ العملية — لا يعيد قراءة الباقة
+create or replace function public.activate_event_from_payment(
+  p_transaction_id uuid,
+  p_gateway_ref text,
+  p_amount numeric default null
+)
+returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare
+  v_tx    public.transactions%rowtype;
+  v_event public.events%rowtype;
+  v_seats integer;
+begin
+  select * into v_tx from public.transactions where id = p_transaction_id for update;
+  if not found then
+    return jsonb_build_object('ok', false, 'reason', 'TRANSACTION_NOT_FOUND');
+  end if;
+
+  if v_tx.status::text = 'paid' then
+    return jsonb_build_object('ok', true, 'reason', 'ALREADY_PAID', 'idempotent', true);
+  end if;
+
+  select * into v_event from public.events where id = v_tx.event_id for update;
+  if not found then
+    return jsonb_build_object('ok', false, 'reason', 'EVENT_NOT_FOUND');
+  end if;
+
+  -- المقاعد المجمّدة لحظة الشراء — تعديل الباقة لاحقاً لا يغيّرها
+  v_seats := v_event.seats_quota + coalesce(v_tx.seats_added, 0);
+
+  update public.transactions
+     set status = 'paid', gateway_ref = p_gateway_ref, paid_at = now(),
+         amount = coalesce(p_amount, amount)
+   where id = p_transaction_id;
+
+  update public.events
+     set status = 'active',
+         seats_quota = v_seats,
+         package_id = coalesce(package_id, v_tx.package_id),
+         activated_at = now(),
+         activated_by = null
+   where id = v_tx.event_id;
+
+  insert into public.activity_logs (actor_id, action, target_type, target_id, metadata)
+  values (null, 'event.activated_by_payment', 'event', v_tx.event_id,
+          jsonb_build_object('transaction_id', p_transaction_id,
+                             'gateway_ref', p_gateway_ref,
+                             'seats_quota', v_seats));
+
+  return jsonb_build_object('ok', true, 'seats_quota', v_seats, 'event_id', v_tx.event_id);
+end;
+$$;
+
+-- التفعيل اليدوي: يسعّر ويجمّد لحظة التنفيذ، ويدعم الكمية المخصّصة
+drop function if exists public.admin_activate_event(uuid, uuid, transaction_type, text);
+
+create or replace function public.admin_activate_event(
+  p_event_id   uuid,
+  p_package_id uuid,
+  p_type       transaction_type default 'manual_activation',
+  p_note       text default null,
+  p_qty        integer default null
+)
+returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare
+  v_pkg    public.packages%rowtype;
+  v_event  public.events%rowtype;
+  v_added  integer;
+  v_amount numeric;
+  v_seats  integer;
+begin
+  if not (public.is_admin() or auth.uid() is null) then
+    raise exception 'FORBIDDEN';
+  end if;
+
+  select * into v_event from public.events where id = p_event_id for update;
+  if not found then
+    return jsonb_build_object('ok', false, 'reason', 'EVENT_NOT_FOUND');
+  end if;
+
+  select * into v_pkg from public.packages where id = p_package_id;
+  if not found then
+    return jsonb_build_object('ok', false, 'reason', 'PACKAGE_NOT_FOUND');
+  end if;
+
+  if v_pkg.kind = 'custom' then
+    if p_qty is null or p_qty < 1 then
+      return jsonb_build_object('ok', false, 'reason', 'QTY_REQUIRED');
+    end if;
+    v_added := p_qty;
+    if p_type = 'upgrade' then
+      v_amount := public.custom_package_price(v_event.seats_quota + p_qty)
+                - public.custom_package_price(v_event.seats_quota);
+    else
+      v_amount := public.custom_package_price(p_qty);
+    end if;
+  else
+    v_added  := v_pkg.seats;
+    v_amount := v_pkg.price;
+  end if;
+
+  -- التفعيل الأول يضبط الرصيد، والترقية تضيف فوقه
+  if p_type = 'upgrade' then
+    v_seats := v_event.seats_quota + v_added;
+  else
+    v_seats := greatest(v_event.seats_quota, v_added);
+  end if;
+
+  update public.events
+     set status       = 'active',
+         seats_quota  = v_seats,
+         package_id   = case when p_type = 'upgrade' then package_id else p_package_id end,
+         activated_at = coalesce(activated_at, now()),
+         activated_by = coalesce(activated_by, auth.uid())
+   where id = p_event_id;
+
+  insert into public.transactions (event_id, package_id, amount, type, status, seats_added, note)
+  values (p_event_id, p_package_id, v_amount, p_type, 'paid', v_added, p_note);
+
+  return jsonb_build_object('ok', true, 'seats_quota', v_seats);
+end;
+$$;
+
+-- ---------- ٨) الصلاحيات ----------
+revoke all on function public.custom_package_price(integer) from public;
+grant execute on function public.custom_package_price(integer) to anon, authenticated, service_role;
+
+revoke all on function public.check_package_tiers(uuid) from public, anon;
+grant execute on function public.check_package_tiers(uuid) to authenticated, service_role;
+
+revoke all on function public.set_package_tiers(uuid, integer, jsonb) from public, anon;
+grant execute on function public.set_package_tiers(uuid, integer, jsonb) to authenticated, service_role;
+
+revoke all on function public.create_pending_payment(uuid, uuid, integer) from public, anon;
+grant execute on function public.create_pending_payment(uuid, uuid, integer) to authenticated, service_role;
+
+revoke all on function public.activate_event_from_payment(uuid, text, numeric) from public, anon;
+grant execute on function public.activate_event_from_payment(uuid, text, numeric) to service_role;
+
+revoke all on function public.admin_activate_event(uuid, uuid, transaction_type, text, integer) from public, anon;
+grant execute on function public.admin_activate_event(uuid, uuid, transaction_type, text, integer) to authenticated, service_role;
+
+
+-- ==========================================================
+-- ملف: 0015_unified_template.sql
+-- ==========================================================
+
+-- ============================================================
+-- 0015 — القالب الموحّد: قالب واتساب واحد للمنصة كلها
+--
+--   تتشرّف {{1}} بدعوتكم لحضور {{2}} — {{3}}
+--
+-- {{1}} و{{2}} يكتبهما المالك والداعي كلٌّ لنفسه، و{{3}} يُحقن آلياً من
+-- بيانات المناسبة. تُلغى مكتبة القوالب واختيارها وطلب القالب الخاص من
+-- واجهات العميل نهائياً. اسم القالب في Meta وتصنيفه يحرّرهما الأدمن.
+-- ============================================================
+
+-- متغيّرات دعوة المالك {host, occasion} — كما للداعي في inviters.invite_vars
+alter table public.events
+  add column if not exists invite_vars jsonb not null default '{}'::jsonb;
+
+comment on column public.events.invite_vars is
+  'متغيّرا القالب الموحّد للمالك: {"host": …, "occasion": …}. الموعد يُحقن آلياً.';
+
+alter table public.templates
+  add column if not exists is_default boolean not null default false;
+
+create unique index if not exists templates_single_default
+  on public.templates(is_default) where is_default;
+
+-- صف القالب الموحّد (مرة واحدة)
+insert into public.templates
+  (owner_id, name, body_text, status, whatsapp_category, meta_template_name, is_default)
+select null, 'قالب برقية الموحّد', 'تتشرّف {{1}} بدعوتكم لحضور {{2}} — {{3}}',
+       'approved', 'utility', 'barqiyah_invite', true
+where not exists (select 1 from public.templates where is_default);
+
+-- إخفاء بقية القوالب العامة عن العملاء (تبقى للتاريخ فقط)
+update public.templates
+   set status = 'draft'
+ where is_default = false and owner_id is null and status::text = 'approved';
+
+
+-- ==========================================================
+-- ملف: 0016_invite_images.sql
+-- ==========================================================
+
+-- ============================================================
+-- 0016 — صورة الدعوة: تُولَّد تلقائياً أو يرفعها المستخدم
+--
+-- image_mode على events وinviters: 'generated' (افتراضي — بطاقة برقية
+-- الخضراء الذهبية من بيانات الدعوة) أو 'uploaded' (صورة المستخدم).
+-- image_url يبقى: للمرفوعة مسار الملف في Storage، وللمولَّدة null.
+-- لا حقل «رابط صورة» في أي مكان.
+-- ============================================================
+
+alter table public.events
+  add column if not exists image_mode text not null default 'generated';
+alter table public.inviters
+  add column if not exists image_mode text not null default 'generated';
+
+do $$ begin
+  alter table public.events
+    add constraint events_image_mode_check check (image_mode in ('generated', 'uploaded'));
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  alter table public.inviters
+    add constraint inviters_image_mode_check check (image_mode in ('generated', 'uploaded'));
+exception when duplicate_object then null; end $$;
+
+-- الصور القديمة بروابط نصّية تبقى مرفوعة (رابط كامل) حتى يعيد المستخدم اختياره
+update public.events   set image_mode = 'uploaded' where image_url is not null and image_mode = 'generated';
+update public.inviters set image_mode = 'uploaded' where image_url is not null and image_mode = 'generated';
+
+-- ---------- Storage: bucket عام للقراءة ----------
+-- الحجم ≤ ٥ MB، الأنواع jpeg/png/webp. المسار {auth.uid()}/{eventId|inviterId}/{timestamp}.{ext}
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('invite-images', 'invite-images', true, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update
+  set public = excluded.public,
+      file_size_limit = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;
+
+-- القراءة للجميع (واتساب يجلب الصورة برابط عام)
+drop policy if exists invite_images_read on storage.objects;
+create policy invite_images_read on storage.objects for select to anon, authenticated
+  using (bucket_id = 'invite-images');
+
+-- الكتابة للمصادق على مساره {auth.uid()}/… فقط
+drop policy if exists invite_images_insert on storage.objects;
+create policy invite_images_insert on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'invite-images'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists invite_images_update on storage.objects;
+create policy invite_images_update on storage.objects for update to authenticated
+  using (
+    bucket_id = 'invite-images'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  )
+  with check (
+    bucket_id = 'invite-images'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists invite_images_delete on storage.objects;
+create policy invite_images_delete on storage.objects for delete to authenticated
+  using (
+    bucket_id = 'invite-images'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+
+-- ==========================================================
+-- ملف: 0017_claim_inviter_rows.sql
+-- ==========================================================
+
+-- ============================================================
+-- 0017 — ربط الداعي بحسابه تلقائياً بالجوال (المرحلة ٦)
+--
+-- حين يضيف المالك داعياً برقم جوال لا حساب له، يبقى الصف بلا profile_id.
+-- بعد أي تسجيل أو دخول ناجح تُستدعى claim_inviter_rows فتربط كل صفوف
+-- inviters حيث phone = profiles.phone وprofile_id فارغ بالحساب الحالي
+-- وتضبط joined_at — محترمةً قيد inviters_event_profile_key وحاجز
+-- guard_owner_inviter_claim (المالك لا يُربط كداعٍ في مناسبته).
+--
+-- تُستدعى من الخادم بمفتاح الخدمة (auth.uid() فارغ) ويُمرَّر المعرّف،
+-- لأن حاجز guard_inviter_fields يمنع صاحب الجلسة من تغيير profile_id بنفسه.
+-- ============================================================
+
+create or replace function public.claim_inviter_rows(p_profile_id uuid default null)
+returns integer
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare
+  v_uid   uuid := coalesce(p_profile_id, auth.uid());
+  v_phone text;
+  v_count integer := 0;
+  r       record;
+begin
+  if v_uid is null then
+    return 0;
+  end if;
+
+  -- من الويب: لا يطالب أحد بصفوف غيره
+  if auth.uid() is not null and auth.uid() <> v_uid and not public.is_admin() then
+    raise exception 'FORBIDDEN';
+  end if;
+
+  select phone into v_phone from public.profiles where id = v_uid;
+  if v_phone is null or length(trim(v_phone)) = 0 then
+    return 0;
+  end if;
+
+  for r in
+    select i.id
+    from public.inviters i
+    join public.events e on e.id = i.event_id
+    where i.phone = v_phone
+      and i.profile_id is null
+      and e.owner_id <> v_uid                                   -- المالك ليس داعياً في مناسبته
+      and not exists (                                          -- صفّ واحد لكل حساب في المناسبة
+        select 1 from public.inviters x
+        where x.event_id = i.event_id and x.profile_id = v_uid
+      )
+  loop
+    begin
+      update public.inviters
+         set profile_id = v_uid, joined_at = coalesce(joined_at, now())
+       where id = r.id and profile_id is null;
+      if found then
+        v_count := v_count + 1;
+      end if;
+    exception when unique_violation or raise_exception then
+      -- قيد الفرادة أو حاجز المالك: نتخطّى هذا الصف ونكمل
+      null;
+    end;
+  end loop;
+
+  return v_count;
+end;
+$$;
+
+revoke all on function public.claim_inviter_rows(uuid) from public, anon, authenticated;
+grant execute on function public.claim_inviter_rows(uuid) to service_role;
+
+
+-- ==========================================================
+-- ملف: 0018_trial_invites.sql
+-- ==========================================================
+
+-- ============================================================
+-- 0018 — الدعوات التجريبية الخمس (المرحلة ٧)
+--
+-- وعد الصفحة الرئيسية: خمس دعوات تجريبية لكل حساب جديد تُرسل قبل الدفع
+-- ولا تُحسب على رصيد المقاعد. العدّاد على الحساب (profiles) لا المناسبة،
+-- والمدعو التجريبي يُعلَّم is_trial فتستثنيه دوال الرصيد.
+-- المصدر المحاسبي: صفّ transactions بنوع 'trial' ومبلغ صفر باسم النظام
+-- عند أول إرسال تجريبي في المناسبة.
+-- ============================================================
+
+alter table public.profiles
+  add column if not exists trial_invites_left integer not null default 5
+    check (trial_invites_left >= 0);
+
+alter table public.guests
+  add column if not exists is_trial boolean not null default false;
+
+create index if not exists guests_trial_idx on public.guests (event_id) where is_trial;
+
+do $$ begin
+  alter type transaction_type add value if not exists 'trial';
+exception when others then null; end $$;
+
+-- ---------- الرصيد يستثني التجريبية ----------
+create or replace function public.event_balance(p_event_id uuid)
+returns table (
+  seats_quota    integer,
+  held           integer,
+  confirmed      integer,
+  available      integer,
+  messages_used  integer,
+  total_guests   integer,
+  cnt_draft      integer,
+  cnt_sent       integer,
+  cnt_accepted   integer,
+  cnt_declined   integer,
+  cnt_expired    integer,
+  cnt_attended   integer
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    e.seats_quota,
+    coalesce(h.held, 0)                                              as held,
+    coalesce(c.confirmed, 0)                                         as confirmed,
+    e.seats_quota - coalesce(h.held, 0) - coalesce(c.confirmed, 0)   as available,
+    coalesce(g.messages_used, 0)                                     as messages_used,
+    coalesce(g.total_guests, 0)                                      as total_guests,
+    coalesce(g.cnt_draft, 0), coalesce(g.cnt_sent, 0), coalesce(g.cnt_accepted, 0),
+    coalesce(g.cnt_declined, 0), coalesce(g.cnt_expired, 0), coalesce(g.cnt_attended, 0)
+  from public.events e
+  left join lateral (
+    select sum(max_seats)::int as held
+    from public.guests where event_id = e.id and status = 'sent' and not is_trial
+  ) h on true
+  left join lateral (
+    select sum(coalesce(confirmed_seats, 0))::int as confirmed
+    from public.guests where event_id = e.id and status in ('accepted', 'attended') and not is_trial
+  ) c on true
+  left join lateral (
+    select
+      count(*) filter (where status <> 'draft')::int as messages_used,
+      count(*)::int                                   as total_guests,
+      count(*) filter (where status = 'draft')::int    as cnt_draft,
+      count(*) filter (where status = 'sent')::int     as cnt_sent,
+      count(*) filter (where status = 'accepted')::int as cnt_accepted,
+      count(*) filter (where status = 'declined')::int as cnt_declined,
+      count(*) filter (where status = 'expired')::int  as cnt_expired,
+      count(*) filter (where status = 'attended')::int as cnt_attended
+    from public.guests where event_id = e.id
+  ) g on true
+  where e.id = p_event_id
+    and (e.owner_id = auth.uid() or public.is_admin() or public.scans_event(e.id) or auth.uid() is null);
+$$;
+
+create or replace function public.inviter_balance(p_inviter_id uuid)
+returns table (
+  seats_quota   integer,
+  held          integer,
+  confirmed     integer,
+  available     integer,
+  messages_used integer,
+  total_guests  integer,
+  cnt_draft     integer,
+  cnt_sent      integer,
+  cnt_accepted  integer,
+  cnt_declined  integer,
+  cnt_expired   integer,
+  cnt_attended  integer
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    i.seats_quota,
+    coalesce(h.held, 0),
+    coalesce(c.confirmed, 0),
+    i.seats_quota - coalesce(h.held, 0) - coalesce(c.confirmed, 0),
+    coalesce(g.messages_used, 0),
+    coalesce(g.total_guests, 0),
+    coalesce(g.cnt_draft, 0), coalesce(g.cnt_sent, 0), coalesce(g.cnt_accepted, 0),
+    coalesce(g.cnt_declined, 0), coalesce(g.cnt_expired, 0), coalesce(g.cnt_attended, 0)
+  from public.inviters i
+  left join lateral (
+    select sum(max_seats)::int as held
+    from public.guests where inviter_id = i.id and status = 'sent' and not is_trial
+  ) h on true
+  left join lateral (
+    select sum(coalesce(confirmed_seats, 0))::int as confirmed
+    from public.guests where inviter_id = i.id and status in ('accepted', 'attended') and not is_trial
+  ) c on true
+  left join lateral (
+    select
+      count(*) filter (where status <> 'draft')::int as messages_used,
+      count(*)::int                                   as total_guests,
+      count(*) filter (where status = 'draft')::int    as cnt_draft,
+      count(*) filter (where status = 'sent')::int     as cnt_sent,
+      count(*) filter (where status = 'accepted')::int as cnt_accepted,
+      count(*) filter (where status = 'declined')::int as cnt_declined,
+      count(*) filter (where status = 'expired')::int  as cnt_expired,
+      count(*) filter (where status = 'attended')::int as cnt_attended
+    from public.guests where inviter_id = i.id
+  ) g on true
+  where i.id = p_inviter_id
+    and (
+      i.profile_id = auth.uid()
+      or public.owns_event(i.event_id)
+      or public.is_admin()
+      or auth.uid() is null
+    );
+$$;
+
+-- ---------- خصم دعوة تجريبية من رصيد الحساب (ذرّي) ----------
+-- يُرجع true إن خُصمت. يُسجَّل صفّ transactions نوع trial مرة واحدة للمناسبة.
+create or replace function public.consume_trial_invite(p_profile_id uuid, p_event_id uuid)
+returns boolean
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare v_ok boolean := false;
+begin
+  if p_profile_id is null then return false; end if;
+
+  update public.profiles
+     set trial_invites_left = trial_invites_left - 1
+   where id = p_profile_id and trial_invites_left > 0
+  returning true into v_ok;
+
+  if coalesce(v_ok, false) then
+    insert into public.transactions (event_id, package_id, amount, type, status, method, seats_added, note)
+    select p_event_id, null, 0, 'trial'::transaction_type, 'paid', 'manual', 0,
+           'دعوات تجريبية — تُسجَّل باسم النظام'
+    where not exists (
+      select 1 from public.transactions t
+      where t.event_id = p_event_id and t.type::text = 'trial'
+    );
+    return true;
+  end if;
+  return false;
+end;
+$$;
+
+-- ---------- الحجز للمالك: التجريبية قبل الدفع ----------
+create or replace function public.reserve_seats_for_send(
+  p_event_id uuid,
+  p_guest_ids uuid[]
+)
+returns table (guest_id uuid, ok boolean, reason text, missing_seats integer)
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare
+  v_event      public.events%rowtype;
+  v_guest      public.guests%rowtype;
+  v_held       integer;
+  v_confirmed  integer;
+  v_available  integer;
+  v_trial_mode boolean := false;
+begin
+  select * into v_event from public.events where id = p_event_id for update;
+  if not found then
+    raise exception 'EVENT_NOT_FOUND';
+  end if;
+
+  if not (v_event.owner_id = auth.uid() or public.is_admin() or auth.uid() is null) then
+    raise exception 'FORBIDDEN';
+  end if;
+
+  -- المناسبة غير مفعّلة: يُسمح بالدعوات التجريبية بقدر رصيد الحساب
+  if v_event.status::text <> 'active' then
+    if v_event.status::text in ('unpaid', 'pending') and auth.uid() is not null then
+      v_trial_mode := true;
+    else
+      return query
+        select gid, false, 'EVENT_NOT_ACTIVE'::text, 0 from unnest(p_guest_ids) as gid;
+      return;
+    end if;
+  end if;
+
+  if not v_trial_mode then
+    select coalesce(sum(max_seats), 0)::int into v_held
+      from public.guests where event_id = p_event_id and status = 'sent' and not is_trial;
+    select coalesce(sum(coalesce(confirmed_seats, 0)), 0)::int into v_confirmed
+      from public.guests where event_id = p_event_id and status in ('accepted', 'attended') and not is_trial;
+    v_available := v_event.seats_quota - v_held - v_confirmed;
+  end if;
+
+  foreach guest_id in array p_guest_ids loop
+    select * into v_guest from public.guests where id = guest_id and event_id = p_event_id;
+
+    if not found then
+      ok := false; reason := 'GUEST_NOT_FOUND'; missing_seats := 0;
+      return next; continue;
+    end if;
+
+    if v_guest.status::text <> 'draft' then
+      ok := false; reason := 'ALREADY_SENT'; missing_seats := 0;
+      return next; continue;
+    end if;
+
+    if v_trial_mode then
+      -- دعوة تجريبية: تُخصم من عدّاد الحساب ولا تُحجز مقاعد
+      if public.consume_trial_invite(auth.uid(), p_event_id) then
+        update public.guests set status = 'sent', sent_at = now(), is_trial = true where id = v_guest.id;
+        ok := true; reason := 'TRIAL'; missing_seats := 0;
+      else
+        ok := false; reason := 'TRIAL_EXHAUSTED'; missing_seats := 0;
+      end if;
+      return next; continue;
+    end if;
+
+    if v_guest.max_seats > v_available then
+      ok := false; reason := 'INSUFFICIENT_SEATS';
+      missing_seats := v_guest.max_seats - greatest(v_available, 0);
+      return next; continue;
+    end if;
+
+    update public.guests set status = 'sent', sent_at = now() where id = v_guest.id;
+
+    v_available := v_available - v_guest.max_seats;
+    ok := true; reason := 'RESERVED'; missing_seats := 0;
+    return next;
+  end loop;
+end;
+$$;
+
+-- ---------- الحجز للداعي: التجريبية من رصيد حسابه هو ----------
+create or replace function public.reserve_seats_for_inviter(
+  p_inviter_id uuid,
+  p_guest_ids uuid[]
+)
+returns table (guest_id uuid, ok boolean, reason text, missing_seats integer)
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare
+  v_inviter     public.inviters%rowtype;
+  v_event       public.events%rowtype;
+  v_guest       public.guests%rowtype;
+  v_available   integer;
+  v_event_avail integer;
+  v_trial_mode  boolean := false;
+begin
+  select * into v_inviter from public.inviters where id = p_inviter_id for update;
+  if not found then
+    raise exception 'INVITER_NOT_FOUND';
+  end if;
+
+  if not (v_inviter.profile_id = auth.uid()
+          or public.owns_event(v_inviter.event_id)
+          or public.is_admin()
+          or auth.uid() is null) then
+    raise exception 'FORBIDDEN';
+  end if;
+
+  select * into v_event from public.events where id = v_inviter.event_id for update;
+
+  if v_event.status::text <> 'active' then
+    if v_event.status::text in ('unpaid', 'pending') and auth.uid() is not null then
+      v_trial_mode := true;
+    else
+      return query select gid, false, 'EVENT_NOT_ACTIVE'::text, 0 from unnest(p_guest_ids) as gid;
+      return;
+    end if;
+  end if;
+
+  if not v_trial_mode then
+    select v_inviter.seats_quota
+           - coalesce((select sum(max_seats) from public.guests
+                       where inviter_id = p_inviter_id and status = 'sent' and not is_trial), 0)
+           - coalesce((select sum(coalesce(confirmed_seats, 0)) from public.guests
+                       where inviter_id = p_inviter_id and status in ('accepted','attended') and not is_trial), 0)
+      into v_available;
+
+    select v_event.seats_quota
+           - coalesce((select sum(max_seats) from public.guests
+                       where event_id = v_event.id and status = 'sent' and not is_trial), 0)
+           - coalesce((select sum(coalesce(confirmed_seats, 0)) from public.guests
+                       where event_id = v_event.id and status in ('accepted','attended') and not is_trial), 0)
+      into v_event_avail;
+  end if;
+
+  foreach guest_id in array p_guest_ids loop
+    select * into v_guest from public.guests
+     where id = guest_id and inviter_id = p_inviter_id;
+
+    if not found then
+      ok := false; reason := 'GUEST_NOT_FOUND'; missing_seats := 0;
+      return next; continue;
+    end if;
+
+    if v_guest.status::text <> 'draft' then
+      ok := false; reason := 'ALREADY_SENT'; missing_seats := 0;
+      return next; continue;
+    end if;
+
+    if v_trial_mode then
+      if public.consume_trial_invite(auth.uid(), v_event.id) then
+        update public.guests set status = 'sent', sent_at = now(), is_trial = true where id = v_guest.id;
+        ok := true; reason := 'TRIAL'; missing_seats := 0;
+      else
+        ok := false; reason := 'TRIAL_EXHAUSTED'; missing_seats := 0;
+      end if;
+      return next; continue;
+    end if;
+
+    if v_guest.max_seats > v_available then
+      ok := false; reason := 'INSUFFICIENT_QUOTA';
+      missing_seats := v_guest.max_seats - greatest(v_available, 0);
+      return next; continue;
+    end if;
+
+    if v_guest.max_seats > v_event_avail then
+      ok := false; reason := 'INSUFFICIENT_EVENT_SEATS';
+      missing_seats := v_guest.max_seats - greatest(v_event_avail, 0);
+      return next; continue;
+    end if;
+
+    update public.guests set status = 'sent', sent_at = now() where id = v_guest.id;
+
+    v_available   := v_available - v_guest.max_seats;
+    v_event_avail := v_event_avail - v_guest.max_seats;
+    ok := true; reason := 'RESERVED'; missing_seats := 0;
+    return next;
+  end loop;
+end;
+$$;
+
+-- ---------- تحرير الحجز: التجريبية تُعاد إلى عدّاد الحساب ----------
+create or replace function public.release_seat_hold(p_guest_id uuid)
+returns void
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare v_guest public.guests%rowtype;
+begin
+  select * into v_guest from public.guests where id = p_guest_id;
+  if not found or v_guest.status::text <> 'sent' then return; end if;
+  if not (public.owns_event(v_guest.event_id) or public.is_admin() or auth.uid() is null) then return; end if;
+
+  update public.guests set status = 'draft', sent_at = null, is_trial = false where id = p_guest_id;
+
+  if v_guest.is_trial and auth.uid() is not null then
+    update public.profiles set trial_invites_left = trial_invites_left + 1 where id = auth.uid();
+  end if;
+end;
+$$;
+
+create or replace function public.release_inviter_hold(p_guest_id uuid)
+returns void
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare v_guest public.guests%rowtype;
+begin
+  select * into v_guest from public.guests where id = p_guest_id;
+  if not found or v_guest.status::text <> 'sent' then return; end if;
+
+  if v_guest.inviter_id is not null
+     and (v_guest.inviter_id = public.my_inviter_id(v_guest.event_id)
+          or public.owns_event(v_guest.event_id)
+          or public.is_admin()
+          or auth.uid() is null) then
+    update public.guests set status = 'draft', sent_at = null, is_trial = false where id = p_guest_id;
+
+    if v_guest.is_trial and auth.uid() is not null then
+      update public.profiles set trial_invites_left = trial_invites_left + 1 where id = auth.uid();
+    end if;
+  end if;
+end;
+$$;
+
+revoke all on function public.consume_trial_invite(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.consume_trial_invite(uuid, uuid) to service_role;
+
+
+-- ==========================================================
+-- ملف: 0019_webhook_events.sql
+-- ==========================================================
+
+-- ============================================================
+-- 0019 — webhook واتساب: عدم التكرار (المرحلة ٨)
+--
+-- Meta تعيد إرسال الأحداث. قبل معالجة أي رسالة يُدرج معرّفها هنا
+-- (insert … on conflict do nothing)؛ إن لم يُدرج صف → تُتخطّى.
+-- للحالات (statuses) المفتاح wamid:status.
+-- ============================================================
+
+create table if not exists public.webhook_events (
+  wamid        text primary key,
+  received_at  timestamptz not null default now()
+);
+
+-- الجدول للخادم فقط (service role) — لا قراءة ولا كتابة من الويب
+alter table public.webhook_events enable row level security;
+
+drop policy if exists webhook_events_no_access on public.webhook_events;
+create policy webhook_events_no_access on public.webhook_events
+  for all to anon, authenticated using (false) with check (false);
+
+-- تنظيف دوري اختياري: الأحداث الأقدم من ٣٠ يوماً لا تعود Meta إليها
+create index if not exists webhook_events_received_idx on public.webhook_events (received_at);
+
+
+-- ==========================================================
+-- ملف: 0020_rsvp_reminder_expire.sql
+-- ==========================================================
+
+-- ============================================================
+-- 0020 — منطق الاستجابة والتذكير والانتهاء (المرحلة ٩)
+--
+-- ١) rsvp_accept: من اعتذر/انتهى/فشل ثم حاول التأكيد يتحقق أن المقاعد
+--    ما زالت متاحة (من حصة الداعي إن كان له حصة، وإلا من المناسبة) وإلا
+--    INSUFFICIENT_SEATS — فلا يتجاوز الرصيد أبداً.
+-- ٢) التذكير قالب معتمد لا نصّ حرّ: اسمه في integration_settings.
+-- ٣) expire_stale_invites: الدعوات المُرسلة الأقدم من موعد المناسبة تصير
+--    expired فتتحرّر مقاعدها — تُستدعى من cron يومي.
+-- ============================================================
+
+-- ---------- ١) تأكيد الحضور بعد الاعتذار يتحقق من المتاح ----------
+create or replace function public.rsvp_accept(p_token uuid, p_seats integer)
+returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare
+  v_guest     public.guests%rowtype;
+  v_inviter   public.inviters%rowtype;
+  v_qr        uuid;
+  v_available integer;
+begin
+  select * into v_guest from public.guests
+   where invite_token = p_token or qr_token = p_token
+   for update;
+
+  if not found then
+    return jsonb_build_object('ok', false, 'reason', 'NOT_FOUND');
+  end if;
+
+  if v_guest.status::text = 'draft' then
+    return jsonb_build_object('ok', false, 'reason', 'NOT_SENT');
+  end if;
+
+  if p_seats is null or p_seats < 1 or p_seats > v_guest.max_seats then
+    return jsonb_build_object('ok', false, 'reason', 'INVALID_SEATS', 'max_seats', v_guest.max_seats);
+  end if;
+
+  if v_guest.status::text = 'attended' then
+    return jsonb_build_object('ok', false, 'reason', 'ALREADY_ATTENDED');
+  end if;
+
+  -- خرج من الحجز (اعتذر/انتهى/فشل) ثم عاد يؤكّد: المقاعد لم تعد محجوزة له،
+  -- فنتحقق من المتاح الآن. الدعوات التجريبية لا تُحسب على الرصيد أصلاً.
+  if v_guest.status::text in ('declined', 'expired', 'failed') and not v_guest.is_trial then
+    -- قفل المناسبة لتسلسل التأكيدات المتزامنة
+    perform 1 from public.events where id = v_guest.event_id for update;
+
+    v_available := null;
+    if v_guest.inviter_id is not null then
+      select * into v_inviter from public.inviters where id = v_guest.inviter_id;
+      if found and v_inviter.seats_quota > 0 then
+        select v_inviter.seats_quota
+               - coalesce((select sum(max_seats) from public.guests
+                           where inviter_id = v_inviter.id and status = 'sent' and not is_trial), 0)
+               - coalesce((select sum(coalesce(confirmed_seats, 0)) from public.guests
+                           where inviter_id = v_inviter.id and status in ('accepted','attended') and not is_trial), 0)
+          into v_available;
+      end if;
+    end if;
+
+    if v_available is null then
+      select e.seats_quota
+             - coalesce((select sum(max_seats) from public.guests
+                         where event_id = e.id and status = 'sent' and not is_trial), 0)
+             - coalesce((select sum(coalesce(confirmed_seats, 0)) from public.guests
+                         where event_id = e.id and status in ('accepted','attended') and not is_trial), 0)
+        into v_available
+      from public.events e where e.id = v_guest.event_id;
+    end if;
+
+    if p_seats > coalesce(v_available, 0) then
+      return jsonb_build_object('ok', false, 'reason', 'INSUFFICIENT_SEATS',
+                                'available', greatest(coalesce(v_available, 0), 0));
+    end if;
+  end if;
+
+  v_qr := coalesce(v_guest.qr_token, gen_random_uuid());
+
+  update public.guests
+     set status          = 'accepted',
+         confirmed_seats = p_seats,
+         qr_token        = v_qr,
+         responded_at    = now(),
+         failure_reason  = null
+   where id = v_guest.id;
+
+  return jsonb_build_object(
+    'ok', true, 'guest_id', v_guest.id, 'event_id', v_guest.event_id,
+    'qr_token', v_qr, 'confirmed_seats', p_seats, 'name', v_guest.name, 'phone', v_guest.phone
+  );
+end;
+$$;
+
+-- ---------- ٢) قالب التذكير ----------
+alter table public.integration_settings
+  add column if not exists reminder_template text;
+
+comment on column public.integration_settings.reminder_template is
+  'اسم قالب التذكير المعتمد في Meta — افتراضياً barqiyah_reminder.';
+
+-- ---------- ٣) انتهاء الدعوات بعد موعد المناسبة ----------
+-- من لم يردّ حتى مضى موعد المناسبة يصير expired؛ خروجه من sent يحرّر حجزه.
+create or replace function public.expire_stale_invites()
+returns integer
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare v_count integer;
+begin
+  if auth.uid() is not null and not public.is_admin() then
+    raise exception 'FORBIDDEN';
+  end if;
+
+  with stale as (
+    select g.id
+    from public.guests g
+    join public.events e on e.id = g.event_id
+    where g.status = 'sent'
+      and e.event_date < current_date
+  )
+  update public.guests g
+     set status = 'expired'
+    from stale
+   where g.id = stale.id;
+
+  get diagnostics v_count = row_count;
+
+  if v_count > 0 then
+    insert into public.activity_logs (actor_id, action, target_type, target_id, metadata)
+    values (null, 'guests.expired', 'system', null, jsonb_build_object('count', v_count));
+  end if;
+
+  return v_count;
+end;
+$$;
+
+revoke all on function public.expire_stale_invites() from public, anon;
+grant execute on function public.expire_stale_invites() to authenticated, service_role;
+
+
 -- ============================================================
 -- تم. الخطوة التالية:
 --   ١) أنشئ مستخدماً من Authentication ← Add user
 --   ٢) اجعله أدمن:
---        update public.profiles p set role = 'admin'
---        from auth.users u
---        where u.id = p.id and u.email = 'البريد-هنا';
+--        select public.grant_admin('البريد-هنا', 'admin_owner');
 --   ٣) (اختياري) شغّل supabase/seed.sql للبيانات التجريبية
 -- ============================================================

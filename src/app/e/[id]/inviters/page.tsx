@@ -1,11 +1,11 @@
 import { requireEventAccess } from '@/lib/auth';
 import { PageHeader, EmptyState, Alert, QuotaBar } from '@/components/ui';
 import { ActionForm, SubmitButton } from '@/components/ActionForm';
-import { addInviter, deleteInviter, updateInviterQuota } from '../actions';
+import { addInviter, deleteInviter, updateInviterQuota, resendInviterLink } from '../actions';
 import { appUrl } from '@/lib/env';
 import { formatEventLine, formatNumber } from '@/lib/format';
-import { renderInvite } from '@/lib/inviteVars';
-import { OCCASION_LABELS, type EventRow, type Guest, type Inviter, type Template } from '@/lib/types';
+import { renderInvite, hasInviteVars, type InviteVars } from '@/lib/inviteVars';
+import type { EventRow, Guest, Inviter } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,20 +17,15 @@ export default async function InvitersPage({ params }: { params: Promise<{ id: s
   const { event, supabase } = await requireEventAccess(id);
   const e = event as EventRow;
 
-  const [{ data: invitersData }, { data: guestsData }, { data: templatesData }] = await Promise.all([
+  const [{ data: invitersData }, { data: guestsData }] = await Promise.all([
     supabase.from('inviters').select('*').eq('event_id', id)
       .order('created_at', { ascending: true }).returns<Inviter[]>(),
     supabase.from('guests').select('*').eq('event_id', id).returns<Guest[]>(),
-    supabase.from('templates').select('id, name').returns<Template[]>(),
   ]);
 
   const inviters = invitersData ?? [];
   const guests = guestsData ?? [];
-  const templateName = new Map((templatesData ?? []).map((t) => [t.id, t.name]));
-
-  // وصف مناسبة المالك في نص دعوته: «حفل زواج ابنه خالد» ونحوه
-  const ownerOccasion = [OCCASION_LABELS[e.occasion_type], e.celebrant_primary]
-    .filter(Boolean).join(' ');
+  const ownerVars = (e.invite_vars ?? {}) as Partial<InviteVars>;
 
   // سطر الموعد والمكان يُحقن في نص كل داعٍ — من بيانات المناسبة وحدها
   const eventLine = formatEventLine({
@@ -62,7 +57,7 @@ export default async function InvitersPage({ params }: { params: Promise<{ id: s
     <>
       <PageHeader
         title="الدعاة"
-        subtitle="وزّع حصص المقاعد. كل داعٍ يكتب نصّه ويختار قالبه بنفسه — ولا تملك تعديلها."
+        subtitle="وزّع حصص المقاعد. كل داعٍ يكتب نصّه بنفسه بالقالب الموحّد — ولا تملك تعديله."
       />
 
       {/* شريط توزيع الحصص — لكل داعٍ لونه في المفتاح */}
@@ -100,12 +95,11 @@ export default async function InvitersPage({ params }: { params: Promise<{ id: s
           ) : (
             inviters.map((inv) => {
               const s = statsFor(inv.id);
-              // صفّ المالك دعوته هي دعوة المناسبة نفسها (من بياناتها
-              // وقالبها)، لا نصّاً يكتبه كداعٍ — فلا يُقال عنه «لم يكتب نصّه»
+              // صفّ المالك دعوته هي دعوة المناسبة نفسها (events.invite_vars)،
+              // لا نصّاً يكتبه كداعٍ
               const isOwnerRow = inv.profile_id === e.owner_id;
-              const written = isOwnerRow
-                ? Boolean(e.template_id)
-                : Boolean(inv.template_id && (inv.invite_vars as Record<string, string>)?.host);
+              const inviterVars = (inv.invite_vars ?? {}) as Partial<InviteVars>;
+              const written = isOwnerRow ? hasInviteVars(ownerVars) : hasInviteVars(inviterVars);
               return (
                 <div key={inv.id} className="inv-card">
                   <div className="inv-top">
@@ -116,7 +110,7 @@ export default async function InvitersPage({ params }: { params: Promise<{ id: s
                         <span className={`badge ${written ? 'bg-ok-soft text-ok' : 'bg-warn-soft text-warn'}`}>
                           {written
                             ? (isOwnerRow ? 'دعوة المناسبة' : 'كتب دعوته')
-                            : (isOwnerRow ? 'لم يُختَر القالب بعد' : 'لم يكتب نصّه بعد')}
+                            : (isOwnerRow ? 'لم تكتب نصّك بعد' : 'لم يكتب نصّه بعد')}
                         </span>
                       </div>
                       <div className="inv-sub">
@@ -150,31 +144,20 @@ export default async function InvitersPage({ params }: { params: Promise<{ id: s
                     {written ? (
                       <>
                         <div className="inv-text">
-                          {renderInvite(
-                            isOwnerRow
-                              ? { host: e.host_name, occasion: ownerOccasion }
-                              : ((inv.invite_vars ?? {}) as Record<string, string>),
-                            eventLine,
-                          )}
+                          {renderInvite(isOwnerRow ? ownerVars : inviterVars, eventLine)}
                         </div>
                         <div className="inv-row">
-                          <span>
-                            القالب:{' '}
-                            <b>
-                              {templateName.get((isOwnerRow ? e.template_id : inv.template_id) ?? '')
-                                ?? 'قالب معتمد'}
-                            </b>
-                          </span>
+                          <span>القالب: <b>قالب برقية الموحّد</b></span>
                           <span>
                             الصورة:{' '}
-                            <b>{(isOwnerRow ? e.image_url : inv.image_url) ? 'مرفوعة' : 'لم تُرفع'}</b>
+                            <b>{(isOwnerRow ? e.image_mode : inv.image_mode) === 'uploaded' ? 'مرفوعة' : 'مولَّدة تلقائياً'}</b>
                           </span>
                         </div>
                       </>
                     ) : (
                       <div className="inv-pending">
                         {isOwnerRow
-                          ? 'اختر قالب الدعوة من صفحة «قالب الدعوة» لتظهر هنا.'
+                          ? 'اكتب نصّ دعوتك من صفحة «دعوتي» ليظهر هنا.'
                           : 'لم يكتب نصّه بعد — سيكتبه عند أول دخول له.'}
                       </div>
                     )}
@@ -207,8 +190,15 @@ export default async function InvitersPage({ params }: { params: Promise<{ id: s
                           readOnly dir="ltr"
                           className="field text-left text-[11.5px]"
                           value={appUrl(`/join/${inv.invite_token}`)}
-                          onFocus={(e) => e.currentTarget.select()}
                         />
+                        <ActionForm action={resendInviterLink} className="mt-2">
+                          <input type="hidden" name="event_id" value={id} />
+                          <input type="hidden" name="inviter_id" value={inv.id} />
+                          <SubmitButton className="btn-ghost btn-sm" pendingLabel="جارٍ الإرسال…">
+                            إعادة إرسال الرابط عبر واتساب
+                          </SubmitButton>
+                        </ActionForm>
+                        <p className="hint">يُربط تلقائياً بحسابه عند أول دخول بهذا الرقم.</p>
                       </div>
                     ) : null}
                   </div>
