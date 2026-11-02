@@ -3,10 +3,14 @@
 import { useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { createEvent, type ActionState } from '../actions';
-import { formatCurrency, formatEventLine, formatNumber } from '@/lib/format';
-import { CELEBRANT_LABELS, OCCASION_LABELS, hasTwoCelebrants, type OccasionType, type Package, type Template } from '@/lib/types';
+import { formatEventLine } from '@/lib/format';
+import { PackagePicker } from '@/components/PackagePicker';
+import { InviteTextEditor } from '@/components/InviteTextEditor';
+import { InviteImagePicker } from '@/components/InviteImagePicker';
+import { defaultOccasionText, validateInviteVars, renderInvite } from '@/lib/inviteVars';
+import { CELEBRANT_LABELS, OCCASION_LABELS, hasTwoCelebrants, type OccasionType, type PackageCatalog } from '@/lib/types';
 
-const STEPS = ['التفاصيل', 'الباقة', 'القالب', 'الدفع'] as const;
+const STEPS = ['التفاصيل', 'الباقة', 'دعوتك', 'الدفع'] as const;
 
 function Submit() {
   const { pending } = useFormStatus();
@@ -17,9 +21,7 @@ function Submit() {
   );
 }
 
-export function NewEventForm({
-  packages, templates,
-}: { packages: Package[]; templates: Template[] }) {
+export function NewEventForm({ catalog, uid }: { catalog: PackageCatalog; uid: string }) {
   const [state, formAction] = useActionState<ActionState, FormData>(createEvent, {});
   const [step, setStep] = useState(0);
 
@@ -31,20 +33,26 @@ export function NewEventForm({
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [venue, setVenue] = useState('');
-  const [packageId, setPackageId] = useState('');
+
+  // متغيّرا القالب الموحّد {{1}} و{{2}} — يُملآن ابتداءً من التفاصيل ويحرّرهما المالك
+  const [inviteHost, setInviteHost] = useState('');
+  const [inviteOccasion, setInviteOccasion] = useState('');
+  const [inviteTouched, setInviteTouched] = useState({ host: false, occasion: false });
 
   const two = hasTwoCelebrants(occasion);
   const celebrantLabel = CELEBRANT_LABELS[occasion];
 
-  const celebrants = two
-    ? [celebrant1, celebrant2].filter(Boolean).join(' و')
-    : celebrant1;
+  const suggestedOccasion = defaultOccasionText(
+    OCCASION_LABELS[occasion], two ? [celebrant1, celebrant2] : [celebrant1],
+  );
+  const effectiveHost = inviteTouched.host ? inviteHost : host;
+  const effectiveOccasion = inviteTouched.occasion ? inviteOccasion : suggestedOccasion;
 
-  const previewHost = host || '…';
-  const previewOccasion = `${OCCASION_LABELS[occasion]}${celebrants ? ` ${celebrants}` : ''}`;
   const previewLine = formatEventLine({ dateGregorian: date || null, time, venue });
+  const previewText = renderInvite({ host: effectiveHost, occasion: effectiveOccasion }, previewLine || '…');
 
   const detailsReady = Boolean(date && host && celebrant1);
+  const inviteReady = validateInviteVars({ host: effectiveHost, occasion: effectiveOccasion }).length === 0;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_340px] items-start">
@@ -145,26 +153,8 @@ export function NewEventForm({
           <h2 className="sec-title">اختر الباقة</h2>
           <p className="text-[13px] text-muted">الرصيد بالمقاعد (عدد الأشخاص) لا بعدد الدعوات.</p>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            {packages.map((p) => (
-              <label key={p.id}
-                className={`cursor-pointer rounded-xl border p-4 transition-colors ${
-                  packageId === p.id ? 'border-brand bg-brand-soft' : 'border-line hover:bg-panel'
-                }`}>
-                <input type="radio" name="package_id" value={p.id} className="sr-only"
-                  checked={packageId === p.id} onChange={() => setPackageId(p.id)} />
-                <div className="font-ui font-bold">{p.name}</div>
-                <div className="mt-1 font-ui text-2xl font-extrabold num">{formatNumber(p.seats)}</div>
-                <div className="text-[12px] text-muted">مقعداً</div>
-                <div className="mt-2 border-t border-line pt-2 text-[13px] font-semibold text-gold num">
-                  {formatCurrency(p.price)}
-                </div>
-              </label>
-            ))}
-          </div>
-          {packages.length === 0 ? (
-            <p className="text-[13px] text-warn">لا توجد باقات متاحة حالياً — تواصل مع الإدارة.</p>
-          ) : null}
+          <PackagePicker catalog={catalog} />
+          <p className="hint">السعر يتجمّد لحظة الشراء — تعديل الباقات لاحقاً لا يغيّر فاتورتك.</p>
 
           <div className="flex gap-2">
             <button type="button" className="btn-ghost" onClick={() => setStep(0)}>رجوع</button>
@@ -172,29 +162,40 @@ export function NewEventForm({
           </div>
         </section>
 
-        {/* ————— ٣) القالب ————— */}
+        {/* ————— ٣) دعوتك ————— */}
         <section className={`card card-pad space-y-4 ${step === 2 ? '' : 'hidden'}`}>
-          <h2 className="sec-title">قالب الدعوة</h2>
+          <h2 className="sec-title">دعوتك</h2>
           <p className="text-[13px] text-muted">
-            يمكنك اختياره الآن أو لاحقاً. كل داعٍ يختار قالبه ويكتب نصّه بنفسه.
+            القالب واحد للمنصة كلها. تكتب فيه الجهة الداعية ووصف المناسبة، والموعد والمكان يُحقنان آلياً.
+            كل داعٍ يكتب نصّه بنفسه لاحقاً.
           </p>
 
-          <div>
-            <label className="label" htmlFor="tpl">القالب</label>
-            <select id="tpl" name="template_id" className="field" defaultValue="">
-              <option value="">— أختار لاحقاً —</option>
-              {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-          </div>
+          <InviteTextEditor
+            host={effectiveHost} occasion={effectiveOccasion} eventLine={previewLine}
+            onHostChange={(v) => { setInviteHost(v); setInviteTouched((t) => ({ ...t, host: true })); }}
+            onOccasionChange={(v) => { setInviteOccasion(v); setInviteTouched((t) => ({ ...t, occasion: true })); }}
+            hostLabel="الدعوة باسم" occasionLabel="المناسبة"
+            hostHint="يُملأ من «الدعوة باسم» — عدّله كما تريد أن يظهر." occasionHint="يُملأ من نوع المناسبة وأصحابها."
+            fieldPrefix="new-"
+          />
 
           <div>
-            <label className="label" htmlFor="img">رابط صورة الدعوة <span className="text-muted font-normal">(اختياري)</span></label>
-            <input id="img" name="image_url" dir="ltr" className="field text-left" placeholder="https://…" />
+            <span className="label">صورة الدعوة</span>
+            <InviteImagePicker
+              uid={uid} folder="pending"
+              generatedFallback={
+                <div className="grid h-20 place-items-center rounded-xl bg-panel text-[12px] text-muted">
+                  بطاقة برقية الخضراء الذهبية — كالمعاينة المجاورة — تُولَّد من بيانات دعوتك.
+                </div>
+              }
+            />
           </div>
 
           <div className="flex gap-2">
             <button type="button" className="btn-ghost" onClick={() => setStep(1)}>رجوع</button>
-            <button type="button" className="btn-primary" onClick={() => setStep(3)}>التالي: الدفع</button>
+            <button type="button" className="btn-primary" onClick={() => setStep(3)} disabled={!inviteReady}>
+              التالي: الدفع
+            </button>
           </div>
         </section>
 
@@ -223,9 +224,9 @@ export function NewEventForm({
                  style={{ width: 48, height: 48 }}>ب</div>
             <p className="mt-4 text-[11px] tracking-[3px] text-gold-soft">دعوة</p>
             <h3 className="mt-3 font-display text-[15px] leading-[2] text-[#F5EEDC]">
-              تتشرّف {previewHost} بدعوتكم
+              تتشرّف {effectiveHost || '…'} بدعوتكم
               <br />
-              لحضور {previewOccasion}
+              لحضور {effectiveOccasion || '…'}
             </h3>
             <div className="my-4 flex items-center justify-center gap-2" aria-hidden>
               <span className="h-px w-10" style={{ background: 'linear-gradient(90deg,transparent,#D8BE86)' }} />
@@ -242,6 +243,7 @@ export function NewEventForm({
         <p className="hint mt-2 text-center">
           الموعد والمكان يُحقنان آلياً من بيانات المناسبة، ولا يحرّرهما الدعاة.
         </p>
+        <p className="mt-2 rounded-xl bg-panel px-3 py-2 text-[12px] leading-6 text-muted">{previewText}</p>
       </aside>
     </div>
   );

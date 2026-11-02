@@ -2,15 +2,15 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import { requireUser } from '@/lib/auth';
-import { can, type Permission } from '@/lib/permissions';
+import { requireAdminPermission } from '@/lib/auth';
+import type { Permission } from '@/lib/permissions';
 import type { UserRole } from '@/lib/types';
 
 export interface ActionState { error?: string; notice?: string }
 
+/** يشترط الصلاحية من مصفوفة SPEC §10 — وإلا يحوّل إلى /admin?denied=1 */
 async function guard(permission: Permission) {
-  const user = await requireUser();
-  if (!can(user.profile.role, permission)) throw new Error('FORBIDDEN');
+  const user = await requireAdminPermission(permission);
   return { user, supabase: await createClient() };
 }
 

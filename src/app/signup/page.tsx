@@ -4,17 +4,18 @@ import { getSessionUser, homePathForRole } from '@/lib/auth';
 import { supabaseConfigured } from '@/lib/env';
 import { SetupNotice } from '@/components/SetupNotice';
 import { PhoneSignup } from './PhoneSignup';
+import { isSafeNextPath, safeNextPath } from '@/lib/safeNext';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SignupPage({
   searchParams,
 }: { searchParams: Promise<{ next?: string }> }) {
-  await searchParams;
+  const { next } = await searchParams;
   if (!supabaseConfigured) return <SetupNotice />;
 
   const user = await getSessionUser();
-  if (user) redirect(homePathForRole(user.profile.role));
+  if (user) redirect(isSafeNextPath(next) ? safeNextPath(next) : homePathForRole(user.profile.role));
 
   return (
     <main className="grid min-h-screen place-items-center bg-ivory px-4 py-10">
@@ -27,12 +28,12 @@ export default async function SignupPage({
         </div>
 
         <div className="border border-gold-line bg-white p-6">
-          <PhoneSignup />
+          <PhoneSignup next={isSafeNextPath(next) ? safeNextPath(next) : ''} />
         </div>
 
         <p className="mt-5 text-center text-[12.5px] text-muted">
           لديك حساب؟{' '}
-          <Link href="/login" className="font-semibold text-brand">تسجيل الدخول</Link>
+          <Link href={isSafeNextPath(next) ? `/login?next=${encodeURIComponent(safeNextPath(next))}` : '/login'} className="font-semibold text-brand">تسجيل الدخول</Link>
         </p>
       </div>
     </main>

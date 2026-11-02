@@ -8,8 +8,8 @@ import { normalizePhone, isValidPhone, formatHijri, formatWeekday, formatTime, f
 let passed = 0;
 function test(name, fn) { fn(); passed++; console.log(`  ✓ ${name}`); }
 
-const guest = (status, max, confirmed = null) => ({
-  status, max_seats: max, confirmed_seats: confirmed,
+const guest = (status, max, confirmed = null, isTrial = false) => ({
+  status, max_seats: max, confirmed_seats: confirmed, is_trial: isTrial,
 });
 
 console.log('حساب الرصيد بثلاث حالات:');
@@ -72,6 +72,17 @@ test('خليط واقعي: ٤ مؤكّد + ٩ محجوز من أصل ٣٠', () =
 test('الرصيد قد يصبح سالباً إن قُلّصت الباقة — تُعرض الحقيقة لا صفر', () => {
   const b = computeBalance([guest('sent', 10)], 5);
   assert.equal(b.available, -5);
+});
+
+test('الدعوات التجريبية لا تُحسب على رصيد المقاعد', () => {
+  const b = computeBalance([
+    guest('sent', 7, null, true), guest('accepted', 4, 3, true), guest('sent', 2),
+  ], 20);
+  assert.equal(b.held, 2);
+  assert.equal(b.confirmed, 0);
+  assert.equal(b.available, 18);
+  assert.equal(b.cnt_sent, 2, 'لكنها تُعدّ ضمن الحالات');
+  assert.equal(b.messages_used, 3);
 });
 
 test('نسبة الاستهلاك = (مؤكّد + محجوز) / الباقة', () => {

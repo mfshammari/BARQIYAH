@@ -47,11 +47,11 @@ META_WEBHOOK_VERIFY_TOKEN=
    - Callback URL: `https://your-domain.vercel.app/api/whatsapp/webhook`
    - Verify Token: نفس قيمة `META_WEBHOOK_VERIFY_TOKEN`
    - اشترك في حقل `messages`
-5. أنشئ قوالب الدعوة واعتمدها، ثم اربط اسم كل قالب من `/admin/templates`.
+5. اعتمد القالب الموحّد `barqiyah_invite` (وقالبي `barqiyah_reminder` و`barqiyah_inviter_invite`) لدى Meta، واضبط اسمه من `/admin/templates`، وأضف `META_APP_SECRET` و`CRON_SECRET` إلى متغيّرات البيئة.
 
 ## ٤) بعد النشر
 
-- سجّل دخول الأدمن، وأضف الباقات وقوالب المكتبة من `/admin`.
+- سجّل دخول الأدمن، وأضف الباقات (الثابتة والمخصّصة بشرائحها) من `/admin/packages` — تنعكس فوراً على الصفحة الرئيسية.
 - أنشئ حساب صاحب مناسبة (Supabase Auth) ودوره `owner`.
 - فعّل مناسبته من `/admin/events` ليبدأ الإرسال.
 

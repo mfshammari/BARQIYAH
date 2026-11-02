@@ -1,8 +1,10 @@
 'use server';
 
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { requestOtp, verifyOtpAndSignIn, phoneHasAccount } from '@/lib/otp';
 import { normalizePhone, isValidPhone } from '@/lib/format';
+import { NEXT_COOKIE, NEXT_COOKIE_MAX_AGE, isSafeNextPath, safeNextPath } from '@/lib/safeNext';
 
 /**
  * دخول العميل: جوال ثم رمز — لا اسم ولا بريد ولا إقرار.
@@ -42,6 +44,7 @@ export async function startPhoneLogin(
 ): Promise<LoginOtpState> {
   const rawPhone = String(formData.get('phone') ?? '').trim();
   const dial = String(formData.get('dial') ?? '966').trim();
+  const next = String(formData.get('next') ?? '');
 
   const phone = normalizePhone(rawPhone.replace(/^0+/, ''), dial);
   if (!isValidPhone(phone)) return { error: 'رقم الجوال غير صالح. مثال: 0555123456' };
@@ -62,6 +65,13 @@ export async function startPhoneLogin(
     maxAge: 600,
     path: '/',
   });
+  if (isSafeNextPath(next)) {
+    jar.set(NEXT_COOKIE, safeNextPath(next), {
+      httpOnly: true, sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: NEXT_COOKIE_MAX_AGE, path: '/',
+    });
+  }
 
   return { step: 'code', unifiedCode: res.unifiedCode, phone };
 }
@@ -111,5 +121,9 @@ export async function verifyLoginCode(
   }
 
   jar.delete(PENDING);
-  return { done: true };
+  const next = safeNextPath(jar.get(NEXT_COOKIE)?.value, '');
+  jar.delete(NEXT_COOKIE);
+
+  // فتح الجلسة تمّ — العودة إلى المسار الداخلي المطلوب وإلا «مناسباتي»
+  redirect(next || '/app');
 }

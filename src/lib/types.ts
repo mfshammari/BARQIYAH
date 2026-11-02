@@ -10,7 +10,9 @@ export type EventStatus = 'pending' | 'unpaid' | 'active' | 'closed';
 export type TemplateStatus = 'draft' | 'under_review' | 'approved' | 'rejected';
 export type WhatsAppCategory = 'marketing' | 'utility';
 export type GuestStatus = 'draft' | 'sent' | 'accepted' | 'declined' | 'expired' | 'attended' | 'failed';
-export type TransactionType = 'purchase' | 'upgrade' | 'manual_activation';
+export type TransactionType = 'purchase' | 'upgrade' | 'manual_activation' | 'trial';
+/** صورة الدعوة: تُولَّد من بيانات الدعوة، أو يرفعها المستخدم */
+export type ImageMode = 'generated' | 'uploaded';
 export type TransactionStatus = 'pending' | 'paid' | 'failed' | 'refunded';
 export type OccasionType =
   | 'wedding' | 'engagement' | 'engagement_contract'
@@ -25,16 +27,43 @@ export interface Profile {
   /** إيقاف إرسال العميل مؤقتاً — حماية الرقم المشترك (SPEC §6) */
   sending_paused: boolean;
   paused_reason: string | null;
+  /** الدعوات التجريبية المتبقية — ٥ لكل حساب جديد، تُرسل قبل الدفع */
+  trial_invites_left: number;
   created_at: string;
 }
+
+export type PackageKind = 'fixed' | 'custom';
 
 export interface Package {
   id: string;
   name: string;
+  /** ثابتة بمقاعد وسعر، أو مخصّصة بتسعير متدرّج يضبطه الأدمن */
+  kind: PackageKind;
   seats: number;
   price: number;
   active: boolean;
+  description: string | null;
+  features: string[];
+  is_featured: boolean;
+  sort_order: number;
+  /** للمخصّصة: أقل كمية */
+  min_qty: number | null;
+  updated_at: string;
   created_at: string;
+}
+
+/** شريحة الباقة المخصّصة: من كمية / سعر الدعوة */
+export interface PackageTier {
+  id: string;
+  package_id: string;
+  min_qty: number;
+  unit_price: number;
+}
+
+/** الباقات كما تُقرأ من القاعدة: الثابتة مرتّبة، والمخصّصة بشرائحها */
+export interface PackageCatalog {
+  fixed: Package[];
+  custom: (Package & { tiers: PackageTier[] }) | null;
 }
 
 export interface Template {
@@ -47,6 +76,10 @@ export interface Template {
   rejection_reason: string | null;
   whatsapp_category: WhatsAppCategory;
   meta_template_name: string | null;
+  /** حالة القالب لدى Meta كما قُرئت آخر مرة (APPROVED / PENDING / REJECTED) */
+  meta_status: string | null;
+  /** القالب الموحّد للمنصة — صف واحد فقط */
+  is_default: boolean;
   created_at: string;
 }
 
@@ -54,6 +87,8 @@ export interface EventRow {
   id: string;
   owner_id: string;
   package_id: string | null;
+  /** الكمية المختارة للباقة المخصّصة عند الإنشاء — تُدفع لاحقاً */
+  package_qty: number | null;
   occasion_type: OccasionType;
   /** التاريخ الميلادي (event_date_gregorian في المواصفة) */
   event_date: string;
@@ -74,6 +109,10 @@ export interface EventRow {
   buyer_name: string | null;
   buyer_phone: string | null;
   template_id: string | null;
+  /** متغيّرا القالب الموحّد للمالك {host, occasion} */
+  invite_vars: Record<string, string>;
+  image_mode: ImageMode;
+  /** للمرفوعة: مسار الملف في Storage؛ للمولَّدة null */
   image_url: string | null;
   seats_quota: number;
   status: EventStatus;
@@ -96,6 +135,8 @@ export interface Inviter {
   template_id: string | null;
   /** المتغيّرات التي كتبها بحرية */
   invite_vars: Record<string, string>;
+  image_mode: ImageMode;
+  /** للمرفوعة: مسار الملف في Storage؛ للمولَّدة null */
   image_url: string | null;
   invite_token: string;
   joined_at: string | null;
@@ -136,6 +177,8 @@ export interface Guest {
   inviter_id: string | null;
   contact_id: string | null;
   failure_reason: string | null;
+  /** دعوة تجريبية — لا تُحسب على رصيد المقاعد */
+  is_trial: boolean;
   name: string;
   phone: string;
   max_seats: number;
@@ -166,6 +209,8 @@ export interface IntegrationSettings {
   waba_id: string | null;
   access_token: string | null;
   verify_token: string | null;
+  /** اسم قالب التذكير المعتمد في Meta (افتراضياً barqiyah_reminder) */
+  reminder_template: string | null;
   updated_at: string;
 }
 
@@ -276,4 +321,5 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   purchase: 'شراء',
   upgrade: 'ترقية',
   manual_activation: 'تفعيل يدوي',
+  trial: 'دعوات تجريبية',
 };

@@ -25,11 +25,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     }
   };
 
-  const [waiting, templateReqs, openTickets] = await Promise.all([
+  const [waiting, openTickets] = await Promise.all([
     counted(() => supabase.from('events').select('id', { count: 'exact', head: true })
       .in('status', ['unpaid', 'pending'])),
-    counted(() => supabase.from('templates').select('id', { count: 'exact', head: true })
-      .eq('status', 'under_review')),
     counted(() => supabase.from('support_tickets').select('id', { count: 'exact', head: true })
       .eq('status', 'open')),
   ]);
@@ -41,7 +39,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       nav={navFor(user.profile.role)}
       pills={{
         '/admin': waiting,
-        '/admin/template-requests': templateReqs,
         '/admin/support': openTickets,
       }}
     >

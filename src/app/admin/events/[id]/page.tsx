@@ -32,7 +32,7 @@ export default async function AdminEventDetail({ params }: { params: Promise<{ i
       supabase.from('transactions').select('*').eq('event_id', id)
         .order('created_at', { ascending: false }).returns<Transaction[]>(),
       supabase.from('packages').select('*').eq('active', true)
-        .order('seats', { ascending: true }).returns<Package[]>(),
+        .order('sort_order', { ascending: true }).returns<Package[]>(),
       fetchEventBalance(supabase, id),
     ]);
 
@@ -180,9 +180,19 @@ export default async function AdminEventDetail({ params }: { params: Promise<{ i
                   <select name="package_id" className="field" defaultValue={event.package_id ?? ''} required>
                     <option value="" disabled>اختر باقة…</option>
                     {(packagesData ?? []).map((p) => (
-                      <option key={p.id} value={p.id}>{p.name} — {formatNumber(p.seats)} مقعد</option>
+                      <option key={p.id} value={p.id}>
+                        {p.kind === 'custom'
+                          ? `${p.name} — مخصّصة (من ${formatNumber(p.min_qty ?? 0)} دعوة)`
+                          : `${p.name} — ${formatNumber(p.seats)} مقعد`}
+                      </option>
                     ))}
                   </select>
+                </div>
+                <div>
+                  <label className="label">عدد الدعوات (للباقة المخصّصة)</label>
+                  <input name="qty" type="number" min={1} className="field num"
+                    defaultValue={event.package_qty ?? ''} placeholder="١٥٠٠" />
+                  <p className="hint">يُسعَّر بالشرائح الحيّة لحظة التفعيل ويُجمَّد في العملية.</p>
                 </div>
                 <div>
                   <label className="label">نوع العملية</label>

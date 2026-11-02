@@ -81,7 +81,43 @@ with checks(ord, migration, proves, ok) as (
       and to_regproc('public.verify_otp') is not null
       and exists (select 1 from information_schema.columns
                    where table_schema='public' and table_name='profiles'
-                     and column_name='recovery_hash'))
+                     and column_name='recovery_hash')),
+
+    (14, '0014_packages_public', 'الباقات العامة والمخصّصة وتجميد السعر',
+      to_regclass('public.package_tiers') is not null
+      and to_regproc('public.custom_package_price') is not null
+      and to_regproc('public.set_package_tiers') is not null
+      and exists (select 1 from pg_policies where schemaname='public' and tablename='packages'
+                   and policyname='packages_read_public')),
+
+    (15, '0015_unified_template', 'القالب الموحّد وinvite_vars للمالك',
+      exists (select 1 from information_schema.columns
+               where table_schema='public' and table_name='events' and column_name='invite_vars')
+      and exists (select 1 from public.templates where is_default)),
+
+    (16, '0016_invite_images', 'صورة الدعوة: مولَّدة أو مرفوعة + bucket',
+      exists (select 1 from information_schema.columns
+               where table_schema='public' and table_name='events' and column_name='image_mode')
+      and exists (select 1 from storage.buckets where id = 'invite-images')),
+
+    (17, '0017_claim_inviter_rows', 'ربط الداعي بحسابه تلقائياً بالجوال',
+      to_regproc('public.claim_inviter_rows') is not null),
+
+    (18, '0018_trial_invites', 'الدعوات التجريبية الخمس',
+      exists (select 1 from information_schema.columns
+               where table_schema='public' and table_name='profiles' and column_name='trial_invites_left')
+      and exists (select 1 from information_schema.columns
+                   where table_schema='public' and table_name='guests' and column_name='is_trial')
+      and to_regproc('public.consume_trial_invite') is not null),
+
+    (19, '0019_webhook_events', 'عدم تكرار أحداث webhook واتساب',
+      to_regclass('public.webhook_events') is not null),
+
+    (20, '0020_rsvp_reminder_expire', 'التأكيد بعد الاعتذار، قالب التذكير، الانتهاء',
+      to_regproc('public.expire_stale_invites') is not null
+      and exists (select 1 from information_schema.columns
+                   where table_schema='public' and table_name='integration_settings'
+                     and column_name='reminder_template'))
 )
 select
   case when ok then '✓' else '✗' end as "حالة",
@@ -130,7 +166,21 @@ with checks(ok) as (
       and to_regproc('public.mark_reminders_sent') is not null),
     (to_regclass('public.otp_requests') is not null
       and to_regproc('public.request_otp') is not null
-      and to_regproc('public.verify_otp') is not null)
+      and to_regproc('public.verify_otp') is not null),
+    (to_regclass('public.package_tiers') is not null
+      and to_regproc('public.custom_package_price') is not null),
+    (exists (select 1 from information_schema.columns
+              where table_schema='public' and table_name='events' and column_name='invite_vars')
+      and exists (select 1 from public.templates where is_default)),
+    (exists (select 1 from information_schema.columns
+              where table_schema='public' and table_name='events' and column_name='image_mode')
+      and exists (select 1 from storage.buckets where id = 'invite-images')),
+    (to_regproc('public.claim_inviter_rows') is not null),
+    (exists (select 1 from information_schema.columns
+              where table_schema='public' and table_name='profiles' and column_name='trial_invites_left')
+      and to_regproc('public.consume_trial_invite') is not null),
+    (to_regclass('public.webhook_events') is not null),
+    (to_regproc('public.expire_stale_invites') is not null)
 )
 select
   count(*) filter (where ok) || ' من ' || count(*) || ' ترحيل مطبَّق'

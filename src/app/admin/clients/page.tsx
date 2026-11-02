@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { requireUser } from '@/lib/auth';
+import { requireUser, CLIENT_ROLES } from '@/lib/auth';
 import { can } from '@/lib/permissions';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader, EmptyState, StatCard } from '@/components/ui';
@@ -14,7 +14,7 @@ export default async function ClientsPage() {
   const supabase = await createClient();
 
   const [{ data: clientsData }, { data: eventsData }, { data: txData }] = await Promise.all([
-    supabase.from('profiles').select('*').in('role', ['user', 'owner'])
+    supabase.from('profiles').select('*').in('role', CLIENT_ROLES)
       .order('created_at', { ascending: false }).returns<Profile[]>(),
     supabase.from('events').select('id, owner_id, created_at, status').returns<EventRow[]>(),
     supabase.from('transactions').select('event_id, amount, status').returns<Transaction[]>(),

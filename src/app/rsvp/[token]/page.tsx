@@ -3,7 +3,8 @@ import { InviteCard } from '@/components/InviteCard';
 import { RsvpForm } from './RsvpForm';
 import { appUrl } from '@/lib/env';
 import { formatNumber } from '@/lib/format';
-import type { EventRow, Guest } from '@/lib/types';
+import { resolveHeaderImage } from '@/lib/inviteImage';
+import type { EventRow, Guest, Inviter } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +51,22 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
 
   if (!event) return <Message title="المناسبة غير متاحة" />;
 
+  // صورة الدعوة كما وصلت: صورة الداعي إن كان له، وإلا صورة المالك
+  const { data: inviter } = guest.inviter_id
+    ? await admin.from('inviters').select('*').eq('id', guest.inviter_id).maybeSingle<Inviter>()
+    : { data: null as Inviter | null };
+  const inviterVars = (inviter?.invite_vars ?? {}) as { host?: string; occasion?: string };
+  const ownerVars = (event.invite_vars ?? {}) as { host?: string; occasion?: string };
+  const imageUrl = inviter && inviter.profile_id !== event.owner_id && inviterVars.host
+    ? resolveHeaderImage({
+        kind: 'inviter', id: inviter.id, imageMode: inviter.image_mode, imageUrl: inviter.image_url,
+        version: [inviterVars.host, inviterVars.occasion, event.event_date, event.event_time, event.venue],
+      })
+    : resolveHeaderImage({
+        kind: 'event', id: event.id, imageMode: event.image_mode, imageUrl: event.image_url,
+        version: [ownerVars.host, ownerVars.occasion, event.event_date, event.event_time, event.venue, event.host_name],
+      });
+
   const card = (children: React.ReactNode) => (
     <Shell>
       <InviteCard
@@ -57,7 +74,7 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
         occasion={event.occasion_type}
         eventDate={event.event_date}
         guestName={guest.name}
-        imageUrl={event.image_url}
+        imageUrl={imageUrl}
       >
         {children}
       </InviteCard>

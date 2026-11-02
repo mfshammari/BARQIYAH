@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { normalizePhone, isValidPhone } from '@/lib/format';
+import { safeNextPath } from '@/lib/safeNext';
 
 export interface SignupState { error?: string; notice?: string }
 
@@ -47,5 +48,5 @@ export async function signUp(_prev: SignupState, formData: FormData): Promise<Si
   }
 
   revalidatePath('/', 'layout');
-  redirect(next && next.startsWith('/') ? next : '/app');
+  redirect(safeNextPath(next));
 }

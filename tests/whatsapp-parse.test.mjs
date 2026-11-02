@@ -2,7 +2,7 @@
 //   node tests/whatsapp-parse.test.mjs
 import assert from 'node:assert/strict';
 import { buildButtonPayloads, buildSeatsPayload, classifyText, normalizeArabic,
-  parseButtonPayload, parseWebhookPayload } from '../.test-build/lib/whatsapp/parse.js';
+  parseButtonPayload, parseWebhookPayload, parseWebhookEvents } from '../.test-build/lib/whatsapp/parse.js';
 
 const TOKEN = '2e72aa8b-000f-402c-8eaa-f7eb5d0c40b9';
 let passed = 0;
@@ -112,6 +112,37 @@ test('عدة ردود في حمولة واحدة', () => {
   assert.equal(replies.length, 2);
   assert.equal(replies[0].kind, 'accept');
   assert.equal(replies[1].kind, 'decline');
+});
+
+console.log('\nالحالات وcontext.id (المرحلة ٨):');
+
+test('statuses تُستخرج: delivered/read/failed مع كود الخطأ', () => {
+  const { replies, statuses } = parseWebhookEvents({
+    entry: [{ changes: [{ value: { statuses: [
+      { id: 'wamid.out1', status: 'delivered', recipient_id: '9665001' },
+      { id: 'wamid.out2', status: 'read' },
+      { id: 'wamid.out3', status: 'failed', errors: [{ code: 131026, title: 'Message undeliverable' }] },
+    ] } }] }],
+  });
+  assert.equal(replies.length, 0);
+  assert.equal(statuses.length, 3);
+  assert.equal(statuses[2].status, 'failed');
+  assert.equal(statuses[2].errorCode, '131026');
+  assert.match(statuses[2].errorTitle, /undeliverable/);
+});
+
+test('context.id يُلتقط من الرد', () => {
+  const [r] = parseWebhookPayload(wrap({
+    from: '966551000009', id: 'wamid.9', type: 'text', text: { body: 'نعم' },
+    context: { id: 'wamid.original', from: '9665000000' },
+  }));
+  assert.equal(r.contextId, 'wamid.original');
+  assert.equal(r.kind, 'accept');
+});
+
+test('رد بلا context يبقى بلا contextId', () => {
+  const [r] = parseWebhookPayload(wrap({ from: '9665001', id: 'x', text: { body: 'نعم' } }));
+  assert.equal(r.contextId, undefined);
 });
 
 console.log('\nتصنيف الردود الحرّة:');

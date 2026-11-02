@@ -2,128 +2,190 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import { requireRole } from '@/lib/auth';
-import type { TransactionType, WhatsAppCategory } from '@/lib/types';
+import { requireAdmin, requireAdminPermission } from '@/lib/auth';
+import { parseFeatures, validateTiers, type TierLike } from '@/lib/packages';
+import { UNIFIED_TEMPLATE_BODY, DEFAULT_META_TEMPLATE_NAME } from '@/lib/inviteVars';
+import { fetchMetaTemplateStatus } from '@/lib/whatsapp/templates';
+import type { PackageKind, TransactionType, WhatsAppCategory } from '@/lib/types';
 
 export interface ActionState { error?: string; notice?: string }
 
 // ————————————————————— الباقات —————————————————————
+/** الباقات تنعكس فوراً على كل الشاشات التي تقرأها. */
+function revalidatePackages() {
+  revalidatePath('/admin/packages');
+  revalidatePath('/');
+  revalidatePath('/app/events/new');
+  revalidatePath('/e/[id]/info', 'layout');
+}
+
+/**
+ * حفظ باقة (إضافة أو تعديل بـ id مخفي). الثابتة: مقاعد وسعر.
+ * المخصّصة: أقل كمية وشرائح تُتحقق هنا وفي القاعدة (TIERS_INVALID).
+ */
 export async function savePackage(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireRole('admin');
+  await requireAdmin();
   const supabase = await createClient();
 
   const id = String(formData.get('id') ?? '');
   const name = String(formData.get('name') ?? '').trim();
-  const seats = Number(formData.get('seats') ?? 0);
-  const price = Number(formData.get('price') ?? 0);
+  const kind = (String(formData.get('kind') ?? 'fixed') === 'custom' ? 'custom' : 'fixed') as PackageKind;
+  const description = String(formData.get('description') ?? '').trim() || null;
+  const features = parseFeatures(String(formData.get('features') ?? ''));
+  const isFeatured = formData.get('is_featured') === 'on';
+  const sortOrder = Math.floor(Number(formData.get('sort_order') ?? 0)) || 0;
   const active = formData.get('active') === 'on';
 
   if (!name) return { error: 'اسم الباقة مطلوب.' };
-  if (!Number.isInteger(seats) || seats <= 0) return { error: 'عدد المقاعد يجب أن يكون رقماً موجباً.' };
-  if (price < 0) return { error: 'السعر غير صالح.' };
 
-  const payload = { name, seats, price, active };
-  const { error } = id
-    ? await supabase.from('packages').update(payload).eq('id', id)
-    : await supabase.from('packages').insert(payload);
+  let seats = 0;
+  let price = 0;
+  let minQty: number | null = null;
+  let tiers: TierLike[] = [];
 
-  if (error) return { error: 'تعذّر حفظ الباقة.' };
-  revalidatePath('/admin/packages');
-  return { notice: id ? 'تم تحديث الباقة.' : 'تمت إضافة الباقة.' };
+  if (kind === 'fixed') {
+    seats = Number(formData.get('seats') ?? 0);
+    price = Number(formData.get('price') ?? 0);
+    if (!Number.isInteger(seats) || seats <= 0) return { error: 'عدد المقاعد يجب أن يكون رقماً موجباً.' };
+    if (!Number.isFinite(price) || price < 0) return { error: 'السعر غير صالح.' };
+  } else {
+    minQty = Math.floor(Number(formData.get('min_qty') ?? 0));
+    try {
+      const raw = JSON.parse(String(formData.get('tiers') ?? '[]')) as { min_qty: unknown; unit_price: unknown }[];
+      tiers = (Array.isArray(raw) ? raw : []).map((t) => ({
+        min_qty: Math.floor(Number(t.min_qty)), unit_price: Number(t.unit_price),
+      }));
+    } catch {
+      return { error: 'الشرائح غير مقروءة.' };
+    }
+    const issue = validateTiers(tiers, minQty);
+    if (issue) return { error: issue };
+    seats = minQty;   // للمخصّصة: أقل كمية، والسعر من الشرائح
+    price = 0;
+  }
+
+  // «مميّزة» واحدة فقط: تُلغى عن البقية قبل الحفظ
+  if (isFeatured) {
+    await supabase.from('packages').update({ is_featured: false }).eq('is_featured', true);
+  }
+
+  const payload = {
+    name, kind, seats, price, active, description, features,
+    is_featured: isFeatured, sort_order: sortOrder,
+    // min_qty للمخصّصة يُضبط داخل set_package_tiers مع الشرائح (يتحقق دفعةً واحدة)
+    ...(kind === 'fixed' ? { min_qty: null } : {}),
+  };
+
+  let packageId = id;
+  if (id) {
+    const { error } = await supabase.from('packages').update(payload).eq('id', id);
+    if (error) return { error: describePackageError(error.message) };
+  } else {
+    const { data, error } = await supabase.from('packages').insert(payload).select('id').single();
+    if (error || !data) return { error: describePackageError(error?.message ?? '') };
+    packageId = data.id;
+  }
+
+  if (kind === 'custom') {
+    const { error } = await supabase.rpc('set_package_tiers', {
+      p_package_id: packageId, p_min_qty: minQty, p_tiers: tiers,
+    });
+    if (error) return { error: describePackageError(error.message) };
+  } else if (id) {
+    // تحوّلت من مخصّصة إلى ثابتة: تُحذف شرائحها
+    await supabase.from('package_tiers').delete().eq('package_id', id);
+  }
+
+  revalidatePackages();
+  return { notice: id ? 'تم تحديث الباقة — انعكست على الصفحة الرئيسية.' : 'تمت إضافة الباقة.' };
+}
+
+function describePackageError(message: string): string {
+  if (message.includes('TIERS_INVALID')) return 'الشرائح غير صالحة: مرتّبة تصاعدياً بالكمية وتنازلياً بالسعر، وأولها من أقل كمية.';
+  if (message.includes('packages_single_custom')) return 'توجد باقة مخصّصة واحدة بالفعل — عدّلها بدل إضافة ثانية.';
+  if (message.includes('packages_single_featured')) return 'باقة مميّزة واحدة فقط.';
+  return 'تعذّر حفظ الباقة.';
 }
 
 export async function togglePackage(formData: FormData) {
-  await requireRole('admin');
+  await requireAdmin();
   const supabase = await createClient();
   const id = String(formData.get('id') ?? '');
   const active = String(formData.get('active') ?? '') === 'true';
   await supabase.from('packages').update({ active: !active }).eq('id', id);
-  revalidatePath('/admin/packages');
+  revalidatePackages();
 }
 
-// ————————————————————— القوالب العامة —————————————————————
-export async function saveGlobalTemplate(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireRole('admin');
+// ————————————————————— القالب الموحّد —————————————————————
+/** الأدمن يحرّر اسم القالب في Meta وتصنيفه فقط — النصّ ثابت للمنصة كلها. */
+export async function saveDefaultTemplate(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAdminPermission('whatsapp_settings');
   const supabase = await createClient();
 
-  const id = String(formData.get('id') ?? '');
-  const name = String(formData.get('name') ?? '').trim();
-  const body_text = String(formData.get('body_text') ?? '').trim();
-  const image_url = String(formData.get('image_url') ?? '').trim() || null;
-  const meta_template_name = String(formData.get('meta_template_name') ?? '').trim() || null;
+  const meta_template_name = String(formData.get('meta_template_name') ?? '').trim();
   const whatsapp_category = String(formData.get('whatsapp_category') ?? 'utility') as WhatsAppCategory;
-  const approved = formData.get('approved') === 'on';
 
-  if (!name) return { error: 'اسم القالب مطلوب.' };
-  if (!body_text) return { error: 'نص القالب مطلوب.' };
+  if (!/^[a-z0-9_]{2,512}$/.test(meta_template_name)) {
+    return { error: 'اسم القالب في Meta: حروف إنجليزية صغيرة وأرقام وشرطة سفلية فقط.' };
+  }
+  if (!['utility', 'marketing'].includes(whatsapp_category)) return { error: 'تصنيف غير صالح.' };
 
-  const payload = {
-    owner_id: null,
-    name, body_text, image_url, meta_template_name, whatsapp_category,
-    status: approved ? ('approved' as const) : ('draft' as const),
+  const { data: existing } = await supabase
+    .from('templates').select('id').eq('is_default', true).maybeSingle();
+
+  const { error } = existing
+    ? await supabase.from('templates')
+        .update({ meta_template_name, whatsapp_category }).eq('id', existing.id)
+    : await supabase.from('templates').insert({
+        owner_id: null, name: 'قالب برقية الموحّد', body_text: UNIFIED_TEMPLATE_BODY,
+        status: 'approved', whatsapp_category, meta_template_name, is_default: true,
+      });
+
+  if (error) return { error: 'تعذّر حفظ إعدادات القالب.' };
+  revalidatePath('/admin/templates');
+  return { notice: 'حُفظت إعدادات القالب الموحّد.' };
+}
+
+/** يقرأ حالة القالب لدى Meta ويخزّنها في meta_status. */
+export async function checkMetaTemplateStatus(_prev: ActionState, _formData: FormData): Promise<ActionState> {
+  await requireAdminPermission('whatsapp_settings');
+  const supabase = await createClient();
+
+  const { data: tpl } = await supabase
+    .from('templates').select('id, meta_template_name').eq('is_default', true).maybeSingle();
+  const name = tpl?.meta_template_name || DEFAULT_META_TEMPLATE_NAME;
+
+  const res = await fetchMetaTemplateStatus(name);
+  if (!res.ok) {
+    if (res.error === 'MOCK_MODE') {
+      return { notice: 'وضع المحاكاة — لا اتصال بـ Meta. اضبط مفاتيح واتساب أولاً.' };
+    }
+    return { error: `تعذّر القراءة من Meta: ${res.error ?? ''}` };
+  }
+
+  const status = res.status ?? 'NOT_FOUND';
+  if (tpl) {
+    await supabase.from('templates').update({ meta_status: status }).eq('id', tpl.id);
+  }
+  revalidatePath('/admin/templates');
+  return {
+    notice: res.status
+      ? `حالة القالب «${name}» لدى Meta: ${res.status}${res.category ? ` · ${res.category}` : ''}`
+      : `لم يُعثر على قالب باسم «${name}» لدى Meta.`,
   };
-
-  const { error } = id
-    ? await supabase.from('templates').update(payload).eq('id', id)
-    : await supabase.from('templates').insert(payload);
-
-  if (error) return { error: 'تعذّر حفظ القالب.' };
-  revalidatePath('/admin/templates');
-  return { notice: id ? 'تم تحديث القالب.' : 'تمت إضافة القالب.' };
-}
-
-export async function deleteTemplate(formData: FormData) {
-  await requireRole('admin');
-  const supabase = await createClient();
-  await supabase.from('templates').delete().eq('id', String(formData.get('id') ?? ''));
-  revalidatePath('/admin/templates');
-}
-
-// ————————————————————— طلبات القوالب الخاصة —————————————————————
-export async function reviewTemplateRequest(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireRole('admin');
-  const supabase = await createClient();
-
-  const id = String(formData.get('id') ?? '');
-  const decision = String(formData.get('decision') ?? '');
-  const reason = String(formData.get('rejection_reason') ?? '').trim();
-  const metaName = String(formData.get('meta_template_name') ?? '').trim() || null;
-
-  if (!id) return { error: 'الطلب غير موجود.' };
-
-  if (decision === 'approve') {
-    const { error } = await supabase
-      .from('templates')
-      .update({ status: 'approved', rejection_reason: null, meta_template_name: metaName })
-      .eq('id', id);
-    if (error) return { error: 'تعذّر اعتماد القالب.' };
-    revalidatePath('/admin/template-requests');
-    return { notice: 'تم اعتماد القالب.' };
-  }
-
-  if (decision === 'reject') {
-    if (!reason) return { error: 'اكتب سبب الرفض ليصل لصاحب المناسبة.' };
-    const { error } = await supabase
-      .from('templates')
-      .update({ status: 'rejected', rejection_reason: reason })
-      .eq('id', id);
-    if (error) return { error: 'تعذّر رفض القالب.' };
-    revalidatePath('/admin/template-requests');
-    return { notice: 'تم رفض القالب مع إرسال السبب.' };
-  }
-
-  return { error: 'قرار غير معروف.' };
 }
 
 // ————————————————————— تفعيل المناسبات —————————————————————
 export async function activateEvent(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireRole('admin');
+  await requireAdminPermission('manual_activation');
   const supabase = await createClient();
 
   const eventId = String(formData.get('event_id') ?? '');
   const packageId = String(formData.get('package_id') ?? '');
   const type = (String(formData.get('type') ?? 'manual_activation') || 'manual_activation') as TransactionType;
   const note = String(formData.get('note') ?? '').trim() || null;
+  const qtyRaw = Math.floor(Number(formData.get('qty') ?? 0));
+  const qty = qtyRaw > 0 ? qtyRaw : null;
 
   if (!eventId || !packageId) return { error: 'اختر الباقة أولاً.' };
 
@@ -132,11 +194,19 @@ export async function activateEvent(_prev: ActionState, formData: FormData): Pro
     p_package_id: packageId,
     p_type: type,
     p_note: note,
+    p_qty: qty,
   });
 
   if (error) return { error: 'تعذّر تفعيل المناسبة.' };
   const res = data as { ok: boolean; reason?: string; seats_quota?: number };
-  if (!res?.ok) return { error: 'تعذّر التفعيل: ' + (res?.reason ?? 'سبب غير معروف') };
+  if (!res?.ok) {
+    const reasons: Record<string, string> = {
+      QTY_REQUIRED: 'الباقة المخصّصة تحتاج عدد الدعوات.',
+      PACKAGE_NOT_FOUND: 'الباقة غير موجودة.',
+      EVENT_NOT_FOUND: 'المناسبة غير موجودة.',
+    };
+    return { error: 'تعذّر التفعيل: ' + (reasons[res?.reason ?? ''] ?? res?.reason ?? 'سبب غير معروف') };
+  }
 
   revalidatePath('/admin/events');
   revalidatePath(`/e/${eventId}`);
@@ -144,7 +214,7 @@ export async function activateEvent(_prev: ActionState, formData: FormData): Pro
 }
 
 export async function setEventStatus(formData: FormData) {
-  await requireRole('admin');
+  await requireAdminPermission('manual_activation');
   const supabase = await createClient();
   const id = String(formData.get('event_id') ?? '');
   const status = String(formData.get('status') ?? '');
@@ -155,15 +225,19 @@ export async function setEventStatus(formData: FormData) {
 
 // ————————————————————— إعدادات Meta —————————————————————
 export async function saveIntegration(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireRole('admin');
+  await requireAdminPermission('whatsapp_settings');
   const supabase = await createClient();
 
   const payload = {
     phone_number_id: String(formData.get('phone_number_id') ?? '').trim() || null,
     waba_id: String(formData.get('waba_id') ?? '').trim() || null,
     verify_token: String(formData.get('verify_token') ?? '').trim() || null,
+    reminder_template: String(formData.get('reminder_template') ?? '').trim() || null,
     updated_at: new Date().toISOString(),
   };
+  if (payload.reminder_template && !/^[a-z0-9_]{2,512}$/.test(payload.reminder_template)) {
+    return { error: 'اسم قالب التذكير: حروف إنجليزية صغيرة وأرقام وشرطة سفلية فقط.' };
+  }
   const token = String(formData.get('access_token') ?? '').trim();
 
   const { data: existing } = await supabase

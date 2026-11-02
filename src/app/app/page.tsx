@@ -227,6 +227,12 @@ export default async function MyEventsPage({
         </div>
       </div>
 
+      {(user.profile.trial_invites_left ?? 0) > 0 ? (
+        <div className="mt-5 rounded-xl border border-info/20 bg-info-soft px-4 py-3 text-[13px] text-info">
+          <b>لديك {formatNumber(user.profile.trial_invites_left)} دعوات تجريبية</b> — جرّب الإرسال قبل الدفع من أي مناسبة تنشئها.
+        </div>
+      ) : null}
+
       <div className="tabs-row mt-5">
         {TABS.map((t) => (
           <Link

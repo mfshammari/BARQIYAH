@@ -1,4 +1,4 @@
-import { requireUser } from '@/lib/auth';
+import { requireUser, CLIENT_ROLES } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader, StatCard, EmptyState, Alert } from '@/components/ui';
@@ -19,7 +19,7 @@ export default async function WhatsAppMonitor() {
   const [{ data: logsData }, { data: clientsData }] = await Promise.all([
     supabase.from('message_logs').select('*')
       .order('created_at', { ascending: false }).limit(2000).returns<MessageLog[]>(),
-    supabase.from('profiles').select('*').in('role', ['user', 'owner']).returns<Profile[]>(),
+    supabase.from('profiles').select('*').in('role', CLIENT_ROLES).returns<Profile[]>(),
   ]);
 
   const logs = logsData ?? [];

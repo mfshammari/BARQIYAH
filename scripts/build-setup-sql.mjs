@@ -37,9 +37,7 @@ const footer = `
 -- تم. الخطوة التالية:
 --   ١) أنشئ مستخدماً من Authentication ← Add user
 --   ٢) اجعله أدمن:
---        update public.profiles p set role = 'admin'
---        from auth.users u
---        where u.id = p.id and u.email = 'البريد-هنا';
+--        select public.grant_admin('البريد-هنا', 'admin_owner');
 --   ٣) (اختياري) شغّل supabase/seed.sql للبيانات التجريبية
 -- ============================================================
 `;

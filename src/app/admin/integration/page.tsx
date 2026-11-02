@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { PageHeader, Alert } from '@/components/ui';
 import { ActionForm, SubmitButton } from '@/components/ActionForm';
 import { saveIntegration } from '../actions';
-import { appUrl, metaConfigured } from '@/lib/env';
+import { appUrl, env, metaConfigured } from '@/lib/env';
 import { formatDateTime } from '@/lib/format';
 import type { IntegrationSettings } from '@/lib/types';
 
@@ -14,6 +14,7 @@ export default async function IntegrationPage() {
     .from('integration_settings').select('*').limit(1).maybeSingle<IntegrationSettings>();
 
   const webhookUrl = appUrl('/api/whatsapp/webhook');
+  const metaAppSecretConfigured = Boolean(env.metaAppSecret);
 
   return (
     <>
@@ -53,6 +54,12 @@ export default async function IntegrationPage() {
               <p className="hint">لا يُعرض التوكن المحفوظ مطلقاً. اتركه فارغاً إن لم ترغب بتغييره.</p>
             </div>
             <div>
+              <label className="label" htmlFor="rt">قالب التذكير في Meta</label>
+              <input id="rt" name="reminder_template" dir="ltr" className="field text-left"
+                defaultValue={data?.reminder_template ?? ''} placeholder="barqiyah_reminder" />
+              <p className="hint">التذكير قالب معتمد لا نصّ حرّ: متغيّران — الجهة الداعية وسطر الموعد، وزرّا التأكيد والاعتذار.</p>
+            </div>
+            <div>
               <label className="label" htmlFor="vt">Webhook Verify Token</label>
               <input id="vt" name="verify_token" dir="ltr" className="field text-left"
                 defaultValue={data?.verify_token ?? ''} placeholder="barqiyah-verify-token" />
@@ -76,6 +83,10 @@ export default async function IntegrationPage() {
 
           <h3 className="sec-title mt-5 mb-2">متطلبات التشغيل</h3>
           <ul className="text-[12.5px] text-muted space-y-1.5 list-disc ps-5">
+            <li>
+              <code dir="ltr">META_APP_SECRET</code> في متغيّرات البيئة — يُرفض كل webhook بلا توقيع
+              صحيح ({metaAppSecretConfigured ? 'مضبوط ✓' : 'غير مضبوط: يُقبل بلا توقيع في التطوير فقط'}).
+            </li>
             <li>حساب WABA + توثيق النشاط التجاري (Business Verification).</li>
             <li>System User بتوكن دائم بصلاحيات whatsapp_business_messaging.</li>
             <li>اعتماد الاسم المعروض (Display Name) للرقم.</li>

@@ -1,5 +1,4 @@
-import { requireUser } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+import { requireAdminPermission, ADMIN_ROLES } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader, EmptyState } from '@/components/ui';
 import { ActionForm, SubmitButton } from '@/components/ActionForm';
@@ -12,17 +11,17 @@ export const dynamic = 'force-dynamic';
 
 const TEAM_ROLES: UserRole[] = ['admin_owner', 'admin_support', 'admin_reviewer', 'admin_finance'];
 const ALL_PERMISSIONS: Permission[] = [
-  'manual_activation', 'review_templates', 'impersonate', 'finance', 'whatsapp_settings', 'manage_team',
+  // review_templates غير مستخدمة بعد توحيد القالب — تبقى في المصفوفة لا في الواجهة
+  'manual_activation', 'impersonate', 'finance', 'whatsapp_settings', 'manage_team',
 ];
 
 export default async function TeamPage() {
-  const user = await requireUser();
-  if (!can(user.profile.role, 'manage_team')) redirect('/admin');
+  const user = await requireAdminPermission('manage_team');
 
   const supabase = await createClient();
   const { data } = await supabase
     .from('profiles').select('*')
-    .in('role', ['admin', ...TEAM_ROLES])
+    .in('role', ADMIN_ROLES)
     .order('created_at', { ascending: true }).returns<Profile[]>();
 
   const team = data ?? [];

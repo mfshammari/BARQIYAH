@@ -2,10 +2,13 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient, adminClientAvailable } from '@/lib/supabase/admin';
 import { appUrl } from '@/lib/env';
-import { buildButtonPayloads, buildSeatsPayload, getWhatsAppProvider } from '@/lib/whatsapp';
-import { OCCASION_LABELS, type EventRow, type Guest, type Template } from '@/lib/types';
-import { formatDate, formatEventLine } from '@/lib/format';
-import { renderInvite, type InviteVars } from '@/lib/inviteVars';
+import { buildButtonPayloads, buildSeatsPayload, getWhatsAppProvider, getReminderTemplateName } from '@/lib/whatsapp';
+import type { EventRow, Guest, ImageMode, Inviter, Template, WhatsAppCategory } from '@/lib/types';
+import { resolveHeaderImage } from '@/lib/inviteImage';
+import { formatEventLine } from '@/lib/format';
+import {
+  buildInviteParams, hasInviteVars, renderInvite, DEFAULT_META_TEMPLATE_NAME, type InviteVars,
+} from '@/lib/inviteVars';
 
 
 export interface SendOutcome {
@@ -25,10 +28,12 @@ interface ReserveRow {
 }
 
 const RESERVE_REASONS: Record<string, string> = {
-  EVENT_NOT_ACTIVE: 'المناسبة غير مفعّلة — تواصل مع الإدارة لتفعيل الباقة.',
+  EVENT_NOT_ACTIVE: 'المناسبة غير مفعّلة — فعّل الباقة للمتابعة.',
+  TRIAL_EXHAUSTED: 'انتهت دعواتك التجريبية — فعّل الباقة للمتابعة.',
   GUEST_NOT_FOUND: 'المدعو غير موجود.',
   ALREADY_SENT: 'الدعوة مُرسلة مسبقاً.',
   INSUFFICIENT_SEATS: 'الرصيد لا يكفي لحجز مقاعد هذه الدعوة.',
+  INVITE_TEXT_MISSING: 'اكتب نصّ دعوتك من صفحة دعوتي قبل الإرسال.',
 };
 
 /** سطر سجل الرسائل — يُكتب بـ service role حتى لا تحجبه سياسات RLS. */
@@ -41,30 +46,32 @@ async function logMessage(row: Record<string, unknown>) {
   }
 }
 
-function buildBodyParams(event: EventRow, template: Template | null): string[] {
-  // {{1}} اسم المُضيف — {{2}} أصحاب المناسبة — {{3}} التاريخ — {{4}} نوع المناسبة
-  const params = [
-    event.host_name,
-    event.buyer_name || event.host_name,
-    formatDate(event.event_date),
-    OCCASION_LABELS[event.occasion_type],
-  ];
-  // نمرّر بقدر ما يطلبه نص القالب فقط
-  const needed = template ? countPlaceholders(template.body_text) : params.length;
-  return params.slice(0, Math.max(needed, 1));
+/**
+ * القالب الموحّد الوحيد للمنصة: اسمه في Meta وتصنيفه من الصف is_default.
+ * في المحاكاة (أو قبل تشغيل الترحيل) يبقى الاسم الافتراضي barqiyah_invite.
+ */
+export async function loadDefaultTemplate(
+  supabase: SupabaseClient,
+): Promise<{ metaName: string; category: WhatsAppCategory }> {
+  try {
+    const { data } = await supabase
+      .from('templates').select('meta_template_name, whatsapp_category')
+      .eq('is_default', true).maybeSingle<Pick<Template, 'meta_template_name' | 'whatsapp_category'>>();
+    return {
+      metaName: data?.meta_template_name || DEFAULT_META_TEMPLATE_NAME,
+      category: data?.whatsapp_category ?? 'utility',
+    };
+  } catch {
+    return { metaName: DEFAULT_META_TEMPLATE_NAME, category: 'utility' };
+  }
 }
 
-export function countPlaceholders(body: string): number {
-  const found = new Set(Array.from(body.matchAll(/\{\{(\d+)\}\}/g)).map((m) => m[1]));
-  return found.size;
-}
-
-/** إرسال باسم داعٍ: بحصته ونصّه وصورته وقالبه. */
+/** إرسال باسم داعٍ: بحصته ونصّه وصورته — والقالب واحد للجميع. */
 export interface InviterContext {
   inviterId: string;
   inviteVars: InviteVars;
+  imageMode: ImageMode;
   imageUrl: string | null;
-  templateId: string;
   reasons?: Record<string, string>;
 }
 
@@ -72,8 +79,9 @@ export interface InviterContext {
  * إرسال دعوات: يحجز المقاعد ذرّياً في قاعدة البيانات أولاً،
  * ثم يرسل عبر واتساب، ويحرّر الحجز عند فشل الإرسال.
  *
- * مع سياق داعٍ: الحجز من حصته، والنص والصورة والقالب من اختياره —
- * وسطر الموعد والمكان يُحقن من بيانات المناسبة ولا يحرّره (SPEC §6).
+ * القالب واحد للجميع بثلاثة متغيّرات: [host, occasion, eventLine].
+ * مع سياق داعٍ: الحجز من حصته، والنص والصورة من عنده؛ وإلا من المالك
+ * (events.invite_vars) — وسطر الموعد يُحقن من بيانات المناسبة (SPEC §6).
  */
 export async function sendInvitations(
   supabase: SupabaseClient,
@@ -87,14 +95,22 @@ export async function sendInvitations(
     .from('events').select('*').eq('id', eventId).maybeSingle<EventRow>();
   if (!event) return guestIds.map((id) => ({ guestId: id, name: '', ok: false, reason: 'المناسبة غير موجودة.' }));
 
-  const { data: template } = event.template_id
-    ? await supabase.from('templates').select('*').eq('id', event.template_id).maybeSingle<Template>()
-    : { data: null as Template | null };
+  // المتغيّران: من الداعي أو من المالك — وبدونهما لا إرسال
+  const vars: Partial<InviteVars> = inviterCtx
+    ? inviterCtx.inviteVars
+    : ((event.invite_vars ?? {}) as Partial<InviteVars>);
 
   const { data: guests } = await supabase
     .from('guests').select('*').in('id', guestIds).eq('event_id', eventId)
     .returns<Guest[]>();
   const guestMap = new Map((guests ?? []).map((g) => [g.id, g]));
+
+  if (!hasInviteVars(vars)) {
+    return guestIds.map((id) => ({
+      guestId: id, name: guestMap.get(id)?.name ?? '', ok: false,
+      reason: RESERVE_REASONS.INVITE_TEXT_MISSING,
+    }));
+  }
 
   // 1) الحجز الذرّي — من حصة الداعي إن وُجد سياقه، وإلا من رصيد المناسبة
   const { data: reserved, error: reserveError } = inviterCtx
@@ -137,15 +153,7 @@ export async function sendInvitations(
   // 2) الإرسال الفعلي
   const provider = await getWhatsAppProvider();
 
-  // قالب الداعي إن وُجد، وإلا قالب المناسبة
-  let activeTemplate = template;
-  if (inviterCtx && inviterCtx.templateId !== event.template_id) {
-    const { data: t } = await supabase
-      .from('templates').select('*').eq('id', inviterCtx.templateId).maybeSingle<Template>();
-    if (t) activeTemplate = t;
-  }
-
-  const templateName = activeTemplate?.meta_template_name || 'barqiyah_invite_default';
+  const { metaName: templateName } = await loadDefaultTemplate(supabase);
 
   // سطر الموعد والمكان: من حقول المناسبة وحدها، مصدره واحد لكل الدعاة
   const eventLine = formatEventLine({
@@ -156,11 +164,24 @@ export async function sendInvitations(
     venue: event.venue,
   });
 
-  const bodyParams = inviterCtx
-    ? [inviterCtx.inviteVars.host, inviterCtx.inviteVars.occasion, eventLine]
-    : buildBodyParams(event, activeTemplate);
+  // دائماً ثلاثة متغيّرات — للمالك والداعي والمحاكاة وMeta
+  const bodyParams = buildInviteParams(vars, eventLine);
 
-  const headerImage = inviterCtx?.imageUrl ?? event.image_url ?? activeTemplate?.image_url ?? null;
+  // الداعي بصورته، والمالك بصورته — لا fallback إلى صورة قالب.
+  // المرفوعة رابط Storage العام، والمولَّدة مسار التوليد ببصمة البيانات.
+  const headerImage = resolveHeaderImage(
+    inviterCtx
+      ? {
+          kind: 'inviter', id: inviterCtx.inviterId,
+          imageMode: inviterCtx.imageMode, imageUrl: inviterCtx.imageUrl,
+          version: [vars.host, vars.occasion, event.event_date, event.event_time, event.venue],
+        }
+      : {
+          kind: 'event', id: event.id,
+          imageMode: event.image_mode, imageUrl: event.image_url,
+          version: [vars.host, vars.occasion, event.event_date, event.event_time, event.venue, event.host_name],
+        },
+  );
 
   for (const row of toSend) {
     const guest = guestMap.get(row.guest_id);
@@ -184,7 +205,7 @@ export async function sendInvitations(
       status: result.ok ? 'sent' : 'failed',
       message_id: result.messageId ?? null, error: result.error ?? null,
       payload: {
-        rendered: inviterCtx ? renderInvite(inviterCtx.inviteVars, eventLine) : null,
+        rendered: renderInvite(vars, eventLine),
         rsvp_url: appUrl(`/rsvp/${guest.invite_token}`),
         body_params: bodyParams,
       },
@@ -296,6 +317,47 @@ export async function sendQrToGuest(guestId: string): Promise<{ ok: boolean; err
 }
 
 /* ============================================================
+   رابط انضمام الداعي عبر واتساب (المرحلة ٦)
+   ============================================================ */
+
+/** اسم قالب رابط الانضمام في Meta: متغيّران — اسم المناسبة والرابط. */
+export const INVITER_INVITE_TEMPLATE = 'barqiyah_inviter_invite';
+
+/**
+ * يرسل للداعي الذي لا حساب له رابط انضمامه عبر قالب barqiyah_inviter_invite
+ * ويسجّله في message_logs بـ kind='inviter_invite'. في المحاكاة يُطبع.
+ */
+export async function sendInviterInviteLink(
+  inviter: Pick<Inviter, 'id' | 'event_id' | 'name' | 'phone' | 'invite_token'>,
+  event: Pick<EventRow, 'internal_name' | 'host_name'>,
+): Promise<{ ok: boolean; error?: string }> {
+  if (!inviter.phone) return { ok: false, error: 'الداعي بلا جوال.' };
+
+  const provider = await getWhatsAppProvider();
+  const link = appUrl(`/join/${inviter.invite_token}`);
+  const eventName = event.internal_name || event.host_name;
+
+  const result = await provider.sendTemplate({
+    to: inviter.phone,
+    templateName: INVITER_INVITE_TEMPLATE,
+    languageCode: 'ar',
+    bodyParams: [eventName, link],
+  });
+
+  await logMessage({
+    event_id: inviter.event_id, guest_id: null, inviter_id: inviter.id, kind: 'inviter_invite',
+    template_name: INVITER_INVITE_TEMPLATE,
+    meta_message_id: result.messageId ?? null,
+    provider: result.provider, to_phone: inviter.phone,
+    status: result.ok ? 'sent' : 'failed',
+    message_id: result.messageId ?? null, error: result.error ?? null,
+    payload: { join_url: link, event_name: eventName, inviter_name: inviter.name },
+  });
+
+  return { ok: result.ok, error: result.error };
+}
+
+/* ============================================================
    التذكير — رسالة واحدة لمن لم يردّ (SPEC §4.1)
    ============================================================ */
 
@@ -344,27 +406,49 @@ export async function sendReminders(
     venue: event.venue,
   });
 
+  // {{1}} الجهة الداعية كما كتبها صاحب الدعوة: الداعي لمدعوّيه والمالك لمدعوّيه
+  const ownerVars = (event.invite_vars ?? {}) as Partial<InviteVars>;
+  const inviterIds = Array.from(new Set(due.map((g) => g.inviter_id).filter(Boolean))) as string[];
+  const { data: inviterRows } = inviterIds.length
+    ? await supabase.from('inviters').select('id, profile_id, invite_vars').in('id', inviterIds)
+    : { data: [] as { id: string; profile_id: string | null; invite_vars: Record<string, string> }[] };
+  const hostFor = (inviterId: string | null): string => {
+    const row = (inviterRows ?? []).find((r) => r.id === inviterId);
+    const v = (row?.invite_vars ?? {}) as Partial<InviteVars>;
+    if (row && row.profile_id !== event.owner_id && v.host?.trim()) return v.host.trim();
+    return ownerVars.host?.trim() || event.host_name;
+  };
+
+  // التذكير قالب معتمد لا نصّ حرّ (قرار محسوم): {{1}} الداعي، {{2}} الموعد
+  const templateName = await getReminderTemplateName();
   const provider = await getWhatsAppProvider();
   let sent = 0;
   let failed = 0;
 
   for (const g of due) {
-    const text =
-      `تذكير بدعوة ${event.host_name} — ${eventLine}.\n` +
-      'هل ستشرّفنا بالحضور؟ ردّ بـ«نعم» أو «أعتذر».';
+    const { data: guestRow } = await supabase
+      .from('guests').select('invite_token').eq('id', g.guest_id).maybeSingle<{ invite_token: string }>();
+    const bodyParams = [hostFor(g.inviter_id), eventLine];
 
-    const res = await provider.sendText({ to: g.phone, text });
+    const res = await provider.sendTemplate({
+      to: g.phone,
+      templateName,
+      languageCode: 'ar',
+      bodyParams,
+      buttonPayloads: guestRow ? buildButtonPayloads(guestRow.invite_token) : undefined,
+    });
     if (res.ok) sent += 1;
     else failed += 1;
 
     await logMessage({
-      event_id: eventId,
-      guest_id: g.guest_id,
-      direction: 'outbound',
-      template_name: 'reminder',
+      event_id: eventId, guest_id: g.guest_id, kind: 'reminder',
+      inviter_id: g.inviter_id ?? inviterId ?? null,
+      template_name: templateName,
       meta_message_id: res.messageId ?? null,
+      provider: res.provider, to_phone: g.phone,
       status: res.ok ? 'sent' : 'failed',
-      error_code: res.ok ? null : (res.error ?? 'SEND_FAILED'),
+      message_id: res.messageId ?? null, error: res.error ?? null,
+      payload: { body_params: bodyParams, rsvp_url: guestRow ? appUrl(`/rsvp/${guestRow.invite_token}`) : null },
     });
   }
 
