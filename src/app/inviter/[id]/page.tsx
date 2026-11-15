@@ -9,11 +9,11 @@ import {
   PageHeader, Alert, SecLabel, QuotaBar, StatTriple, TodoCard, PolicyNote, Crumb,
 } from '@/components/ui';
 import { InviteEditor } from './InviteEditor';
-import { InviterGuests } from './InviterGuests';
+import { InviterGuests, type InviterManualSetup } from './InviterGuests';
 import { InviterRemindButton } from './RemindButton';
 import { formatDate, formatEventLine, formatHijri, formatNumber, formatTime } from '@/lib/format';
 import { publicImageUrl, resolveHeaderImage } from '@/lib/inviteImage';
-import { isVideoPath } from '@/lib/inviteMedia';
+import { parseManualMessage, parseSignBy } from '@/lib/manualMessage';
 import { OCCASION_LABELS, type Contact, type EventBalance, type EventRow, type Guest, type Inviter } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -49,7 +49,7 @@ export default async function InviterWorkspace({
   // مساحة الداعي لصاحبها وحده
   if (!inviter || inviter.profile_id !== user.id) redirect('/app');
 
-  const [{ data: event }, { data: balanceRows }, { data: guestsData }, { data: contactsData }] =
+  const [{ data: event }, { data: balanceRows }, { data: guestsData }, { data: contactsData }, { data: ownerNameData }] =
     await Promise.all([
       supabase.from('events').select('*').eq('id', inviter.event_id).maybeSingle<EventRow>(),
       supabase.rpc('inviter_balance', { p_inviter_id: id }),
@@ -57,6 +57,8 @@ export default async function InviterWorkspace({
         .order('created_at', { ascending: false }).returns<Guest[]>(),
       supabase.from('contacts').select('*').eq('owner_id', user.id)
         .order('name', { ascending: true }).returns<Contact[]>(),
+      // اسم حساب صاحب المناسبة للتوقيع — RLS تمنع قراءة profiles مباشرة
+      supabase.rpc('event_owner_name', { p_event_id: inviter.event_id }),
     ]);
 
   if (!event) redirect('/app');
@@ -76,13 +78,26 @@ export default async function InviterWorkspace({
   const canSend = event.status === 'active' || ((event.status === 'unpaid' || event.status === 'pending') && trialLeft > 0);
   const active = tab === 'guests' ? 'guests' : 'invite';
 
-  const eventLine = formatEventLine({
+  const dateParts = {
     dateGregorian: event.event_date,
     dateHijri: event.event_date_hijri,
     weekday: event.event_weekday,
     time: event.event_time,
-    venue: event.venue,
-  });
+  };
+  const eventLine = formatEventLine({ ...dateParts, venue: event.venue });
+
+  // رسالة واتساب اليدوية: التوقيع من الحسابات (صاحب المناسبة والداعي الفرعي)
+  const manual: InviterManualSetup | null = vars.host && vars.occasion
+    ? {
+        occasion: vars.occasion,
+        date: formatEventLine({ ...dateParts, venue: null }),
+        venue: event.venue ?? '',
+        ownerName: (typeof ownerNameData === 'string' && ownerNameData.trim()) || event.host_name,
+        subName: user.profile.full_name?.trim() || inviter.name,
+        config: parseManualMessage(inviter.manual_message),
+        signBy: parseSignBy(inviter.sign_by),
+      }
+    : null;
 
   const days = daysUntil(event.event_date);
   const noResponse = guests.filter((g) => g.status === 'sent').length;
@@ -273,10 +288,7 @@ export default async function InviterWorkspace({
           canSend={canSend}
           ready={ready}
           appUrl={appUrl()}
-          manual={vars.host && vars.occasion ? {
-            host: vars.host, occasion: vars.occasion, eventLine,
-            hasVideo: inviter.image_mode === 'uploaded' && isVideoPath(inviter.image_url),
-          } : null}
+          manual={manual}
         />
       )}
 

@@ -4,11 +4,11 @@ import { PageHeader } from '@/components/ui';
 import { ActionForm, SubmitButton } from '@/components/ActionForm';
 import { BalancePanel } from '@/components/BalancePanel';
 import { addGuest, importGuests } from '../actions';
-import { GuestsTable } from './GuestsTable';
+import { OwnerGuestsSection, type OwnerManualSetup } from './OwnerGuestsSection';
 import { appUrl } from '@/lib/env';
 import { formatEventLine } from '@/lib/format';
 import { hasInviteVars, type InviteVars } from '@/lib/inviteVars';
-import { isVideoPath } from '@/lib/inviteMedia';
+import { parseManualMessage } from '@/lib/manualMessage';
 import type { EventRow, Guest, Inviter } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -32,23 +32,19 @@ export default async function GuestsPage({ params }: { params: Promise<{ id: str
   const trialLeft = user.profile.trial_invites_left ?? 0;
   const canSend = e.status === 'active' || ((e.status === 'unpaid' || e.status === 'pending') && trialLeft > 0);
 
-  // الإرسال اليدوي عبر واتساب (الحل المؤقّت): نصّ المالك وسطر الموعد
+  // الإرسال اليدوي عبر واتساب (الحل المؤقّت): من حساب صاحب المناسبة تصدر
+  // الدعوة باسمه فقط (من الحساب لا من إدخال جديد)، ونصّ الرسالة من events.manual_message
   const ownerVars = (e.invite_vars ?? {}) as Partial<InviteVars>;
-  const isVideo = (mode: string | null | undefined, path: string | null) => mode === 'uploaded' && isVideoPath(path);
-  const manual = hasInviteVars(ownerVars)
+  const dateParts = {
+    dateGregorian: e.event_date, dateHijri: e.event_date_hijri, weekday: e.event_weekday, time: e.event_time,
+  };
+  const manual: OwnerManualSetup | null = hasInviteVars(ownerVars)
     ? {
-        host: ownerVars.host,
         occasion: ownerVars.occasion,
-        eventLine: formatEventLine({
-          dateGregorian: e.event_date, dateHijri: e.event_date_hijri, weekday: e.event_weekday,
-          time: e.event_time, venue: e.venue,
-        }),
-        ownerHasVideo: isVideo(e.image_mode, e.image_url),
-        // كما في صفحة المدعو: مدعو الداعي الفرعي يرى مرفق داعيه
-        videoInviterIds: inviters
-          .filter((i) => i.profile_id !== e.owner_id && Boolean((i.invite_vars as Partial<InviteVars>)?.host)
-            && isVideo(i.image_mode, i.image_url))
-          .map((i) => i.id),
+        date: formatEventLine({ ...dateParts, venue: null }),
+        venue: e.venue ?? '',
+        ownerName: user.profile.full_name?.trim() || e.host_name,
+        config: parseManualMessage(e.manual_message),
       }
     : null;
 
@@ -61,7 +57,7 @@ export default async function GuestsPage({ params }: { params: Promise<{ id: str
 
       <div className="grid gap-5 lg:grid-cols-[1fr_340px] items-start">
         <div className="order-2 lg:order-1">
-          <GuestsTable
+          <OwnerGuestsSection
             eventId={id}
             guests={guests}
             inviters={inviters}

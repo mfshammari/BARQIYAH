@@ -9,6 +9,9 @@ import { formatNumber, formatHijri, formatWeekday, normalizePhone, isValidPhone 
 import { hasTwoCelebrants, type EventRow, type Guest, type Inviter, type OccasionType, type Package } from '@/lib/types';
 import { validateInviteVars, type InviteVars } from '@/lib/inviteVars';
 import { readImageFields } from '@/lib/inviteImage';
+import {
+  TEMPLATE_IDS, parseManualMessage, templateText, validateTemplateText, type ManualMessageConfig,
+} from '@/lib/manualMessage';
 import { getPaymentProvider } from '@/lib/payments';
 import { appUrl } from '@/lib/env';
 import { redirect } from 'next/navigation';
@@ -435,6 +438,25 @@ export async function saveEventInvite(_prev: ActionState, formData: FormData): P
   revalidatePath(`/e/${eventId}/invite`);
   revalidateEvent(eventId);
   return { notice: 'حُفظت دعوتك — جاهزة للإرسال.' };
+}
+
+/**
+ * نصّ رسالة واتساب اليدوية للمالك — يُحفظ لكل مناسبة (events.manual_message).
+ * يُقرأ بأمان ويُتحقّق من كل قالب قبل الحفظ.
+ */
+export async function saveManualMessage(eventId: string, config: ManualMessageConfig): Promise<ActionState> {
+  const { supabase } = await guardEvent(eventId);
+  const clean = parseManualMessage(config);
+  for (const id of TEMPLATE_IDS) {
+    const issue = validateTemplateText(templateText(clean, id));
+    if (issue) return { error: issue };
+  }
+
+  const { error } = await supabase.from('events').update({ manual_message: clean }).eq('id', eventId);
+  if (error) return { error: 'تعذّر حفظ نصّ الرسالة.' };
+
+  revalidateEvent(eventId);
+  return { notice: 'حُفظ نصّ الرسالة.' };
 }
 
 // ————————————————————— حسابات المسح —————————————————————

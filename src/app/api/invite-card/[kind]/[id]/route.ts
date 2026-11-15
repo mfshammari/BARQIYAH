@@ -1,9 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createAdminClient, adminClientAvailable } from '@/lib/supabase/admin';
-import { buildInviteCardSvg } from '@/lib/inviteCard';
+import { inviteCardSvg, loadInviteCardSource } from '@/lib/inviteCardData';
 import { renderInviteCardPng } from '@/lib/inviteCardRender';
-import { formatHijri, formatTime, formatWeekday } from '@/lib/format';
-import type { EventRow, Inviter } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -27,38 +25,11 @@ export async function GET(
     return new NextResponse('Service unavailable', { status: 503 });
   }
 
-  const admin = createAdminClient();
-  let event: EventRow | null = null;
-  let vars: { host?: string; occasion?: string } = {};
-
-  if (kind === 'event') {
-    const { data } = await admin.from('events').select('*').eq('id', id).maybeSingle<EventRow>();
-    event = data ?? null;
-    vars = (event?.invite_vars ?? {}) as typeof vars;
-  } else {
-    const { data: inviter } = await admin.from('inviters').select('*').eq('id', id).maybeSingle<Inviter>();
-    if (inviter) {
-      const { data } = await admin.from('events').select('*').eq('id', inviter.event_id).maybeSingle<EventRow>();
-      event = data ?? null;
-      vars = (inviter.invite_vars ?? {}) as typeof vars;
-    }
-  }
-
-  if (!event) return new NextResponse('Not found', { status: 404 });
-
-  const weekday = event.event_weekday || formatWeekday(event.event_date);
-  const hijri = event.event_date_hijri || formatHijri(event.event_date);
-
-  const svg = buildInviteCardSvg({
-    host: vars.host?.trim() || event.host_name,
-    occasion: vars.occasion?.trim() || '',
-    dateLine: [weekday, hijri].filter(Boolean).join(' '),
-    venue: event.venue,
-    time: formatTime(event.event_time) || null,
-  });
+  const src = await loadInviteCardSource(createAdminClient(), kind, id);
+  if (!src) return new NextResponse('Not found', { status: 404 });
 
   try {
-    const png = renderInviteCardPng(svg);
+    const png = renderInviteCardPng(inviteCardSvg(src));
     return new NextResponse(new Uint8Array(png), {
       status: 200,
       headers: {

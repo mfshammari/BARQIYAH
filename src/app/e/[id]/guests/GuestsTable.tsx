@@ -6,7 +6,8 @@ import { SubmitButton } from '@/components/ActionForm';
 import { formatDateTime } from '@/lib/format';
 import { GUEST_STATUS_LABELS, type Guest, type GuestStatus, type Inviter } from '@/lib/types';
 import { WhatsAppSendLink } from '@/components/WhatsAppSendLink';
-import { buildManualMessage, buildWhatsAppUrl } from '@/lib/manualInvite';
+import { buildWhatsAppUrl } from '@/lib/manualInvite';
+import { buildMessage } from '@/lib/manualMessage';
 import { deleteGuest, markGuestManualSent, sendGuestInvitations, updateGuest, type ActionState } from '../actions';
 
 const FILTERS: { key: GuestStatus | 'all'; label: string }[] = [
@@ -22,8 +23,8 @@ const FILTERS: { key: GuestStatus | 'all'; label: string }[] = [
 export function GuestsTable({
   eventId, guests, inviters, appUrl, canSend, manual,
 }: {
-  /** نصّ دعوة المالك للإرسال اليدوي عبر واتساب — null إن لم يكتبه بعد */
-  manual: { host: string; occasion: string; eventLine: string; ownerHasVideo: boolean; videoInviterIds: string[] } | null;
+  /** رسالة واتساب اليدوية: المتغيّرات ونصّ القالب المختار — null إن لم يكتب المالك دعوته بعد */
+  manual: { occasion: string; date: string; venue: string; signature: string; text: string } | null;
   eventId: string;
   guests: Guest[];
   inviters: Inviter[];
@@ -200,6 +201,11 @@ export function GuestsTable({
                       {g.reminded_at ? (
                         <span className="badge border border-line bg-panel text-muted">ذُكّر</span>
                       ) : null}
+                      {g.opened_at ? (
+                        <span className="badge bg-brand-soft text-brand" title={`فتح الرابط ${formatDateTime(g.opened_at)}`}>
+                          فتح الدعوة
+                        </span>
+                      ) : null}
                     </div>
                   </td>
                   <td className="text-muted text-[12px] num">
@@ -218,11 +224,10 @@ export function GuestsTable({
 
                       {manual && ((g.status === 'draft' && canSend) || g.status === 'sent') ? (
                         <WhatsAppSendLink
-                          href={buildWhatsAppUrl(g.phone, buildManualMessage({
-                            guestName: g.name, occasion: manual.occasion, eventLine: manual.eventLine,
-                            signature: manual.host, link: `${appUrl}/rsvp/${g.invite_token}`,
-                            hasVideo: g.inviter_id && manual.videoInviterIds.includes(g.inviter_id)
-                              ? true : manual.ownerHasVideo,
+                          href={buildWhatsAppUrl(g.phone, buildMessage(manual.text, {
+                            guestName: g.name, occasion: manual.occasion, date: manual.date,
+                            venue: manual.venue, signature: manual.signature,
+                            link: `${appUrl}/rsvp/${g.invite_token}`,
                           }))}
                           markSent={g.status === 'draft' ? () => markGuestManualSent(eventId, g.id) : undefined}
                         />

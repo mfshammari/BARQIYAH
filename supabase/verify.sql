@@ -121,7 +121,16 @@ with checks(ord, migration, proves, ok) as (
 
     (21, '0021_invite_video', 'مرفق الدعوة: السماح برفع فيديو (٥٠ MB)',
       exists (select 1 from storage.buckets
-               where id = 'invite-images' and 'video/mp4' = any(allowed_mime_types)))
+               where id = 'invite-images' and 'video/mp4' = any(allowed_mime_types))),
+
+    (22, '0022_manual_whatsapp', 'رسالة واتساب اليدوية: القوالب والتوقيع وفتح الدعوة',
+      exists (select 1 from information_schema.columns
+               where table_schema='public' and table_name='events' and column_name='manual_message')
+      and exists (select 1 from information_schema.columns
+                   where table_schema='public' and table_name='inviters' and column_name='sign_by')
+      and exists (select 1 from information_schema.columns
+                   where table_schema='public' and table_name='guests' and column_name='opened_at')
+      and to_regproc('public.event_owner_name') is not null)
 )
 select
   case when ok then '✓' else '✗' end as "حالة",
@@ -184,7 +193,10 @@ with checks(ok) as (
               where table_schema='public' and table_name='profiles' and column_name='trial_invites_left')
       and to_regproc('public.consume_trial_invite') is not null),
     (to_regclass('public.webhook_events') is not null),
-    (to_regproc('public.expire_stale_invites') is not null)
+    (to_regproc('public.expire_stale_invites') is not null),
+    (exists (select 1 from information_schema.columns
+              where table_schema='public' and table_name='guests' and column_name='opened_at')
+      and to_regproc('public.event_owner_name') is not null)
 )
 select
   count(*) filter (where ok) || ' من ' || count(*) || ' ترحيل مطبَّق'

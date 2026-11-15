@@ -6,6 +6,10 @@ import { requireUser } from '@/lib/auth';
 import { normalizePhone, isValidPhone, formatNumber } from '@/lib/format';
 import { validateInviteVars, hasInviteVars, type InviteVars } from '@/lib/inviteVars';
 import { readImageFields } from '@/lib/inviteImage';
+import {
+  TEMPLATE_IDS, parseManualMessage, parseSignBy, templateText, validateTemplateText,
+  type ManualMessageConfig, type SignBy,
+} from '@/lib/manualMessage';
 import { sendInvitations, sendReminders } from '@/lib/invitations';
 import type { Guest, Inviter } from '@/lib/types';
 
@@ -50,6 +54,30 @@ export async function saveInviteContent(_prev: ActionState, formData: FormData):
   if (error) return { error: 'تعذّر حفظ دعوتك.' };
   revalidateInviter(inviterId);
   return { notice: 'حُفظت دعوتك — جاهزة للإرسال.' };
+}
+
+/**
+ * نصّ رسالة واتساب اليدوية وتوقيع الداعي الفرعي — يملكهما الداعي وحده
+ * (inviters.manual_message وsign_by؛ حاجز guard_inviter_fields يمنع المالك).
+ */
+export async function saveInviterManualMessage(
+  inviterId: string, config: ManualMessageConfig, signBy: SignBy,
+): Promise<ActionState> {
+  const { supabase } = await guardInviter(inviterId);
+  const clean = parseManualMessage(config);
+  for (const id of TEMPLATE_IDS) {
+    const issue = validateTemplateText(templateText(clean, id));
+    if (issue) return { error: issue };
+  }
+
+  const { error } = await supabase
+    .from('inviters')
+    .update({ manual_message: clean, sign_by: parseSignBy(signBy) })
+    .eq('id', inviterId);
+  if (error) return { error: 'تعذّر حفظ نصّ الرسالة.' };
+
+  revalidateInviter(inviterId);
+  return { notice: 'حُفظ نصّ الرسالة والتوقيع.' };
 }
 
 /** الداعي يضيف مدعواً إلى قائمته وحده. */
