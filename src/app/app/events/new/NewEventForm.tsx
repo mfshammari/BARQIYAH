@@ -11,6 +11,8 @@ import { defaultOccasionText, validateInviteVars, renderInvite } from '@/lib/inv
 import { CELEBRANT_LABELS, OCCASION_LABELS, hasTwoCelebrants, type OccasionType, type PackageCatalog } from '@/lib/types';
 
 const STEPS = ['التفاصيل', 'الباقة', 'دعوتك', 'الدفع'] as const;
+/** الحساب المعفى: بلا باقة وبلا دفع */
+const HOSPITALITY_STEPS = ['التفاصيل', 'دعوتك'] as const;
 
 function Submit() {
   const { pending } = useFormStatus();
@@ -21,7 +23,7 @@ function Submit() {
   );
 }
 
-export function NewEventForm({ catalog, uid }: { catalog: PackageCatalog; uid: string }) {
+export function NewEventForm({ catalog, uid, hospitality = false }: { catalog: PackageCatalog; uid: string; hospitality?: boolean }) {
   const [state, formAction] = useActionState<ActionState, FormData>(createEvent, {});
   const [step, setStep] = useState(0);
 
@@ -59,7 +61,10 @@ export function NewEventForm({ catalog, uid }: { catalog: PackageCatalog; uid: s
       <form action={formAction} className="space-y-5">
         {/* شريط الخطوات */}
         <ol className="flex flex-wrap gap-2">
-          {STEPS.map((label, i) => (
+          {(hospitality ? HOSPITALITY_STEPS : STEPS).map((label, idx) => {
+            // في وضع الضيافة تبقى فهارس الأقسام كما هي (٠ التفاصيل، ٢ دعوتك)
+            const i = hospitality ? [0, 2][idx] : idx;
+            return (
             <li key={label}>
               <button
                 type="button"
@@ -69,10 +74,11 @@ export function NewEventForm({ catalog, uid }: { catalog: PackageCatalog; uid: s
                     : 'border border-line bg-surface text-muted hover:text-ink'
                 }`}
               >
-                <span className="num">{['١','٢','٣','٤'][i]}</span> · {label}
+                <span className="num">{['١','٢','٣','٤'][idx]}</span> · {label}
               </button>
             </li>
-          ))}
+            );
+          })}
         </ol>
 
         {state.error ? (
@@ -143,7 +149,7 @@ export function NewEventForm({ catalog, uid }: { catalog: PackageCatalog; uid: s
             <p className="hint">يميّزها في قائمة مناسباتك ولا يظهر للمدعوين.</p>
           </div>
 
-          <button type="button" className="btn-primary" onClick={() => setStep(1)} disabled={!detailsReady}>
+          <button type="button" className="btn-primary" onClick={() => setStep(hospitality ? 2 : 1)} disabled={!detailsReady}>
             التالي: الباقة
           </button>
         </section>
@@ -192,11 +198,18 @@ export function NewEventForm({ catalog, uid }: { catalog: PackageCatalog; uid: s
           </div>
 
           <div className="flex gap-2">
-            <button type="button" className="btn-ghost" onClick={() => setStep(1)}>رجوع</button>
+            <button type="button" className="btn-ghost" onClick={() => setStep(hospitality ? 0 : 1)}>رجوع</button>
+            {hospitality ? <span className={inviteReady ? "" : "pointer-events-none opacity-50"}><Submit /></span> : (
             <button type="button" className="btn-primary" onClick={() => setStep(3)} disabled={!inviteReady}>
               التالي: الدفع
             </button>
+            )}
           </div>
+          {hospitality ? (
+            <p className="rounded-xl bg-brand-soft px-4 py-3 text-[13px] text-brand">
+              حسابك ضمن <b>باقة ضيافة</b>: تُنشأ المناسبة مفعّلة فورًا بلا باقة ولا دفع، ويُخصم كل مدعو تُرسل له من رصيد الضيافة.
+            </p>
+          ) : null}
         </section>
 
         {/* ————— ٤) الدفع ————— */}

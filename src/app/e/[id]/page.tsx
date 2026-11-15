@@ -9,6 +9,9 @@ import { formatHijri, formatNumber, formatEventLine } from '@/lib/format';
 import { metaConfigured } from '@/lib/env';
 import { OCCASION_LABELS, type EventRow, type Guest } from '@/lib/types';
 import { RemindButton } from './RemindButton';
+import { HospitalityBalanceCard } from '@/components/exemptions/HospitalityBalanceCard';
+import { fetchExemption } from '@/lib/exemptions/server';
+import { exemptionStatus, remainingOf } from '@/lib/exemptions/logic';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +28,9 @@ export default async function EventDashboard({ params }: { params: Promise<{ id:
   const { event, supabase, user } = await requireEventAccess(id);
   const e = event as EventRow;
   const balance = await fetchEventBalance(supabase, id);
+  // مناسبة ضيافة: الرصيد من سقف الإعفاء لا من مقاعد الباقة
+  const exemption = e.exemption_id ? await fetchExemption(supabase, e.owner_id) : null;
+  const hospitalityBlocked = Boolean(exemption) && exemptionStatus(exemption!) !== 'active';
   const trialLeft = user.profile.trial_invites_left ?? 0;
   const days = daysUntil(e.event_date);
 
@@ -118,22 +124,31 @@ export default async function EventDashboard({ params }: { params: Promise<{ id:
           }
         />
         <TodoCard
-          count={formatNumber(balance.available)}
-          label="مقعداً متاحاً"
+          count={formatNumber(exemption ? (hospitalityBlocked ? 0 : remainingOf(exemption)) : balance.available)}
+          label={exemption ? 'دعوة متبقية في باقة الضيافة' : 'مقعداً متاحاً'}
           action={<Link href={`/e/${id}/guests`} className="btn-ghost btn-sm">أضف مدعوين</Link>}
         />
       </div>
 
-      <SecLabel>
-        الرصيد بالمقاعد — باقة <span className="num">{formatNumber(balance.seats_quota)}</span> مقعد
-      </SecLabel>
-      <StatTriple
-        items={[
-          { tone: 'g', label: 'متاح', value: formatNumber(balance.available) },
-          { tone: 'd', label: 'محجوز (بانتظار الرد)', value: formatNumber(balance.held) },
-          { tone: 'n', label: 'مؤكّد', value: formatNumber(balance.confirmed) },
-        ]}
-      />
+      {exemption ? (
+        <>
+          <SecLabel>الرصيد — باقة ضيافة (إعفاء من الدفع)</SecLabel>
+          <HospitalityBalanceCard exemption={exemption} blocked={hospitalityBlocked} packagesHref={`/e/${id}/info`} />
+        </>
+      ) : (
+        <>
+          <SecLabel>
+            الرصيد بالمقاعد — باقة <span className="num">{formatNumber(balance.seats_quota)}</span> مقعد
+          </SecLabel>
+          <StatTriple
+            items={[
+              { tone: 'g', label: 'متاح', value: formatNumber(balance.available) },
+              { tone: 'd', label: 'محجوز (بانتظار الرد)', value: formatNumber(balance.held) },
+              { tone: 'n', label: 'مؤكّد', value: formatNumber(balance.confirmed) },
+            ]}
+          />
+        </>
+      )}
 
       <div className="mt-4">
         <MiniStats

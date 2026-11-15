@@ -10,7 +10,7 @@ export type EventStatus = 'pending' | 'unpaid' | 'active' | 'closed';
 export type TemplateStatus = 'draft' | 'under_review' | 'approved' | 'rejected';
 export type WhatsAppCategory = 'marketing' | 'utility';
 export type GuestStatus = 'draft' | 'sent' | 'accepted' | 'declined' | 'expired' | 'attended' | 'failed';
-export type TransactionType = 'purchase' | 'upgrade' | 'manual_activation' | 'trial';
+export type TransactionType = 'purchase' | 'upgrade' | 'manual_activation' | 'trial' | 'exemption';
 /** صورة الدعوة: تُولَّد من بيانات الدعوة، أو يرفعها المستخدم */
 export type ImageMode = 'generated' | 'uploaded';
 export type TransactionStatus = 'pending' | 'paid' | 'failed' | 'refunded';
@@ -116,7 +116,35 @@ export interface EventRow {
   image_url: string | null;
   seats_quota: number;
   status: EventStatus;
+  /** فُعّلت ضمن باقة ضيافة (إعفاء من الدفع) — الإرسال يُخصم من سقف الإعفاء */
+  exemption_id: string | null;
   created_at: string;
+}
+
+/** صفّ payment_exemptions كما في القاعدة */
+export interface PaymentExemptionRow {
+  id: string;
+  account_id: string;
+  cap: number;
+  used: number;
+  reason: 'trial' | 'partner' | 'compensation' | 'personal' | 'other';
+  note: string | null;
+  expires_at: string | null;
+  granted_by: string | null;
+  granted_at: string;
+  revoked_at: string | null;
+  created_at: string;
+}
+
+/** صفّ exemption_log — يُضاف إليه فقط */
+export interface ExemptionLogRow {
+  id: string;
+  account_id: string;
+  action: 'grant' | 'update' | 'revoke' | 'expire';
+  cap: number;
+  reason: 'trial' | 'partner' | 'compensation' | 'personal' | 'other';
+  admin_id: string | null;
+  at: string;
 }
 
 export interface Inviter {
@@ -322,4 +350,5 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   upgrade: 'ترقية',
   manual_activation: 'تفعيل يدوي',
   trial: 'دعوات تجريبية',
+  exemption: 'باقة ضيافة',
 };
