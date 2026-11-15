@@ -22,6 +22,7 @@
     "src/lib/roles.ts",
     "src/lib/packages.ts",
     "src/lib/inviteCard.ts",
+    "src/lib/inviteMedia.ts",
     "src/lib/safeNext.ts",
     "src/lib/whatsapp/signature.ts",
     "src/lib/eventRoles.ts",

@@ -2,18 +2,15 @@
 
 import { useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { checkInviteMedia, INVITE_MEDIA_ACCEPT, isVideoPath } from '@/lib/inviteMedia';
 import type { ImageMode } from '@/lib/types';
 
-const MAX_BYTES = 5 * 1024 * 1024;
-const ALLOWED: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-};
-
 /**
- * صورة الدعوة بخيارين: تُولَّد تلقائياً (افتراضي) أو يرفع المستخدم صورته
- * مباشرة إلى Storage من المتصفح. لا حقل «رابط صورة».
+ * مرفق الدعوة بخيارين: بطاقة تُولَّد تلقائياً (افتراضي) أو يرفع المستخدم
+ * صورته أو فيديو مباشرة إلى Storage من المتصفح. لا حقل «رابط صورة».
+ *
+ * الصورة المرفوعة تظهر أعلى رسالة واتساب. الفيديو لا يُرفق في الرسالة:
+ * يُعرض داخل رابط الدعوة، ورأس الرسالة يبقى البطاقة المولَّدة.
  *
  * يكتب حقلين مخفيين في نموذج الأب: image_mode وimage_url (مسار الملف).
  * `folder` = eventId أو inviterId (أو مؤقت قبل الإنشاء)، والمسار
@@ -42,6 +39,7 @@ export function InviteImagePicker({
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const isVideo = isVideoPath(path);
 
   const emit = (m: ImageMode, p: string | null, u: string | null) => onChange?.({ mode: m, path: p, publicUrl: u });
 
@@ -49,9 +47,9 @@ export function InviteImagePicker({
 
   const upload = async (file: File) => {
     setError(null);
-    const ext = ALLOWED[file.type];
-    if (!ext) { setError('نوع الملف غير مدعوم — استخدم JPG أو PNG أو WebP.'); return; }
-    if (file.size > MAX_BYTES) { setError('حجم الصورة أكبر من ٥ ميغابايت.'); return; }
+    const check = checkInviteMedia(file);
+    if (!check.ok) { setError(check.error); return; }
+    const { ext } = check;
 
     setUploading(true);
     try {
@@ -60,7 +58,7 @@ export function InviteImagePicker({
       const { error: upErr } = await supabase.storage
         .from('invite-images')
         .upload(key, file, { contentType: file.type, upsert: false, cacheControl: '3600' });
-      if (upErr) { setError('تعذّر رفع الصورة. حاول مرة أخرى.'); return; }
+      if (upErr) { setError('تعذّر رفع الملف. حاول مرة أخرى.'); return; }
 
       const { data } = supabase.storage.from('invite-images').getPublicUrl(key);
       setPath(key);
@@ -98,7 +96,7 @@ export function InviteImagePicker({
             mode === 'uploaded' ? 'border-brand bg-brand-soft text-brand' : 'border-line text-muted hover:text-ink'
           }`}
         >
-          أرفع صورتي
+          أرفع صورة أو فيديو
         </button>
       </div>
 
@@ -120,20 +118,34 @@ export function InviteImagePicker({
         <div className="space-y-2">
           {publicUrl ? (
             <div className="flex items-start gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={publicUrl} alt="صورتك" className="max-h-40 rounded-xl border border-line object-cover" />
+              {isVideo ? (
+                <video
+                  src={publicUrl} controls playsInline preload="metadata"
+                  className="max-h-56 max-w-[70%] rounded-xl border border-line bg-black"
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={publicUrl} alt="صورتك" className="max-h-40 rounded-xl border border-line object-cover" />
+              )}
               <button type="button" className="btn-ghost btn-sm" onClick={remove}>إزالة</button>
             </div>
           ) : null}
           <input
-            ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp"
+            ref={fileRef} type="file" accept={INVITE_MEDIA_ACCEPT}
             className="block w-full text-[13px] file:me-3 file:rounded-lg file:border-0 file:bg-panel file:px-3 file:py-1.5 file:text-[12.5px] file:font-semibold"
             disabled={uploading}
             onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); }}
           />
           <p className={`hint ${error ? 'text-danger' : ''}`}>
-            {error ?? (uploading ? 'جارٍ الرفع…' : 'JPG أو PNG أو WebP حتى ٥ ميغابايت. تظهر أعلى رسالة واتساب.')}
+            {error ?? (uploading
+              ? 'جارٍ الرفع… لا تغلق الصفحة.'
+              : 'صورة (JPG أو PNG أو WebP حتى ٥ ميغابايت) تظهر أعلى رسالة واتساب، أو فيديو (MP4 أو MOV حتى ٥٠ ميغابايت).')}
           </p>
+          {isVideo ? (
+            <p className="rounded-xl bg-brand-soft px-3 py-2 text-[12.5px] leading-6 text-brand">
+              الفيديو معتمد: لا يُرفق في رسالة واتساب، بل يشاهده المدعو داخل رابط دعوته. أعلى الرسالة تبقى بطاقة برقية.
+            </p>
+          ) : null}
         </div>
       )}
     </div>
