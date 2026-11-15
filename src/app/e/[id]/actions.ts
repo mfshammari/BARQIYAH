@@ -226,6 +226,18 @@ export async function sendGuestInvitations(_prev: ActionState, formData: FormDat
   return describeOutcomes(outcomes);
 }
 
+/**
+ * الحل المؤقّت: المالك أرسل دعوة هذا المدعو بنفسه من واتساب (رابط wa.me).
+ * يحجز مقاعده ويحوّله إلى «أُرسلت» بالقواعد نفسها — بلا رسالة من المنصة.
+ */
+export async function markGuestManualSent(eventId: string, guestId: string): Promise<ActionState> {
+  const { supabase } = await guardEvent(eventId);
+  const [outcome] = await sendInvitations(supabase, eventId, [guestId], undefined, { manual: true });
+  revalidateEvent(eventId);
+  if (!outcome) return { error: 'المدعو غير موجود.' };
+  return outcome.ok ? {} : { error: outcome.reason ?? 'تعذّر تفعيل الدعوة.' };
+}
+
 export async function updateGuest(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const eventId = String(formData.get('event_id') ?? '');
   const { supabase } = await guardEvent(eventId);

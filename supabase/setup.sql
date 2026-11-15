@@ -3451,6 +3451,31 @@ revoke all on function public.expire_stale_invites() from public, anon;
 grant execute on function public.expire_stale_invites() to authenticated, service_role;
 
 
+-- ==========================================================
+-- ملف: 0021_invite_video.sql
+-- ==========================================================
+
+-- ============================================================
+-- 0021 — مرفق الدعوة: السماح برفع فيديو
+--
+-- الفيديو لا يُرفق في رسالة واتساب (رأس القالب صورة): يُعرض داخل رابط
+-- الدعوة، ورأس الرسالة يبقى البطاقة المولَّدة. لا عمود جديد — النوع يُعرف
+-- من امتداد المسار في image_url مع image_mode = 'uploaded'.
+--
+-- حدّ الـbucket يرتفع إلى ٥٠ MB للفيديو؛ حدّ الصورة (٥ MB) يُفرض في الواجهة.
+-- ملاحظة: الحدّ العام للمشروع في Supabase (Storage ← Settings) يجب ألا يقل
+-- عن ٥٠ MB — وهو الافتراضي.
+-- ============================================================
+
+update storage.buckets
+   set file_size_limit = 52428800,
+       allowed_mime_types = array[
+         'image/jpeg', 'image/png', 'image/webp',
+         'video/mp4', 'video/quicktime', 'video/webm'
+       ]
+ where id = 'invite-images';
+
+
 -- ============================================================
 -- تم. الخطوة التالية:
 --   ١) أنشئ مستخدماً من Authentication ← Add user

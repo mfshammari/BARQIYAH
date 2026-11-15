@@ -179,6 +179,27 @@ export async function sendInviterInvitations(_prev: ActionState, formData: FormD
   return sent ? { notice: parts.join(' ') } : { error: parts.join(' ') };
 }
 
+/**
+ * الحل المؤقّت: الداعي أرسل دعوة هذا المدعو بنفسه من واتساب (رابط wa.me).
+ * تُحجز من حصته وتتحوّل إلى «أُرسلت» — بلا رسالة من المنصة.
+ */
+export async function markInviterGuestManualSent(inviterId: string, guestId: string): Promise<ActionState> {
+  const { supabase, inviter } = await guardInviter(inviterId);
+  if (!hasInviteVars(inviter.invite_vars as Partial<InviteVars>)) {
+    return { error: 'اكتب نصّ دعوتك قبل الإرسال.' };
+  }
+  const [outcome] = await sendInvitations(supabase, inviter.event_id, [guestId], {
+    inviterId,
+    inviteVars: inviter.invite_vars as unknown as InviteVars,
+    imageMode: inviter.image_mode ?? 'generated',
+    imageUrl: inviter.image_url,
+    reasons: REASONS,
+  }, { manual: true });
+  revalidateInviter(inviterId);
+  if (!outcome) return { error: 'المدعو غير موجود.' };
+  return outcome.ok ? {} : { error: outcome.reason ?? 'تعذّر تفعيل الدعوة.' };
+}
+
 export async function deleteInviterGuest(formData: FormData) {
   const inviterId = String(formData.get('inviter_id') ?? '');
   const { supabase } = await guardInviter(inviterId);

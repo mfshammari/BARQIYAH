@@ -13,6 +13,7 @@ import { InviterGuests } from './InviterGuests';
 import { InviterRemindButton } from './RemindButton';
 import { formatDate, formatEventLine, formatHijri, formatNumber, formatTime } from '@/lib/format';
 import { publicImageUrl, resolveHeaderImage } from '@/lib/inviteImage';
+import { isVideoPath } from '@/lib/inviteMedia';
 import { OCCASION_LABELS, type Contact, type EventBalance, type EventRow, type Guest, type Inviter } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -272,6 +273,10 @@ export default async function InviterWorkspace({
           canSend={canSend}
           ready={ready}
           appUrl={appUrl()}
+          manual={vars.host && vars.occasion ? {
+            host: vars.host, occasion: vars.occasion, eventLine,
+            hasVideo: inviter.image_mode === 'uploaded' && isVideoPath(inviter.image_url),
+          } : null}
         />
       )}
 

@@ -180,7 +180,7 @@ export function NewEventForm({ catalog, uid }: { catalog: PackageCatalog; uid: s
           />
 
           <div>
-            <span className="label">صورة الدعوة</span>
+            <span className="label">مرفق الدعوة</span>
             <InviteImagePicker
               uid={uid} folder="pending"
               generatedFallback={

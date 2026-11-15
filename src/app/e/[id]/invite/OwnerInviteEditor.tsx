@@ -6,6 +6,7 @@ import { InviteTextEditor } from '@/components/InviteTextEditor';
 import { InviteImagePicker } from '@/components/InviteImagePicker';
 import { saveEventInvite, type ActionState } from '../actions';
 import { validateInviteVars } from '@/lib/inviteVars';
+import { isVideoPath } from '@/lib/inviteMedia';
 import type { ImageMode } from '@/lib/types';
 
 /** «دعوتي» للمالك: متغيّرا القالب الموحّد + الصورة + المعاينة. */
@@ -24,7 +25,8 @@ export function OwnerInviteEditor({
   const [host, setHost] = useState(initial.host);
   const [occasion, setOccasion] = useState(initial.occasion);
   const [preview, setPreview] = useState<string | null>(
-    initial.imageMode === 'uploaded' ? initial.imagePublicUrl : initial.generatedUrl,
+    // الفيديو لا يُرفق في الرسالة — رأسها البطاقة المولَّدة
+    initial.imageMode === 'uploaded' && !isVideoPath(initial.imagePath) ? initial.imagePublicUrl : initial.generatedUrl,
   );
   const issues = validateInviteVars({ host, occasion });
 
@@ -66,12 +68,12 @@ export function OwnerInviteEditor({
         />
 
         <div>
-          <span className="label">صورة الدعوة</span>
+          <span className="label">مرفق الدعوة</span>
           <InviteImagePicker
             uid={uid} folder={eventId}
             initialMode={initial.imageMode} initialPath={initial.imagePath}
             initialPublicUrl={initial.imagePublicUrl} generatedUrl={initial.generatedUrl}
-            onChange={(v) => setPreview(v.mode === 'uploaded' ? v.publicUrl : initial.generatedUrl)}
+            onChange={(v) => setPreview(v.mode === 'uploaded' && !isVideoPath(v.path) ? v.publicUrl : initial.generatedUrl)}
           />
         </div>
 

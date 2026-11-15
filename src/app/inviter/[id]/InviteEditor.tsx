@@ -6,6 +6,7 @@ import { InviteTextEditor } from '@/components/InviteTextEditor';
 import { InviteImagePicker } from '@/components/InviteImagePicker';
 import { saveInviteContent, type ActionState } from './actions';
 import { validateInviteVars } from '@/lib/inviteVars';
+import { isVideoPath } from '@/lib/inviteMedia';
 import type { ImageMode } from '@/lib/types';
 
 /**
@@ -27,7 +28,8 @@ export function InviteEditor({
   const [host, setHost] = useState(initial.host);
   const [occasion, setOccasion] = useState(initial.occasion);
   const [preview, setPreview] = useState<string | null>(
-    initial.imageMode === 'uploaded' ? initial.imagePublicUrl : initial.generatedUrl,
+    // الفيديو لا يُرفق في الرسالة — رأسها البطاقة المولَّدة
+    initial.imageMode === 'uploaded' && !isVideoPath(initial.imagePath) ? initial.imagePublicUrl : initial.generatedUrl,
   );
   const issues = validateInviteVars({ host, occasion });
 
@@ -67,14 +69,14 @@ export function InviteEditor({
         />
 
         <div>
-          <span className="label">صورة دعوتك</span>
+          <span className="label">مرفق دعوتك</span>
           <InviteImagePicker
             uid={uid} folder={inviterId}
             initialMode={initial.imageMode} initialPath={initial.imagePath}
             initialPublicUrl={initial.imagePublicUrl} generatedUrl={initial.generatedUrl}
-            onChange={(v) => setPreview(v.mode === 'uploaded' ? v.publicUrl : initial.generatedUrl)}
+            onChange={(v) => setPreview(v.mode === 'uploaded' && !isVideoPath(v.path) ? v.publicUrl : initial.generatedUrl)}
           />
-          <p className="hint">لكل داعٍ صورته — تظهر أعلى الرسالة.</p>
+          <p className="hint">لكل داعٍ مرفقه — الصورة تظهر أعلى الرسالة، والفيديو داخل رابط الدعوة.</p>
         </div>
 
         <SubmitButton className={`btn-primary ${issues.length > 0 ? 'pointer-events-none opacity-50' : ''}`}>

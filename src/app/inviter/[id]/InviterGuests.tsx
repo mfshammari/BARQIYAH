@@ -7,12 +7,16 @@ import { formatDateTime, formatNumber } from '@/lib/format';
 import type { Contact, Guest } from '@/lib/types';
 import {
   addInviterGuest, addFromContacts, deleteInviterGuest,
-  sendInviterInvitations, type ActionState,
+  markInviterGuestManualSent, sendInviterInvitations, type ActionState,
 } from './actions';
+import { WhatsAppSendLink } from '@/components/WhatsAppSendLink';
+import { buildManualMessage, buildWhatsAppUrl } from '@/lib/manualInvite';
 
 export function InviterGuests({
-  inviterId, guests, contacts, canSend, appUrl, ready,
+  inviterId, guests, contacts, canSend, appUrl, ready, manual,
 }: {
+  /** نصّ دعوة الداعي للإرسال اليدوي عبر واتساب — null إن لم يكتبه بعد */
+  manual: { host: string; occasion: string; eventLine: string; hasVideo: boolean } | null;
   inviterId: string;
   guests: Guest[];
   contacts: Contact[];
@@ -100,6 +104,16 @@ export function InviterGuests({
                             <input type="hidden" name="guest_ids" value={g.id} />
                             <SubmitButton className="btn-soft btn-sm" pendingLabel="…">أرسل</SubmitButton>
                           </form>
+                        ) : null}
+                        {manual && ((g.status === 'draft' && canSend && ready) || g.status === 'sent') ? (
+                          <WhatsAppSendLink
+                            href={buildWhatsAppUrl(g.phone, buildManualMessage({
+                              guestName: g.name, occasion: manual.occasion, eventLine: manual.eventLine,
+                              signature: manual.host, link: `${appUrl}/rsvp/${g.invite_token}`,
+                              hasVideo: manual.hasVideo,
+                            }))}
+                            markSent={g.status === 'draft' ? () => markInviterGuestManualSent(inviterId, g.id) : undefined}
+                          />
                         ) : null}
                         {g.status === 'sent' ? (
                           <a href={`${appUrl}/rsvp/${g.invite_token}`} target="_blank" rel="noreferrer"
