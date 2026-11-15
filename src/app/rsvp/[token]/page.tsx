@@ -3,7 +3,7 @@ import { InviteCard } from '@/components/InviteCard';
 import { RsvpForm } from './RsvpForm';
 import { appUrl } from '@/lib/env';
 import { formatNumber } from '@/lib/format';
-import { resolveHeaderImage } from '@/lib/inviteImage';
+import { resolveHeaderImage, resolveInviteVideo } from '@/lib/inviteImage';
 import type { EventRow, Guest, Inviter } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -57,7 +57,12 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
     : { data: null as Inviter | null };
   const inviterVars = (inviter?.invite_vars ?? {}) as { host?: string; occasion?: string };
   const ownerVars = (event.invite_vars ?? {}) as { host?: string; occasion?: string };
-  const imageUrl = inviter && inviter.profile_id !== event.owner_id && inviterVars.host
+  const fromInviter = Boolean(inviter && inviter.profile_id !== event.owner_id && inviterVars.host);
+  // إن كان المرفق فيديو: يُعرض هنا داخل الرابط، والصورة (البطاقة المولَّدة) غلافه
+  const videoUrl = fromInviter && inviter
+    ? resolveInviteVideo({ imageMode: inviter.image_mode, imageUrl: inviter.image_url })
+    : resolveInviteVideo({ imageMode: event.image_mode, imageUrl: event.image_url });
+  const imageUrl = fromInviter && inviter
     ? resolveHeaderImage({
         kind: 'inviter', id: inviter.id, imageMode: inviter.image_mode, imageUrl: inviter.image_url,
         version: [inviterVars.host, inviterVars.occasion, event.event_date, event.event_time, event.venue],
@@ -75,6 +80,7 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
         eventDate={event.event_date}
         guestName={guest.name}
         imageUrl={imageUrl}
+        videoUrl={videoUrl}
       >
         {children}
       </InviteCard>

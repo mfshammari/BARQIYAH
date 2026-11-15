@@ -117,7 +117,11 @@ with checks(ord, migration, proves, ok) as (
       to_regproc('public.expire_stale_invites') is not null
       and exists (select 1 from information_schema.columns
                    where table_schema='public' and table_name='integration_settings'
-                     and column_name='reminder_template'))
+                     and column_name='reminder_template')),
+
+    (21, '0021_invite_video', 'مرفق الدعوة: السماح برفع فيديو (٥٠ MB)',
+      exists (select 1 from storage.buckets
+               where id = 'invite-images' and 'video/mp4' = any(allowed_mime_types)))
 )
 select
   case when ok then '✓' else '✗' end as "حالة",

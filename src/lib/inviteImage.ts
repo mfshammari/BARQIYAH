@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { appUrl, env } from '@/lib/env';
+import { isVideoPath } from '@/lib/inviteMedia';
 import type { ImageMode } from '@/lib/types';
 
 export const INVITE_IMAGES_BUCKET = 'invite-images';
@@ -36,10 +37,21 @@ export interface HeaderImageSource {
 /**
  * صورة رأس الرسالة: المرفوعة رابط Storage العام، والمولَّدة مسار التوليد.
  * الداعي بصورته، والمالك بصورته — لا fallback إلى صورة قالب.
+ *
+ * إن كان المرفوع فيديو فرأس الرسالة بطاقة برقية المولَّدة (رأس القالب صورة
+ * فقط)، والفيديو نفسه يُعرض داخل رابط الدعوة — انظر resolveInviteVideo.
  */
 export function resolveHeaderImage(src: HeaderImageSource): string | null {
-  if (src.imageMode === 'uploaded') {
+  if (src.imageMode === 'uploaded' && !isVideoPath(src.imageUrl)) {
     return src.imageUrl ? publicImageUrl(src.imageUrl) : null;
   }
   return appUrl(`/api/invite-card/${src.kind}/${src.id}?v=${imageVersion(src.version)}`);
+}
+
+/** رابط الفيديو المرفوع ليُعرض في صفحة المدعو — null إن لم يكن المرفق فيديو. */
+export function resolveInviteVideo(
+  src: Pick<HeaderImageSource, 'imageMode' | 'imageUrl'>,
+): string | null {
+  if (src.imageMode !== 'uploaded' || !src.imageUrl || !isVideoPath(src.imageUrl)) return null;
+  return publicImageUrl(src.imageUrl);
 }

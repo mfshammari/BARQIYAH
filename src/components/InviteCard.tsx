@@ -3,13 +3,15 @@ import { formatDate } from '@/lib/format';
 
 /** بطاقة الدعوة كما يراها المدعو — عربية، هادئة، ذهبية. */
 export function InviteCard({
-  hostName, occasion, eventDate, guestName, imageUrl, children,
+  hostName, occasion, eventDate, guestName, imageUrl, videoUrl, children,
 }: {
   hostName: string;
   occasion: OccasionType;
   eventDate: string;
   guestName?: string;
   imageUrl?: string | null;
+  /** فيديو الدعوة المرفوع — يُعرض بدل الصورة، والصورة غلافه */
+  videoUrl?: string | null;
   children?: React.ReactNode;
 }) {
   return (
@@ -30,7 +32,15 @@ export function InviteCard({
           </div>
         </div>
 
-        {imageUrl ? (
+        {videoUrl ? (
+          <video
+            src={videoUrl} poster={imageUrl ?? undefined}
+            controls playsInline preload="metadata"
+            className="w-full max-h-[75vh] bg-black"
+          >
+            <a href={videoUrl}>مشاهدة فيديو الدعوة</a>
+          </video>
+        ) : imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={imageUrl} alt="صورة الدعوة" className="w-full object-cover max-h-72" />
         ) : null}

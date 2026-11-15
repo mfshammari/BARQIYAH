@@ -9,6 +9,9 @@ import { exemptionStatus } from '@/lib/exemptions/logic';
 import { addGuest, importGuests } from '../actions';
 import { GuestsTable } from './GuestsTable';
 import { appUrl } from '@/lib/env';
+import { formatEventLine } from '@/lib/format';
+import { hasInviteVars, type InviteVars } from '@/lib/inviteVars';
+import { isVideoPath } from '@/lib/inviteMedia';
 import type { EventRow, Guest, Inviter } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -33,11 +36,31 @@ export default async function GuestsPage({ params }: { params: Promise<{ id: str
   const trialLeft = user.profile.trial_invites_left ?? 0;
   const canSend = e.status === 'active' || ((e.status === 'unpaid' || e.status === 'pending') && trialLeft > 0);
 
+  // الإرسال اليدوي عبر واتساب (الحل المؤقّت): نصّ المالك وسطر الموعد
+  const ownerVars = (e.invite_vars ?? {}) as Partial<InviteVars>;
+  const isVideo = (mode: string | null | undefined, path: string | null) => mode === 'uploaded' && isVideoPath(path);
+  const manual = hasInviteVars(ownerVars)
+    ? {
+        host: ownerVars.host,
+        occasion: ownerVars.occasion,
+        eventLine: formatEventLine({
+          dateGregorian: e.event_date, dateHijri: e.event_date_hijri, weekday: e.event_weekday,
+          time: e.event_time, venue: e.venue,
+        }),
+        ownerHasVideo: isVideo(e.image_mode, e.image_url),
+        // كما في صفحة المدعو: مدعو الداعي الفرعي يرى مرفق داعيه
+        videoInviterIds: inviters
+          .filter((i) => i.profile_id !== e.owner_id && Boolean((i.invite_vars as Partial<InviteVars>)?.host)
+            && isVideo(i.image_mode, i.image_url))
+          .map((i) => i.id),
+      }
+    : null;
+
   return (
     <>
       <PageHeader
         title="المدعوون"
-        subtitle="كل مدعو = رسالة واتساب واحدة، بغضّ النظر عن عدد مقاعده."
+        subtitle="كل مدعو = رسالة واتساب واحدة، بغضّ النظر عن عدد مقاعده. زر «واتساب» يفتح الرسالة جاهزة برابط المدعو لترسلها بنفسك."
       />
 
       <div className="grid gap-5 lg:grid-cols-[1fr_340px] items-start">
@@ -48,6 +71,7 @@ export default async function GuestsPage({ params }: { params: Promise<{ id: str
             inviters={inviters}
             appUrl={appUrl()}
             canSend={canSend}
+            manual={manual}
           />
         </div>
 

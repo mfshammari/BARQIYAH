@@ -6,6 +6,7 @@ import { appUrl } from '@/lib/env';
 import { formatEventLine, formatNumber } from '@/lib/format';
 import { renderInvite, hasInviteVars, type InviteVars } from '@/lib/inviteVars';
 import type { EventRow, Guest, Inviter } from '@/lib/types';
+import { isVideoPath } from '@/lib/inviteMedia';
 
 export const dynamic = 'force-dynamic';
 
@@ -149,8 +150,12 @@ export default async function InvitersPage({ params }: { params: Promise<{ id: s
                         <div className="inv-row">
                           <span>القالب: <b>قالب برقية الموحّد</b></span>
                           <span>
-                            الصورة:{' '}
-                            <b>{(isOwnerRow ? e.image_mode : inv.image_mode) === 'uploaded' ? 'مرفوعة' : 'مولَّدة تلقائياً'}</b>
+                            المرفق:{' '}
+                            <b>
+                              {(isOwnerRow ? e.image_mode : inv.image_mode) !== 'uploaded'
+                                ? 'بطاقة مولَّدة تلقائياً'
+                                : isVideoPath(isOwnerRow ? e.image_url : inv.image_url) ? 'فيديو (داخل الرابط)' : 'صورة مرفوعة'}
+                            </b>
                           </span>
                         </div>
                       </>

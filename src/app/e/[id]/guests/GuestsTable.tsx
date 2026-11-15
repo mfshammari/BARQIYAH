@@ -5,7 +5,9 @@ import { GuestStatusBadge, EmptyState } from '@/components/ui';
 import { SubmitButton } from '@/components/ActionForm';
 import { formatDateTime } from '@/lib/format';
 import { GUEST_STATUS_LABELS, type Guest, type GuestStatus, type Inviter } from '@/lib/types';
-import { deleteGuest, sendGuestInvitations, updateGuest, type ActionState } from '../actions';
+import { WhatsAppSendLink } from '@/components/WhatsAppSendLink';
+import { buildManualMessage, buildWhatsAppUrl } from '@/lib/manualInvite';
+import { deleteGuest, markGuestManualSent, sendGuestInvitations, updateGuest, type ActionState } from '../actions';
 
 const FILTERS: { key: GuestStatus | 'all'; label: string }[] = [
   { key: 'all', label: 'الكل' },
@@ -18,8 +20,10 @@ const FILTERS: { key: GuestStatus | 'all'; label: string }[] = [
 ];
 
 export function GuestsTable({
-  eventId, guests, inviters, appUrl, canSend,
+  eventId, guests, inviters, appUrl, canSend, manual,
 }: {
+  /** نصّ دعوة المالك للإرسال اليدوي عبر واتساب — null إن لم يكتبه بعد */
+  manual: { host: string; occasion: string; eventLine: string; ownerHasVideo: boolean; videoInviterIds: string[] } | null;
   eventId: string;
   guests: Guest[];
   inviters: Inviter[];
@@ -210,6 +214,18 @@ export function GuestsTable({
                           <input type="hidden" name="guest_ids" value={g.id} />
                           <SubmitButton className="btn-soft btn-sm" pendingLabel="…">إرسال</SubmitButton>
                         </form>
+                      ) : null}
+
+                      {manual && ((g.status === 'draft' && canSend) || g.status === 'sent') ? (
+                        <WhatsAppSendLink
+                          href={buildWhatsAppUrl(g.phone, buildManualMessage({
+                            guestName: g.name, occasion: manual.occasion, eventLine: manual.eventLine,
+                            signature: manual.host, link: `${appUrl}/rsvp/${g.invite_token}`,
+                            hasVideo: g.inviter_id && manual.videoInviterIds.includes(g.inviter_id)
+                              ? true : manual.ownerHasVideo,
+                          }))}
+                          markSent={g.status === 'draft' ? () => markGuestManualSent(eventId, g.id) : undefined}
+                        />
                       ) : null}
 
                       <button type="button" className="btn-ghost btn-sm" onClick={() => setEditing(g)}>

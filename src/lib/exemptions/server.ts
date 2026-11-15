@@ -6,7 +6,7 @@ import type { CanSendResult, Exemption, ExemptionLogEntry, SendBlockReason } fro
 
 /**
  * طبقة Supabase للإعفاء — تقرأ الجداول وتستدعي الدوال التي تطبّق القواعد
- * على الخادم. لا منطق هنا يُوثق به وحده؛ القاعدة في 0021_payment_exemptions.sql.
+ * على الخادم. لا منطق هنا يُوثق به وحده؛ القاعدة في 0022_payment_exemptions.sql.
  */
 
 export function toExemption(row: PaymentExemptionRow): Exemption {
