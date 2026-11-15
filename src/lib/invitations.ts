@@ -75,6 +75,14 @@ export interface InviterContext {
   reasons?: Record<string, string>;
 }
 
+export interface SendOptions {
+  /**
+   * الإرسال اليدوي (الحل المؤقّت): الداعي يرسل بنفسه من واتساب برابط wa.me.
+   * الحجز والتحقق كما هما، لكن لا رسالة تخرج من المنصة — تُسجَّل فقط.
+   */
+  manual?: boolean;
+}
+
 /**
  * إرسال دعوات: يحجز المقاعد ذرّياً في قاعدة البيانات أولاً،
  * ثم يرسل عبر واتساب، ويحرّر الحجز عند فشل الإرسال.
@@ -88,6 +96,7 @@ export async function sendInvitations(
   eventId: string,
   guestIds: string[],
   inviterCtx?: InviterContext,
+  opts: SendOptions = {},
 ): Promise<SendOutcome[]> {
   if (guestIds.length === 0) return [];
 
@@ -151,9 +160,9 @@ export async function sendInvitations(
   if (toSend.length === 0) return outcomes;
 
   // 2) الإرسال الفعلي
-  const provider = await getWhatsAppProvider();
+  const provider = opts.manual ? null : await getWhatsAppProvider();
 
-  const { metaName: templateName } = await loadDefaultTemplate(supabase);
+  const templateName = opts.manual ? 'manual_wa_me' : (await loadDefaultTemplate(supabase)).metaName;
 
   // سطر الموعد والمكان: من حقول المناسبة وحدها، مصدره واحد لكل الدعاة
   const eventLine = formatEventLine({
@@ -187,14 +196,17 @@ export async function sendInvitations(
     const guest = guestMap.get(row.guest_id);
     if (!guest) continue;
 
-    const result = await provider.sendTemplate({
-      to: guest.phone,
-      templateName,
-      languageCode: 'ar',
-      headerImageUrl: headerImage,
-      bodyParams,
-      buttonPayloads: buildButtonPayloads(guest.invite_token),
-    });
+    const result: { ok: boolean; provider: string; messageId?: string; error?: string } = provider
+      ? await provider.sendTemplate({
+          to: guest.phone,
+          templateName,
+          languageCode: 'ar',
+          headerImageUrl: headerImage,
+          bodyParams,
+          buttonPayloads: buildButtonPayloads(guest.invite_token),
+        })
+      // يدوي: الرسالة يرسلها الداعي من واتساب — نسجّل الحجز فقط
+      : { ok: true, provider: 'manual' };
 
     await logMessage({
       event_id: eventId, guest_id: guest.id, kind: 'invitation',
