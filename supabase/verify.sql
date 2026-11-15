@@ -130,7 +130,11 @@ with checks(ord, migration, proves, ok) as (
                    where table_schema='public' and table_name='inviters' and column_name='sign_by')
       and exists (select 1 from information_schema.columns
                    where table_schema='public' and table_name='guests' and column_name='opened_at')
-      and to_regproc('public.event_owner_name') is not null)
+      and to_regproc('public.event_owner_name') is not null),
+
+    (23, '0023_invite_video_limit', 'سعة الفيديو ٢٠٠ MB (بعد الترقية إلى Pro)',
+      exists (select 1 from storage.buckets
+               where id = 'invite-images' and file_size_limit >= 209715200))
 )
 select
   case when ok then '✓' else '✗' end as "حالة",
@@ -196,7 +200,9 @@ with checks(ok) as (
     (to_regproc('public.expire_stale_invites') is not null),
     (exists (select 1 from information_schema.columns
               where table_schema='public' and table_name='guests' and column_name='opened_at')
-      and to_regproc('public.event_owner_name') is not null)
+      and to_regproc('public.event_owner_name') is not null),
+    (exists (select 1 from storage.buckets
+              where id = 'invite-images' and file_size_limit >= 209715200))
 )
 select
   count(*) filter (where ok) || ' من ' || count(*) || ' ترحيل مطبَّق'

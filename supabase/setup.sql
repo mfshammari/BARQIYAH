@@ -3588,6 +3588,24 @@ revoke all on function public.event_owner_name(uuid) from public, anon;
 grant execute on function public.event_owner_name(uuid) to authenticated, service_role;
 
 
+-- ==========================================================
+-- ملف: 0023_invite_video_limit.sql
+-- ==========================================================
+
+-- ============================================================
+-- 0023 — سعة الفيديو بعد الترقية إلى Pro: حدّ المخزن ٢٠٠ MB
+--
+-- يطابق MAX_VIDEO_BYTES في src/lib/inviteMedia.ts (الحدّ في مكان واحد).
+-- شرط مسبق يُضبط يدوياً: Storage ← Settings ← Global file size limit ≥ ٢٠٠ MB
+-- (الخطة المجانية تقف عند ٥٠ MB ولا ينفع رفع حدّ الـbucket وحده).
+-- الفيديو يُرفع من المتصفح ببروتوكول TUS القابل للاستئناف (قطع ٦ MB).
+-- ============================================================
+
+update storage.buckets
+   set file_size_limit = 209715200
+ where id = 'invite-images';
+
+
 -- ============================================================
 -- تم. الخطوة التالية:
 --   ١) أنشئ مستخدماً من Authentication ← Add user

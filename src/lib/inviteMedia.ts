@@ -22,11 +22,17 @@ export const VIDEO_TYPES: Record<string, string> = {
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 /**
- * يطابق file_size_limit للـbucket في الترحيل 0021. حدّ الملف في خطة Supabase
- * المجانية ٥٠ MB ولا يرتفع إلا بالترقية إلى Pro — عندها يُرفع هنا وفي ترحيل
- * جديد معاً (الحدّ في مكان واحد).
+ * الحدّ في مكان واحد: يطابق file_size_limit للـbucket في الترحيل 0023 (٢٠٠ MB).
+ * يفترض خطة Pro مع Global file size limit ≥ هذا الرقم في Storage ← Settings؛
+ * الخطة المجانية تقف عند ٥٠ MB مهما كان حدّ الـbucket.
  */
-export const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+export const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
+/** عرض الحدّ في الرسائل والتلميحات */
+export const MAX_VIDEO_MB_LABEL = '٢٠٠';
+/** حجم القطعة في الرفع القابل للاستئناف (TUS) — ٦ MB كما يطلبه Supabase. */
+export const TUS_CHUNK_BYTES = 6 * 1024 * 1024;
+/** فوق هذا الحجم لا يصلح الرفع العادي على شبكة الجوال — الفيديو كله يُرفع بـTUS. */
+export const RESUMABLE_MIN_BYTES = TUS_CHUNK_BYTES;
 /** أقصى مدة للفيديو بالثواني — ٣ دقائق؛ ما زاد يُرفض قبل الرفع (حجم + egress). */
 export const MAX_VIDEO_SECONDS = 3 * 60;
 /** كاش الفيديو المرفوع سنة كاملة — المسار يحمل طابعاً زمنياً فلا يتكرر. */
@@ -78,6 +84,23 @@ export function formatDuration(seconds: number): string {
   return `${ar(m)}:${ar(s, true)}`;
 }
 
+/** نقطة الرفع القابل للاستئناف (TUS) في Supabase Storage. */
+export function resumableEndpoint(supabaseUrl: string): string {
+  return `${supabaseUrl.replace(/\/+$/, '')}/storage/v1/upload/resumable`;
+}
+
+/** نسبة التقدّم ٠–١٠٠ عدداً صحيحاً — لا تتجاوز ١٠٠ ولا تنزل عن ٠. */
+export function uploadPercent(bytesUploaded: number, bytesTotal: number): number {
+  if (!Number.isFinite(bytesTotal) || bytesTotal <= 0) return 0;
+  return Math.min(100, Math.max(0, Math.floor((bytesUploaded / bytesTotal) * 100)));
+}
+
+/** «٤٢٫٥ م.ب» — حجم الملف بالأرقام العربية. */
+export function formatMegabytes(bytes: number): string {
+  const mb = bytes / (1024 * 1024);
+  return `${new Intl.NumberFormat('ar-SA', { maximumFractionDigits: mb < 10 ? 1 : 0 }).format(mb)} م.ب`;
+}
+
 /** كاش الملف المرفوع بالثواني: الفيديو سنة، والصورة ساعة. */
 export function cacheSecondsFor(kind: InviteMediaKind): number {
   return kind === 'video' ? VIDEO_CACHE_SECONDS : IMAGE_CACHE_SECONDS;
@@ -87,7 +110,7 @@ export type MediaCheck =
   | { ok: true; kind: InviteMediaKind; ext: string }
   | { ok: false; error: string };
 
-/** يتحقق من نوع الملف وحجمه قبل الرفع — الصورة ≤ ٥ م.ب والفيديو ≤ ٥٠ م.ب. */
+/** يتحقق من نوع الملف وحجمه قبل الرفع — الصورة ≤ ٥ م.ب والفيديو ≤ MAX_VIDEO_BYTES. */
 export function checkInviteMedia(file: { type: string; size: number }): MediaCheck {
   const imageExt = IMAGE_TYPES[file.type];
   if (imageExt) {
@@ -97,7 +120,7 @@ export function checkInviteMedia(file: { type: string; size: number }): MediaChe
   const videoExt = VIDEO_TYPES[file.type];
   if (videoExt) {
     if (file.size > MAX_VIDEO_BYTES) {
-      return { ok: false, error: 'حجم الفيديو أكبر من ٥٠ ميغابايت — اضغطه أو قصّره ثم أعد الرفع.' };
+      return { ok: false, error: `حجم الفيديو أكبر من ${MAX_VIDEO_MB_LABEL} ميغابايت — اضغطه أو قصّره ثم أعد الرفع.` };
     }
     return { ok: true, kind: 'video', ext: videoExt };
   }
