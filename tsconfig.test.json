@@ -28,6 +28,9 @@
     "src/lib/otpCodes.ts",
     "src/lib/manual-whatsapp/types.ts",
     "src/lib/manual-whatsapp/message.ts",
-    "src/lib/manual-whatsapp/mock.ts"
+    "src/lib/manual-whatsapp/mock.ts",
+    "src/lib/exemptions/types.ts",
+    "src/lib/exemptions/logic.ts",
+    "src/lib/exemptions/mock.ts"
   ]
 }
