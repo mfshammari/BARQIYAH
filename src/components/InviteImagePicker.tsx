@@ -2,7 +2,10 @@
 
 import { useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { checkInviteMedia, INVITE_MEDIA_ACCEPT, isVideoPath } from '@/lib/inviteMedia';
+import {
+  cacheSecondsFor, checkInviteMedia, checkVideoDuration, formatDuration,
+  INVITE_MEDIA_ACCEPT, isQuickTimePath, isVideoPath,
+} from '@/lib/inviteMedia';
 import type { ImageMode } from '@/lib/types';
 
 /**
@@ -11,6 +14,9 @@ import type { ImageMode } from '@/lib/types';
  *
  * الصورة المرفوعة تظهر أعلى رسالة واتساب. الفيديو لا يُرفق في الرسالة:
  * يُعرض داخل رابط الدعوة، ورأس الرسالة يبقى البطاقة المولَّدة.
+ *
+ * قبل رفع الفيديو تُقرأ مدته وأبعاده من عنصر <video> مؤقت: ما زاد على
+ * ثلاث دقائق يُرفض برسالة واضحة قبل أن يستهلك الرفع شيئاً.
  *
  * يكتب حقلين مخفيين في نموذج الأب: image_mode وimage_url (مسار الملف).
  * `folder` = eventId أو inviterId (أو مؤقت قبل الإنشاء)، والمسار
@@ -38,8 +44,10 @@ export function InviteImagePicker({
   const [publicUrl, setPublicUrl] = useState<string | null>(initialPublicUrl);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [videoMeta, setVideoMeta] = useState<VideoMeta | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const isVideo = isVideoPath(path);
+  const isQuickTime = isQuickTimePath(path);
 
   const emit = (m: ImageMode, p: string | null, u: string | null) => onChange?.({ mode: m, path: p, publicUrl: u });
 
@@ -49,20 +57,32 @@ export function InviteImagePicker({
     setError(null);
     const check = checkInviteMedia(file);
     if (!check.ok) { setError(check.error); return; }
-    const { ext } = check;
+    const { ext, kind } = check;
 
     setUploading(true);
     try {
+      let meta: VideoMeta | null = null;
+      if (kind === 'video') {
+        meta = await probeVideo(file);
+        const duration = checkVideoDuration(meta?.duration ?? NaN);
+        if (!duration.ok) { setError(duration.error); return; }
+      }
+
       const supabase = createClient();
       const key = `${uid}/${folder}/${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage
         .from('invite-images')
-        .upload(key, file, { contentType: file.type, upsert: false, cacheControl: '3600' });
+        .upload(key, file, {
+          contentType: file.type, upsert: false,
+          // المسار يحمل طابعاً زمنياً فلا يتكرر: الفيديو يُخزَّن سنة، والصورة ساعة
+          cacheControl: String(cacheSecondsFor(kind)),
+        });
       if (upErr) { setError('تعذّر رفع الملف. حاول مرة أخرى.'); return; }
 
       const { data } = supabase.storage.from('invite-images').getPublicUrl(key);
       setPath(key);
       setPublicUrl(data.publicUrl);
+      setVideoMeta(meta);
       emit('uploaded', key, data.publicUrl);
     } finally {
       setUploading(false);
@@ -72,6 +92,7 @@ export function InviteImagePicker({
   const remove = () => {
     setPath(null);
     setPublicUrl(null);
+    setVideoMeta(null);
     if (fileRef.current) fileRef.current.value = '';
     emit(mode, null, null);
   };
@@ -139,15 +160,54 @@ export function InviteImagePicker({
           <p className={`hint ${error ? 'text-danger' : ''}`}>
             {error ?? (uploading
               ? 'جارٍ الرفع… لا تغلق الصفحة.'
-              : 'صورة (JPG أو PNG أو WebP حتى ٥ ميغابايت) تظهر أعلى رسالة واتساب، أو فيديو (MP4 أو MOV حتى ٥٠ ميغابايت).')}
+              : 'صورة (JPG أو PNG أو WebP حتى ٥ ميغابايت) تظهر أعلى رسالة واتساب، أو فيديو (MP4 أو MOV حتى ٥٠ ميغابايت وثلاث دقائق).')}
           </p>
           {isVideo ? (
             <p className="rounded-xl bg-brand-soft px-3 py-2 text-[12.5px] leading-6 text-brand">
-              الفيديو معتمد: لا يُرفق في رسالة واتساب، بل يشاهده المدعو داخل رابط دعوته. أعلى الرسالة تبقى بطاقة برقية.
+              الفيديو معتمد
+              {videoMeta ? (
+                <span className="num"> ({formatDuration(videoMeta.duration)} · {videoMeta.width}×{videoMeta.height})</span>
+              ) : null}
+              : لا يُرفق في رسالة واتساب، بل يشاهده المدعو داخل رابط دعوته. أعلى الرسالة تبقى بطاقة برقية.
+            </p>
+          ) : null}
+          {isQuickTime ? (
+            <p className="rounded-xl bg-warn-soft px-3 py-2 text-[12.5px] leading-6 text-warn">
+              هذا الملف بصيغة MOV: بعض جوالات أندرويد قد لا تشغّله داخل الرابط. يُفضَّل تصديره MP4 (H.264) قبل الرفع.
             </p>
           ) : null}
         </div>
       )}
     </div>
   );
+}
+
+interface VideoMeta { duration: number; width: number; height: number }
+
+/**
+ * يقرأ مدة الفيديو وأبعاده من عنصر <video> مؤقت دون رفع شيء.
+ * null إن لم يستطع المتصفح قراءة البيانات (يبقى الحجم هو الحاجز).
+ */
+function probeVideo(file: File, timeoutMs = 8000): Promise<VideoMeta | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    let settled = false;
+    const finish = (meta: VideoMeta | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      video.removeAttribute('src');
+      video.load();
+      URL.revokeObjectURL(url);
+      resolve(meta);
+    };
+    const timer = setTimeout(() => finish(null), timeoutMs);
+    video.onloadedmetadata = () =>
+      finish({ duration: video.duration, width: video.videoWidth, height: video.videoHeight });
+    video.onerror = () => finish(null);
+    video.src = url;
+  });
 }

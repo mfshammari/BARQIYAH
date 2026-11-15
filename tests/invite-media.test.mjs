@@ -2,7 +2,9 @@
 //   node tests/invite-media.test.mjs
 import assert from 'node:assert/strict';
 import {
-  isVideoPath, checkInviteMedia, MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, INVITE_MEDIA_ACCEPT,
+  isVideoPath, isQuickTimePath, checkInviteMedia, checkVideoDuration, formatDuration, cacheSecondsFor,
+  MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, MAX_VIDEO_SECONDS, VIDEO_CACHE_SECONDS, IMAGE_CACHE_SECONDS,
+  INVITE_MEDIA_ACCEPT,
 } from '../.test-build/lib/inviteMedia.js';
 
 let passed = 0;
@@ -43,6 +45,42 @@ test('امتداد كل نوع مقبول يُعرف لاحقاً بنوعه ا�
     assert.ok(r.ok);
     assert.equal(isVideoPath(`u/e/1.${r.ext}`), r.kind === 'video');
   }
+});
+
+test('MOV وحده يُعرف كـQuickTime — لتنبيه أندرويد', () => {
+  assert.equal(isQuickTimePath('u/e/1.mov'), true);
+  assert.equal(isQuickTimePath('u/e/1.MOV?v=1'), true);
+  assert.equal(isQuickTimePath('u/e/1.mp4'), false);
+  assert.equal(isQuickTimePath(null), false);
+});
+
+test('مدة الفيديو: حتى ثلاث دقائق، وما زاد يُرفض برسالة عربية', () => {
+  assert.equal(MAX_VIDEO_SECONDS, 180);
+  assert.deepEqual(checkVideoDuration(45), { ok: true });
+  assert.deepEqual(checkVideoDuration(MAX_VIDEO_SECONDS), { ok: true });
+  const r = checkVideoDuration(MAX_VIDEO_SECONDS + 1);
+  assert.equal(r.ok, false);
+  assert.ok(r.error.includes('ثلاث دقائق'));
+  assert.ok(r.error.includes('٣:٠١'));
+});
+
+test('مدة غير معروفة لا تُرفض — الحجم هو الحاجز', () => {
+  assert.deepEqual(checkVideoDuration(NaN), { ok: true });
+  assert.deepEqual(checkVideoDuration(Infinity), { ok: true });
+  assert.deepEqual(checkVideoDuration(0), { ok: true });
+});
+
+test('تنسيق المدة بالأرقام العربية', () => {
+  assert.equal(formatDuration(0), '٠:٠٠');
+  assert.equal(formatDuration(65), '١:٠٥');
+  assert.equal(formatDuration(155.6), '٢:٣٦');
+});
+
+test('كاش الفيديو سنة والصورة ساعة', () => {
+  assert.equal(VIDEO_CACHE_SECONDS, 31536000);
+  assert.equal(IMAGE_CACHE_SECONDS, 3600);
+  assert.equal(cacheSecondsFor('video'), VIDEO_CACHE_SECONDS);
+  assert.equal(cacheSecondsFor('image'), IMAGE_CACHE_SECONDS);
 });
 
 console.log(`\n${passed} اختبارات نجحت.`);
