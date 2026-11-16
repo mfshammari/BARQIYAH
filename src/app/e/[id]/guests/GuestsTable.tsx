@@ -315,6 +315,7 @@ export function GuestsTable({
                             link: `${appUrl}/rsvp/${g.invite_token}`,
                           }))}
                           markSent={g.status === 'draft' ? () => markGuestManualSent(eventId, g.id) : undefined}
+                          label={g.status === 'sent' ? 'إرسال مرة أخرى' : 'واتساب'}
                         />
                       ) : null}
 

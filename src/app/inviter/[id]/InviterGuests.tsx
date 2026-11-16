@@ -176,6 +176,7 @@ export function InviterGuests({
                               venue: manual.venue, signature, link: `${appUrl}/rsvp/${g.invite_token}`,
                             }))}
                             markSent={g.status === 'draft' ? () => markInviterGuestManualSent(inviterId, g.id) : undefined}
+                            label={g.status === 'sent' ? 'إرسال مرة أخرى' : 'واتساب'}
                           />
                         ) : null}
                         {g.status === 'sent' ? (
