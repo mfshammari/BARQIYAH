@@ -26,8 +26,10 @@ interface SaveResult { error?: string; notice?: string }
  * خيار الاثنين / صاحب المناسبة / الداعي الفرعي — يُمرَّر onSignByChange.
  */
 export function ManualMessageEditor({
-  config, onConfigChange, names, signBy, onSignByChange, sample, save,
+  config, onConfigChange, names, signBy, onSignByChange, sample, save, attachment,
 }: {
+  /** مرفق الدعوة (صورة أو فيديو) — يُرفع من هنا ويظهر داخل رابط المدعو */
+  attachment?: React.ReactNode;
   config: ManualMessageConfig;
   onConfigChange: (c: ManualMessageConfig) => void;
   names: SignatureNames;
@@ -174,6 +176,8 @@ export function ManualMessageEditor({
           </div>
         </div>
       ) : null}
+
+      {attachment}
 
       <div>
         <div className="mb-1 text-[12px] text-muted">المعاينة كما تصل إلى {sample.guestName}</div>

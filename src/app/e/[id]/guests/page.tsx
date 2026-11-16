@@ -12,6 +12,7 @@ import { appUrl } from '@/lib/env';
 import { formatEventLine } from '@/lib/format';
 import { hasInviteVars, type InviteVars } from '@/lib/inviteVars';
 import { parseManualMessage } from '@/lib/manualMessage';
+import { publicImageUrl, resolveHeaderImage } from '@/lib/inviteImage';
 import type { EventRow, Guest, Inviter } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -49,6 +50,16 @@ export default async function GuestsPage({ params }: { params: Promise<{ id: str
         venue: e.venue ?? '',
         ownerName: user.profile.full_name?.trim() || e.host_name,
         config: parseManualMessage(e.manual_message),
+        uid: user.id,
+        attachment: {
+          mode: e.image_mode ?? 'generated',
+          path: e.image_url,
+          publicUrl: e.image_url ? publicImageUrl(e.image_url) : null,
+          generatedUrl: resolveHeaderImage({
+            kind: 'event', id, imageMode: 'generated', imageUrl: null,
+            version: [ownerVars.host, ownerVars.occasion, e.event_date, e.event_time, e.venue, e.host_name],
+          }),
+        },
       }
     : null;
 

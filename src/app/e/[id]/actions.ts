@@ -6,7 +6,7 @@ import { createAdminClient, adminClientAvailable } from '@/lib/supabase/admin';
 import { requireUser, isAdminRole } from '@/lib/auth';
 import { sendInvitations, sendReminders, sendInviterInviteLink } from '@/lib/invitations';
 import { formatNumber, formatHijri, formatWeekday, normalizePhone, isValidPhone } from '@/lib/format';
-import { hasTwoCelebrants, type EventRow, type Guest, type Inviter, type OccasionType, type Package } from '@/lib/types';
+import { hasTwoCelebrants, type EventRow, type ImageMode, type Guest, type Inviter, type OccasionType, type Package } from '@/lib/types';
 import { validateInviteVars, type InviteVars } from '@/lib/inviteVars';
 import { readImageFields } from '@/lib/inviteImage';
 import {
@@ -438,6 +438,26 @@ export async function saveEventInvite(_prev: ActionState, formData: FormData): P
   revalidatePath(`/e/${eventId}/invite`);
   revalidateEvent(eventId);
   return { notice: 'حُفظت دعوتك — جاهزة للإرسال.' };
+}
+
+/** مرفق دعوة المالك (صورة أو فيديو) من محرّر رسالة واتساب — المرفق وحده بلا النص. */
+export async function saveEventAttachment(
+  eventId: string, mode: ImageMode, path: string | null,
+): Promise<ActionState> {
+  const { supabase } = await guardEvent(eventId);
+  const fd = new FormData();
+  fd.set('image_mode', mode);
+  fd.set('image_url', path ?? '');
+  const { imageMode, imageUrl } = readImageFields(fd);
+  if (imageMode === 'uploaded' && !imageUrl) return { error: 'ملف المرفق غير صالح.' };
+
+  const { error } = await supabase
+    .from('events').update({ image_mode: imageUrl ? 'uploaded' : 'generated', image_url: imageUrl }).eq('id', eventId);
+  if (error) return { error: 'تعذّر حفظ المرفق.' };
+
+  revalidatePath(`/e/${eventId}/invite`);
+  revalidateEvent(eventId);
+  return {};
 }
 
 /**

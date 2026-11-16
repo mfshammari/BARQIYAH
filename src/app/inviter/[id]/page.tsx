@@ -96,6 +96,16 @@ export default async function InviterWorkspace({
         subName: user.profile.full_name?.trim() || inviter.name,
         config: parseManualMessage(inviter.manual_message),
         signBy: parseSignBy(inviter.sign_by),
+        uid: user.id,
+        attachment: {
+          mode: inviter.image_mode ?? 'generated',
+          path: inviter.image_url,
+          publicUrl: inviter.image_url ? publicImageUrl(inviter.image_url) : null,
+          generatedUrl: resolveHeaderImage({
+            kind: 'inviter', id, imageMode: 'generated', imageUrl: null,
+            version: [vars.host, vars.occasion, event.event_date, event.event_time, event.venue],
+          }),
+        },
       }
     : null;
 
