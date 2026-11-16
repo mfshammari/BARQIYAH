@@ -3,7 +3,7 @@ import { formatDate } from '@/lib/format';
 
 /** بطاقة الدعوة كما يراها المدعو — عربية، هادئة، ذهبية. */
 export function InviteCard({
-  hostName, occasion, eventDate, guestName, imageUrl, videoUrl, children,
+  hostName, occasion, eventDate, guestName, imageUrl, videoUrl, ownMedia = false, children,
 }: {
   hostName: string;
   occasion: OccasionType;
@@ -12,11 +12,17 @@ export function InviteCard({
   imageUrl?: string | null;
   /** فيديو الدعوة المرفوع — يُعرض بدل الصورة، والصورة غلافه */
   videoUrl?: string | null;
+  /**
+   * الداعي رفع مرفقه (صورة أو فيديو): يُعرض مرفقه وحده كاملاً — بلا ترويسة
+   * برقية الخضراء فوقه وبلا قصّ، فدعوته المصمَّمة تحمل نصّها.
+   */
+  ownMedia?: boolean;
   children?: React.ReactNode;
 }) {
   return (
     <div className="w-full max-w-md">
       <div className="card overflow-hidden">
+        {ownMedia ? <h1 className="sr-only">دعوة {hostName} — {OCCASION_LABELS[occasion]}</h1> : (
         <div className="bg-brand text-center px-6 py-8 relative">
           <div
             className="absolute inset-3 rounded-xl border border-gold-soft/30 pointer-events-none"
@@ -31,20 +37,22 @@ export function InviteCard({
             <p className="text-white/70 text-[13px] mt-3 num">{formatDate(eventDate)}</p>
           </div>
         </div>
+        )}
 
         {videoUrl ? (
           // preload="none": لا يُحمَّل الفيديو إلا عند الضغط — الغلاف يكفي للعرض
           // الأول ويحفظ egress المشروع (كل فتح للرابط كان يجلب جزءاً من الملف)
           <video
-            src={videoUrl} poster={imageUrl ?? undefined}
-            controls playsInline preload="none"
+            // مرفقه وحده: أول لقطة من فيديوه غلافاً (metadata فقط) بدل بطاقة برقية
+            src={ownMedia ? `${videoUrl}#t=0.1` : videoUrl} poster={ownMedia ? undefined : (imageUrl ?? undefined)}
+            controls playsInline preload={ownMedia ? 'metadata' : 'none'}
             className="w-full max-h-[75vh] bg-black"
           >
             <a href={videoUrl}>مشاهدة فيديو الدعوة</a>
           </video>
         ) : imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt="صورة الدعوة" className="w-full object-cover max-h-72" />
+          <img src={imageUrl} alt="صورة الدعوة" className={ownMedia ? 'block w-full h-auto' : 'w-full object-cover max-h-72'} />
         ) : null}
 
         <div className="card-pad">
