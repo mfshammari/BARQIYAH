@@ -215,6 +215,10 @@ export interface Guest {
   is_trial: boolean;
   name: string;
   phone: string;
+  /** تقسيمة المدعو في قائمة صاحب المناسبة (العائلة، الجيران…) — اختيارية */
+  section: string | null;
+  /** فرع داخل التقسيمة — اختياري */
+  branch: string | null;
   max_seats: number;
   confirmed_seats: number | null;
   status: GuestStatus;

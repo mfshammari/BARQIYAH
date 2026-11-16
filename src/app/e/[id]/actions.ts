@@ -63,6 +63,12 @@ function describeOutcomes(outcomes: { ok: boolean; name: string; reason?: string
 }
 
 // ————————————————————— المدعوون —————————————————————
+/** تقسيمة/فرع من النموذج أو الملف: نصّ مشذَّب بمسافات مفردة، أو null إن كان فارغاً */
+function cleanLabel(value: unknown): string | null {
+  const text = String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, 60);
+  return text || null;
+}
+
 export async function addGuest(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const eventId = String(formData.get('event_id') ?? '');
   const { supabase } = await guardEvent(eventId);
@@ -71,6 +77,8 @@ export async function addGuest(_prev: ActionState, formData: FormData): Promise<
   const rawPhone = String(formData.get('phone') ?? '').trim();
   const maxSeats = Number(formData.get('max_seats') ?? 1);
   const inviterId = String(formData.get('inviter_id') ?? '') || null;
+  const section = cleanLabel(formData.get('section'));
+  const branch = section ? cleanLabel(formData.get('branch')) : null;
   const sendNow = formData.get('send_now') === 'on';
 
   if (!name) return { error: 'اسم المدعو مطلوب.' };
@@ -84,7 +92,7 @@ export async function addGuest(_prev: ActionState, formData: FormData): Promise<
     .from('guests')
     .insert({
       event_id: eventId, name, phone, max_seats: maxSeats,
-      inviter_id: inviterId, status: 'draft',
+      inviter_id: inviterId, section, branch, status: 'draft',
     })
     .select('id')
     .single();
@@ -108,7 +116,7 @@ export async function addGuest(_prev: ActionState, formData: FormData): Promise<
   return { notice: `تمت إضافة ${name} كمسودة.` };
 }
 
-/** رفع ملف Excel/CSV: الأعمدة = الاسم | الجوال | عدد الأشخاص | الداعي */
+/** رفع ملف Excel/CSV: الأعمدة = الاسم | الجوال | عدد الأشخاص | الداعي | التقسيمة | الفرع */
 export async function importGuests(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const eventId = String(formData.get('event_id') ?? '');
   const { supabase } = await guardEvent(eventId);
@@ -134,10 +142,11 @@ export async function importGuests(_prev: ActionState, formData: FormData): Prom
   if (rows.length === 0) return { error: 'الملف فارغ.' };
   if (rows.length > 2000) return { error: 'الحد الأقصى ٢٠٠٠ صف في الرفعة الواحدة.' };
 
-  const pick = (row: Record<string, unknown>, keys: string[]): string => {
+  // exact: مطابقة تامّة لاسم العمود — «الفرع» لا يلتقط عموداً مثل «الداعي الفرعي»
+  const pick = (row: Record<string, unknown>, keys: string[], exact = false): string => {
     for (const key of Object.keys(row)) {
       const norm = key.trim().toLowerCase();
-      if (keys.some((k) => norm === k || norm.includes(k))) {
+      if (keys.some((k) => norm === k || (!exact && norm.includes(k)))) {
         const v = row[key];
         if (v !== null && v !== undefined && String(v).trim() !== '') return String(v).trim();
       }
@@ -149,7 +158,10 @@ export async function importGuests(_prev: ActionState, formData: FormData): Prom
     .from('inviters').select('id, name').eq('event_id', eventId);
   const inviterByName = new Map((inviters ?? []).map((i) => [i.name.trim(), i.id]));
 
-  const valid: { event_id: string; name: string; phone: string; max_seats: number; inviter_id: string | null; status: 'draft' }[] = [];
+  const valid: {
+    event_id: string; name: string; phone: string; max_seats: number; inviter_id: string | null;
+    section: string | null; branch: string | null; status: 'draft';
+  }[] = [];
   const seen = new Set<string>();
   let skipped = 0;
 
@@ -158,6 +170,8 @@ export async function importGuests(_prev: ActionState, formData: FormData): Prom
     const phoneRaw = pick(row, ['الجوال', 'جوال', 'الهاتف', 'phone', 'mobile', 'رقم']);
     const seatsRaw = pick(row, ['عدد', 'المقاعد', 'أشخاص', 'اشخاص', 'seats', 'count']);
     const inviterName = pick(row, ['الداعي', 'داعي', 'inviter']);
+    const section = cleanLabel(pick(row, ['التقسيمة', 'تقسيمة', 'التقسيمه', 'القسم', 'المجموعة', 'section', 'group']));
+    const branch = section ? cleanLabel(pick(row, ['الفرع', 'فرع', 'branch'], true)) : null;
 
     if (!name || !isValidPhone(phoneRaw)) { skipped++; continue; }
 
@@ -171,6 +185,7 @@ export async function importGuests(_prev: ActionState, formData: FormData): Prom
     valid.push({
       event_id: eventId, name, phone, max_seats: maxSeats,
       inviter_id: inviterName ? inviterByName.get(inviterName) ?? null : null,
+      section, branch,
       status: 'draft',
     });
   }
@@ -249,6 +264,8 @@ export async function updateGuest(_prev: ActionState, formData: FormData): Promi
   const name = String(formData.get('name') ?? '').trim();
   const maxSeats = Number(formData.get('max_seats') ?? 1);
   const inviterId = String(formData.get('inviter_id') ?? '') || null;
+  const section = cleanLabel(formData.get('section'));
+  const branch = section ? cleanLabel(formData.get('branch')) : null;
 
   if (!guestId) return { error: 'المدعو غير موجود.' };
   if (!name) return { error: 'اسم المدعو مطلوب.' };
@@ -282,7 +299,7 @@ export async function updateGuest(_prev: ActionState, formData: FormData): Promi
 
   const { error } = await supabase
     .from('guests')
-    .update({ name, max_seats: maxSeats, inviter_id: inviterId })
+    .update({ name, max_seats: maxSeats, inviter_id: inviterId, section, branch })
     .eq('id', guestId).eq('event_id', eventId);
 
   if (error) return { error: 'تعذّر تحديث بيانات المدعو.' };

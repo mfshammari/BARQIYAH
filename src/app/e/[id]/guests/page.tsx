@@ -32,6 +32,9 @@ export default async function GuestsPage({ params }: { params: Promise<{ id: str
 
   const guests = guestsData ?? [];
   const inviters = invitersData ?? [];
+  // التقسيمات والفروع الموجودة — اقتراحات عند الإضافة حتى لا يتكرّر الاسم بإملاء مختلف
+  const sectionNames = Array.from(new Set(guests.map((g) => g.section).filter(Boolean) as string[])).sort();
+  const branchNames = Array.from(new Set(guests.map((g) => g.branch).filter(Boolean) as string[])).sort();
   const exemption = e.exemption_id ? await fetchExemption(supabase, e.owner_id) : null;
   // قبل الدفع: الدعوات التجريبية المتبقية في الحساب تسمح بالإرسال
   const trialLeft = user.profile.trial_invites_left ?? 0;
@@ -112,6 +115,24 @@ export default async function GuestsPage({ params }: { params: Promise<{ id: str
                   defaultValue={1} className="field num" required />
                 <p className="hint">يُحجز هذا العدد من الرصيد حتى يرد المدعو بالعدد الفعلي.</p>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label" htmlFor="g-section">التقسيمة (اختياري)</label>
+                  <input id="g-section" name="section" className="field" list="guest-sections"
+                    placeholder="العائلة" maxLength={60} />
+                  <datalist id="guest-sections">
+                    {sectionNames.map((s) => <option key={s} value={s} />)}
+                  </datalist>
+                </div>
+                <div>
+                  <label className="label" htmlFor="g-branch">الفرع (اختياري)</label>
+                  <input id="g-branch" name="branch" className="field" list="guest-branches"
+                    placeholder="الرياض" maxLength={60} />
+                  <datalist id="guest-branches">
+                    {branchNames.map((b) => <option key={b} value={b} />)}
+                  </datalist>
+                </div>
+              </div>
               <div>
                 <label className="label" htmlFor="g-inviter">الداعي</label>
                 <select id="g-inviter" name="inviter_id" className="field" defaultValue={inviters[0]?.id ?? ''}>
@@ -132,7 +153,7 @@ export default async function GuestsPage({ params }: { params: Promise<{ id: str
           <div className="card card-pad">
             <h2 className="sec-title mb-2">رفع ملف Excel</h2>
             <p className="text-[12.5px] text-muted mb-3">
-              الأعمدة المطلوبة: <b>الاسم</b> و<b>الجوال</b>، واختيارياً <b>عدد الأشخاص</b> و<b>الداعي</b>.
+              الأعمدة المطلوبة: <b>الاسم</b> و<b>الجوال</b>، واختيارياً <b>عدد الأشخاص</b> و<b>الداعي</b> و<b>التقسيمة</b> و<b>الفرع</b>.
             </p>
             <ActionForm action={importGuests} onSuccessReset>
               <input type="hidden" name="event_id" value={id} />
