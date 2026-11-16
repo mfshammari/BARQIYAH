@@ -177,6 +177,7 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
         guestName={guest.name}
         imageUrl={imageUrl}
         videoUrl={videoUrl}
+        ownMedia={src.imageMode === 'uploaded' && Boolean(src.imageUrl)}
       >
         {children}
       </InviteCard>
