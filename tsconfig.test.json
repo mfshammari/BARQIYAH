@@ -24,6 +24,8 @@
     "src/lib/inviteCard.ts",
     "src/lib/inviteMedia.ts",
     "src/lib/manualInvite.ts",
+    "src/lib/manualMessage.ts",
+    "src/lib/inviteOg.ts",
     "src/lib/safeNext.ts",
     "src/lib/whatsapp/signature.ts",
     "src/lib/eventRoles.ts",

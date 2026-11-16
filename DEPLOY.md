@@ -5,6 +5,9 @@
 1. أنشئ مشروعاً على [supabase.com](https://supabase.com).
 2. من **SQL Editor** الصق محتوى `supabase/setup.sql` كاملاً واضغط Run
    (ملف واحد يحتوي المخطط + RLS + الدوال، وآمن لإعادة التشغيل).
+   ثم نفّذ `supabase/verify.sql` حتى تظهر كل الترحيلات ✓. وإن لصقت ترحيلاً
+   يدوياً فقارن أجسام دواله بـ `node scripts/migration-fn-hashes.mjs` مع
+   `md5(prosrc)` من `pg_proc` — أي اختلاف يعني خطأ نقل.
 3. من **Settings → API** انسخ: `Project URL`, `anon key`, `service_role key`.
 4. من **Authentication → Add user** أنشئ حسابك (فعّل Auto Confirm)، ثم اجعله أدمن:
    ```sql

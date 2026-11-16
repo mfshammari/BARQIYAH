@@ -33,9 +33,11 @@ export function InviteCard({
         </div>
 
         {videoUrl ? (
+          // preload="none": لا يُحمَّل الفيديو إلا عند الضغط — الغلاف يكفي للعرض
+          // الأول ويحفظ egress المشروع (كل فتح للرابط كان يجلب جزءاً من الملف)
           <video
             src={videoUrl} poster={imageUrl ?? undefined}
-            controls playsInline preload="metadata"
+            controls playsInline preload="none"
             className="w-full max-h-[75vh] bg-black"
           >
             <a href={videoUrl}>مشاهدة فيديو الدعوة</a>

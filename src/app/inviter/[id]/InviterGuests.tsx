@@ -1,22 +1,41 @@
 'use client';
 
 import { useActionState, useMemo, useState } from 'react';
+import { ManualMessageEditor } from '@/components/manual-whatsapp/ManualMessageEditor';
+import {
+  buildMessage, resolveSignature, templateText, type ManualMessageConfig, type SignBy,
+} from '@/lib/manualMessage';
 import { GuestStatusBadge, EmptyState } from '@/components/ui';
 import { SubmitButton, ActionForm } from '@/components/ActionForm';
 import { formatDateTime, formatNumber } from '@/lib/format';
 import type { Contact, Guest } from '@/lib/types';
 import {
-  addInviterGuest, addFromContacts, deleteInviterGuest,
-  markInviterGuestManualSent, sendInviterInvitations, type ActionState,
+  addInviterGuest, addFromContacts, deleteInviterGuest, markInviterGuestManualSent,
+  saveInviterManualMessage, sendInviterInvitations, type ActionState,
 } from './actions';
 import { WhatsAppSendLink } from '@/components/WhatsAppSendLink';
-import { buildManualMessage, buildWhatsAppUrl } from '@/lib/manualInvite';
+import { buildWhatsAppUrl } from '@/lib/manualInvite';
+
+export interface InviterManualSetup {
+  /** وصف المناسبة كما كتبه الداعي — {المناسبة} */
+  occasion: string;
+  /** اليوم والتاريخ الهجري والوقت — {التاريخ} */
+  date: string;
+  /** {المكان} */
+  venue: string;
+  /** اسم حساب صاحب المناسبة (event_owner_name) */
+  ownerName: string;
+  /** اسم حساب الداعي الفرعي */
+  subName: string;
+  config: ManualMessageConfig;
+  signBy: SignBy;
+}
 
 export function InviterGuests({
   inviterId, guests, contacts, canSend, appUrl, ready, manual,
 }: {
-  /** نصّ دعوة الداعي للإرسال اليدوي عبر واتساب — null إن لم يكتبه بعد */
-  manual: { host: string; occasion: string; eventLine: string; hasVideo: boolean } | null;
+  /** رسالة واتساب اليدوية للداعي — null إن لم يكتب نصّ دعوته بعد */
+  manual: InviterManualSetup | null;
   inviterId: string;
   guests: Guest[];
   contacts: Contact[];
@@ -27,6 +46,11 @@ export function InviterGuests({
   const [sendState, sendAction] = useActionState<ActionState, FormData>(sendInviterInvitations, {});
   const [query, setQuery] = useState('');
   const [picking, setPicking] = useState(false);
+  const [config, setConfig] = useState<ManualMessageConfig>(manual?.config ?? { template: 'formal', texts: {} });
+  const [signBy, setSignBy] = useState<SignBy>(manual?.signBy ?? 'both');
+  const names = manual ? { ownerName: manual.ownerName, subName: manual.subName } : null;
+  const signature = names ? resolveSignature(names, signBy) : '';
+  const sampleGuest = guests[0];
 
   const visible = useMemo(() => {
     const q = query.trim();
@@ -69,6 +93,24 @@ export function InviterGuests({
           </div>
         ) : null}
 
+        {manual && names ? (
+          <ManualMessageEditor
+            config={config}
+            onConfigChange={setConfig}
+            names={names}
+            signBy={signBy}
+            onSignByChange={setSignBy}
+            sample={{
+              guestName: sampleGuest?.name ?? 'خالد الفهد',
+              occasion: manual.occasion,
+              date: manual.date,
+              venue: manual.venue,
+              link: `${appUrl}/rsvp/${sampleGuest?.invite_token ?? '…'}`,
+            }}
+            save={(c, s) => saveInviterManualMessage(inviterId, c, s)}
+          />
+        ) : null}
+
         {visible.length === 0 ? (
           <EmptyState
             title={guests.length === 0 ? 'لا مدعوين بعد' : 'لا نتائج'}
@@ -91,7 +133,19 @@ export function InviterGuests({
                         {g.confirmed_seats != null ? ' مؤكّد' : ' حد أقصى'}
                       </span>
                     </td>
-                    <td><GuestStatusBadge status={g.status} /></td>
+                    <td>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <GuestStatusBadge status={g.status} />
+                        {g.reminded_at ? (
+                          <span className="badge border border-line bg-panel text-muted">ذُكّر</span>
+                        ) : null}
+                        {g.opened_at ? (
+                          <span className="badge bg-brand-soft text-brand" title={`فتح الرابط ${formatDateTime(g.opened_at)}`}>
+                            فتح الدعوة
+                          </span>
+                        ) : null}
+                      </div>
+                    </td>
                     <td className="num text-[12px] text-muted">
                       {formatDateTime(g.responded_at ?? g.sent_at ?? g.created_at)}
                     </td>
@@ -107,10 +161,9 @@ export function InviterGuests({
                         ) : null}
                         {manual && ((g.status === 'draft' && canSend && ready) || g.status === 'sent') ? (
                           <WhatsAppSendLink
-                            href={buildWhatsAppUrl(g.phone, buildManualMessage({
-                              guestName: g.name, occasion: manual.occasion, eventLine: manual.eventLine,
-                              signature: manual.host, link: `${appUrl}/rsvp/${g.invite_token}`,
-                              hasVideo: manual.hasVideo,
+                            href={buildWhatsAppUrl(g.phone, buildMessage(templateText(config), {
+                              guestName: g.name, occasion: manual.occasion, date: manual.date,
+                              venue: manual.venue, signature, link: `${appUrl}/rsvp/${g.invite_token}`,
                             }))}
                             markSent={g.status === 'draft' ? () => markInviterGuestManualSent(inviterId, g.id) : undefined}
                           />

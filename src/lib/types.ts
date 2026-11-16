@@ -114,6 +114,8 @@ export interface EventRow {
   image_mode: ImageMode;
   /** للمرفوعة: مسار الملف في Storage؛ للمولَّدة null */
   image_url: string | null;
+  /** نصّ رسالة واتساب اليدوية للمالك — انظر manualMessage.ts */
+  manual_message: Record<string, unknown>;
   seats_quota: number;
   status: EventStatus;
   /** فُعّلت ضمن باقة ضيافة (إعفاء من الدفع) — الإرسال يُخصم من سقف الإعفاء */
@@ -166,6 +168,10 @@ export interface Inviter {
   image_mode: ImageMode;
   /** للمرفوعة: مسار الملف في Storage؛ للمولَّدة null */
   image_url: string | null;
+  /** نصّ رسالة واتساب اليدوية للداعي — يملكه وحده */
+  manual_message: Record<string, unknown>;
+  /** باسم من تصدر دعوته: both | owner | sub */
+  sign_by: 'both' | 'owner' | 'sub';
   invite_token: string;
   joined_at: string | null;
   created_at: string;
@@ -217,6 +223,8 @@ export interface Guest {
   scans_used: number;
   /** وقت التذكير الوحيد — غير فارغ يعني ذُكِّر ولا يُذكَّر ثانيةً (SPEC §4.1) */
   reminded_at: string | null;
+  /** أول فتح لصفحة المدعو /rsvp/[token] — null لم يُفتح بعد */
+  opened_at: string | null;
   sent_at: string | null;
   responded_at: string | null;
   attended_at: string | null;
