@@ -12,16 +12,24 @@ import {
 } from './otpUi';
 import { formatNumber } from '@/lib/format';
 
-export function PhoneSignup({ next = '' }: { next?: string }) {
+/** بيانات الداعي كما أضافها صاحب المناسبة — تُعرض جاهزة للتأكيد أو التعديل */
+export interface SignupPrefill {
+  name: string;
+  dial: string;
+  /** الرقم بلا مفتاح الدولة */
+  phone: string;
+}
+
+export function PhoneSignup({ next = '', prefill = null }: { next?: string; prefill?: SignupPrefill | null }) {
   const router = useRouter();
   const [details, detailsAction] = useActionState<OtpState, FormData>(startPhoneSignup, {});
   const [resent, resendAction] = useActionState<OtpState, FormData>(resendOtp, {});
   const [verify, verifyAction] = useActionState<VerifyState, FormData>(verifyPhoneCode, {});
 
-  const [dial, setDial] = useState('966');
-  const [phone, setPhone] = useState('');
+  const [dial, setDial] = useState(prefill?.dial ?? '966');
+  const [phone, setPhone] = useState(prefill?.phone ?? '');
   const [consent, setConsent] = useState(false);
-  const [name, setName] = useState('');
+  const [name, setName] = useState(prefill?.name ?? '');
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -91,9 +99,9 @@ export function PhoneSignup({ next = '' }: { next?: string }) {
               type="button"
               className="btn-primary !rounded-[2px] mt-5 w-full"
               disabled={!saved}
-              onClick={() => router.push('/app/events/new')}
+              onClick={() => router.push(verify.next ?? '/app/events/new')}
             >
-              إنشاء أول مناسبة
+              {verify.next ? 'متابعة' : 'إنشاء أول مناسبة'}
             </button>
           </>
         ) : (
@@ -173,8 +181,14 @@ export function PhoneSignup({ next = '' }: { next?: string }) {
   return (
     <>
       <Dots step={1} total={3} />
-      <h1 className="text-center font-display text-[24px] font-bold text-brand">أنشئ حسابك</h1>
-      <p className="mt-2 text-center text-[13px] text-muted">سنرسل لك رمز تحقق عبر واتساب</p>
+      <h1 className="text-center font-display text-[24px] font-bold text-brand">
+        {prefill ? 'أكّد بياناتك' : 'أنشئ حسابك'}
+      </h1>
+      <p className="mt-2 text-center text-[13px] leading-7 text-muted">
+        {prefill
+          ? 'هذه بياناتك كما أضافها صاحب المناسبة — أكّدها أو عدّلها، ثم نرسل لك رمز تحقق عبر واتساب'
+          : 'سنرسل لك رمز تحقق عبر واتساب'}
+      </p>
 
       <form action={detailsAction} className="mt-6 space-y-4">
         <input type="hidden" name="next" value={next} />
@@ -187,6 +201,11 @@ export function PhoneSignup({ next = '' }: { next?: string }) {
         </div>
 
         <PhoneField id="s-phone" dial={dial} setDial={setDial} phone={phone} setPhone={setPhone} />
+        {prefill && prefill.phone && (dial !== prefill.dial || phone !== prefill.phone) ? (
+          <p className="hint !text-warn">
+            رابط الدعوة مرتبط بالرقم المضاف عند صاحب المناسبة — لو سجّلت برقم آخر فاطلب منه تحديث رقمك ليُربط حسابك بالمناسبة.
+          </p>
+        ) : null}
 
         <div>
           <label className="label" htmlFor="s-email">
