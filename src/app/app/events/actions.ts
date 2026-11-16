@@ -8,6 +8,7 @@ import { formatHijri, formatWeekday } from '@/lib/format';
 import { hasTwoCelebrants, OCCASION_LABELS, type OccasionType } from '@/lib/types';
 import { defaultOccasionText, validateInviteVars, type InviteVars } from '@/lib/inviteVars';
 import { readImageFields } from '@/lib/inviteImage';
+import { hasActiveExemption } from '@/lib/exemptions/server';
 
 export interface ActionState { error?: string; notice?: string }
 
@@ -97,6 +98,14 @@ export async function createEvent(_prev: ActionState, formData: FormData): Promi
     metadata: { occasion, host_name: hostName },
   });
 
+  // حساب معفى من الدفع: تُفعَّل المناسبة فورًا ضمن باقة الضيافة — القاعدة
+  // تتحقق من الإعفاء وصاحب المناسبة، فلا خطوة دفع ولا تفعيل يدوي.
+  let hospitality = false;
+  if (await hasActiveExemption(supabase, user.id)) {
+    const { data: activated } = await supabase.rpc('activate_event_by_exemption', { p_event_id: data.id });
+    hospitality = Boolean((activated as { ok?: boolean } | null)?.ok);
+  }
+
   revalidatePath('/app');
-  redirect(`/e/${data.id}/info`);
+  redirect(hospitality ? `/e/${data.id}` : `/e/${data.id}/info`);
 }

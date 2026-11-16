@@ -3,6 +3,9 @@ import { fetchEventBalance } from '@/lib/balance';
 import { PageHeader } from '@/components/ui';
 import { ActionForm, SubmitButton } from '@/components/ActionForm';
 import { BalancePanel } from '@/components/BalancePanel';
+import { HospitalityBalanceCard } from '@/components/exemptions/HospitalityBalanceCard';
+import { fetchExemption } from '@/lib/exemptions/server';
+import { exemptionStatus } from '@/lib/exemptions/logic';
 import { addGuest, importGuests } from '../actions';
 import { OwnerGuestsSection, type OwnerManualSetup } from './OwnerGuestsSection';
 import { appUrl } from '@/lib/env';
@@ -28,6 +31,7 @@ export default async function GuestsPage({ params }: { params: Promise<{ id: str
 
   const guests = guestsData ?? [];
   const inviters = invitersData ?? [];
+  const exemption = e.exemption_id ? await fetchExemption(supabase, e.owner_id) : null;
   // قبل الدفع: الدعوات التجريبية المتبقية في الحساب تسمح بالإرسال
   const trialLeft = user.profile.trial_invites_left ?? 0;
   const canSend = e.status === 'active' || ((e.status === 'unpaid' || e.status === 'pending') && trialLeft > 0);
@@ -68,7 +72,15 @@ export default async function GuestsPage({ params }: { params: Promise<{ id: str
         </div>
 
         <div className="order-1 lg:order-2 space-y-5">
-          <BalancePanel balance={balance} />
+          {exemption ? (
+            <HospitalityBalanceCard
+              exemption={exemption}
+              blocked={exemptionStatus(exemption) !== 'active'}
+              packagesHref={`/e/${id}/info`}
+            />
+          ) : (
+            <BalancePanel balance={balance} />
+          )}
 
           <div className="card card-pad">
             <h2 className="sec-title mb-4">إضافة مدعو</h2>

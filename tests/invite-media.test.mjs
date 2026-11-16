@@ -27,7 +27,7 @@ test('الصورة والفارغ ليسا فيديو', () => {
   assert.equal(isVideoPath(''), false);
 });
 
-test('يقبل الصورة حتى ٥ م.ب والفيديو حتى ٢٠٠ م.ب (حدّ المخزن في 0023)', () => {
+test('يقبل الصورة حتى ٥ م.ب والفيديو حتى ٢٠٠ م.ب (حدّ المخزن في 0024)', () => {
   assert.equal(MAX_VIDEO_BYTES, 209715200);
   assert.equal(MAX_VIDEO_MB_LABEL, '٢٠٠');
   assert.deepEqual(checkInviteMedia({ type: 'image/png', size: MAX_IMAGE_BYTES }), { ok: true, kind: 'image', ext: 'png' });

@@ -123,7 +123,12 @@ with checks(ord, migration, proves, ok) as (
       exists (select 1 from storage.buckets
                where id = 'invite-images' and 'video/mp4' = any(allowed_mime_types))),
 
-    (22, '0022_manual_whatsapp', 'رسالة واتساب اليدوية: القوالب والتوقيع وفتح الدعوة',
+    (22, '0022_payment_exemptions', 'الإعفاء من الدفع (باقة ضيافة)',
+      to_regclass('public.payment_exemptions') is not null
+      and to_regclass('public.exemption_log') is not null
+      and to_regproc('public.exemption_can_send') is not null),
+
+    (23, '0023_manual_whatsapp', 'رسالة واتساب اليدوية: القوالب والتوقيع وفتح الدعوة',
       exists (select 1 from information_schema.columns
                where table_schema='public' and table_name='events' and column_name='manual_message')
       and exists (select 1 from information_schema.columns
@@ -132,7 +137,7 @@ with checks(ord, migration, proves, ok) as (
                    where table_schema='public' and table_name='guests' and column_name='opened_at')
       and to_regproc('public.event_owner_name') is not null),
 
-    (23, '0023_invite_video_limit', 'سعة الفيديو ٢٠٠ MB (بعد الترقية إلى Pro)',
+    (24, '0024_invite_video_limit', 'سعة الفيديو ٢٠٠ MB (بعد الترقية إلى Pro)',
       exists (select 1 from storage.buckets
                where id = 'invite-images' and file_size_limit >= 209715200))
 )

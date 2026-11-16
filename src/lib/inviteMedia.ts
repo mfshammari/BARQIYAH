@@ -22,7 +22,7 @@ export const VIDEO_TYPES: Record<string, string> = {
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 /**
- * الحدّ في مكان واحد: يطابق file_size_limit للـbucket في الترحيل 0023 (٢٠٠ MB).
+ * الحدّ في مكان واحد: يطابق file_size_limit للـbucket في الترحيل 0024 (٢٠٠ MB).
  * يفترض خطة Pro مع Global file size limit ≥ هذا الرقم في Storage ← Settings؛
  * الخطة المجانية تقف عند ٥٠ MB مهما كان حدّ الـbucket.
  */
