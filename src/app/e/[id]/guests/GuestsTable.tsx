@@ -20,6 +20,9 @@ const FILTERS: { key: GuestStatus | 'all'; label: string }[] = [
   { key: 'expired', label: GUEST_STATUS_LABELS.expired },
 ];
 
+/** قيمة تصفية «بلا تقسيمة» — لا تتعارض مع اسم تقسيمة حقيقي */
+const NO_SECTION = '\u0000none';
+
 export function GuestsTable({
   eventId, guests, inviters, appUrl, canSend, manual,
 }: {
@@ -33,6 +36,10 @@ export function GuestsTable({
 }) {
   const [filter, setFilter] = useState<GuestStatus | 'all'>('all');
   const [query, setQuery] = useState('');
+  /** '' = كل التقسيمات */
+  const [section, setSection] = useState('');
+  /** '' = كل فروع التقسيمة المختارة */
+  const [branch, setBranch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<Guest | null>(null);
   const [sendState, sendAction] = useActionState<ActionState, FormData>(sendGuestInvitations, {});
@@ -42,14 +49,45 @@ export function GuestsTable({
     [inviters],
   );
 
+  // التقسيمات من الأكبر إلى الأصغر، مع عدد المدعوين والمقاعد وفروع كل تقسيمة
+  const sections = useMemo(() => {
+    const map = new Map<string, { name: string; count: number; seats: number; branches: Map<string, number> }>();
+    let none = 0;
+    for (const g of guests) {
+      if (!g.section) { none++; continue; }
+      let s = map.get(g.section);
+      if (!s) { s = { name: g.section, count: 0, seats: 0, branches: new Map() }; map.set(g.section, s); }
+      s.count++;
+      s.seats += g.confirmed_seats ?? g.max_seats;
+      if (g.branch) s.branches.set(g.branch, (s.branches.get(g.branch) ?? 0) + 1);
+    }
+    return { list: Array.from(map.values()).sort((a, b) => b.count - a.count), none };
+  }, [guests]);
+
+  const activeSection = sections.list.find((s) => s.name === section);
+  const sectionNames = sections.list.map((s) => s.name);
+  const branchNames = useMemo(
+    () => Array.from(new Set(guests.map((g) => g.branch).filter(Boolean) as string[])),
+    [guests],
+  );
+
+  function chooseSection(next: string) {
+    setSection(next);
+    setBranch('');
+    setSelected(new Set());
+  }
+
   const visible = useMemo(() => {
     const q = query.trim();
     return guests.filter((g) => {
       if (filter !== 'all' && g.status !== filter) return false;
+      if (section === NO_SECTION ? g.section : section && g.section !== section) return false;
+      if (branch && g.branch !== branch) return false;
       if (!q) return true;
-      return g.name.includes(q) || g.phone.includes(q);
+      return g.name.includes(q) || g.phone.includes(q)
+        || (g.section ?? '').includes(q) || (g.branch ?? '').includes(q);
     });
-  }, [guests, filter, query]);
+  }, [guests, filter, query, section, branch]);
 
   const selectableIds = visible.filter((g) => g.status === 'draft').map((g) => g.id);
   const allSelected = selectableIds.length > 0 && selectableIds.every((id) => selected.has(id));
@@ -97,10 +135,48 @@ export function GuestsTable({
           })}
         </div>
 
+        {sections.list.length > 0 ? (
+          <div className="space-y-2 border-t border-line pt-3">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[12px] font-semibold text-muted me-1">التقسيمات</span>
+              <SectionChip active={section === ''} onClick={() => chooseSection('')}
+                label="الكل" count={guests.length} />
+              {sections.list.map((s) => (
+                <SectionChip key={s.name} active={section === s.name} onClick={() => chooseSection(s.name)}
+                  label={s.name} count={s.count} />
+              ))}
+              {sections.none > 0 ? (
+                <SectionChip active={section === NO_SECTION} onClick={() => chooseSection(NO_SECTION)}
+                  label="بلا تقسيمة" count={sections.none} />
+              ) : null}
+            </div>
+
+            {activeSection ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {activeSection.branches.size > 0 ? (
+                  <>
+                    <span className="text-[12px] font-semibold text-muted me-1">الفروع</span>
+                    <SectionChip active={branch === ''} onClick={() => setBranch('')}
+                      label="كل الفروع" count={activeSection.count} />
+                    {Array.from(activeSection.branches).map(([name, count]) => (
+                      <SectionChip key={name} active={branch === name} onClick={() => setBranch(name)}
+                        label={name} count={count} />
+                    ))}
+                  </>
+                ) : null}
+                <span className="text-[12px] text-muted ms-auto">
+                  {activeSection.name}: <span className="num font-semibold text-ink">{activeSection.count}</span> مدعو
+                  {' · '}<span className="num font-semibold text-ink">{activeSection.seats}</span> مقعد
+                </span>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap gap-2 items-center">
           <input
             className="field flex-1 min-w-[180px]"
-            placeholder="بحث بالاسم أو الجوال…"
+            placeholder="بحث بالاسم أو الجوال أو التقسيمة…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -160,6 +236,7 @@ export function GuestsTable({
                   />
                 </th>
                 <th>الاسم</th>
+                <th>التقسيمة</th>
                 <th>الجوال</th>
                 <th>المقاعد</th>
                 <th>الداعي</th>
@@ -182,6 +259,14 @@ export function GuestsTable({
                     />
                   </td>
                   <td className="font-semibold">{g.name}</td>
+                  <td className="text-[12.5px]">
+                    {g.section ? (
+                      <>
+                        <span className="badge bg-brand-soft text-brand">{g.section}</span>
+                        {g.branch ? <span className="text-muted ms-1.5">{g.branch}</span> : null}
+                      </>
+                    ) : <span className="text-muted">—</span>}
+                  </td>
                   <td className="num text-muted" dir="ltr">{g.phone}</td>
                   <td>
                     <span className="num font-semibold">
@@ -268,6 +353,8 @@ export function GuestsTable({
           eventId={eventId}
           guest={editing}
           inviters={inviters}
+          sectionNames={sectionNames}
+          branchNames={branchNames}
           onClose={() => setEditing(null)}
         />
       ) : null}
@@ -275,10 +362,29 @@ export function GuestsTable({
   );
 }
 
-function EditGuestDialog({
-  eventId, guest, inviters, onClose,
+function SectionChip({
+  label, count, active, onClick,
 }: {
-  eventId: string; guest: Guest; inviters: Inviter[]; onClose: () => void;
+  label: string; count: number; active: boolean; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-lg px-2.5 py-1 text-[12px] font-semibold transition-colors ${
+        active ? 'bg-brand text-white' : 'bg-panel text-muted hover:text-ink border border-line'
+      }`}
+    >
+      {label} <span className="num opacity-70">({count})</span>
+    </button>
+  );
+}
+
+function EditGuestDialog({
+  eventId, guest, inviters, sectionNames, branchNames, onClose,
+}: {
+  eventId: string; guest: Guest; inviters: Inviter[];
+  sectionNames: string[]; branchNames: string[]; onClose: () => void;
 }) {
   const [state, action] = useActionState<ActionState, FormData>(updateGuest, {});
 
@@ -316,6 +422,24 @@ function EditGuestDialog({
             {guest.status === 'sent' ? (
               <p className="hint text-warn">هذه الدعوة محجوزة بالحد الأقصى الحالي — تغييره يغيّر الحجز.</p>
             ) : null}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">التقسيمة</label>
+              <input name="section" className="field" list="edit-guest-sections"
+                defaultValue={guest.section ?? ''} maxLength={60} />
+              <datalist id="edit-guest-sections">
+                {sectionNames.map((s) => <option key={s} value={s} />)}
+              </datalist>
+            </div>
+            <div>
+              <label className="label">الفرع</label>
+              <input name="branch" className="field" list="edit-guest-branches"
+                defaultValue={guest.branch ?? ''} maxLength={60} />
+              <datalist id="edit-guest-branches">
+                {branchNames.map((b) => <option key={b} value={b} />)}
+              </datalist>
+            </div>
           </div>
           <div>
             <label className="label">الداعي</label>
