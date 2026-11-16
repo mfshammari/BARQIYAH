@@ -11,7 +11,7 @@ import {
   type ManualMessageConfig, type SignBy,
 } from '@/lib/manualMessage';
 import { sendInvitations, sendReminders } from '@/lib/invitations';
-import type { Guest, Inviter } from '@/lib/types';
+import type { Guest, ImageMode, Inviter } from '@/lib/types';
 
 export interface ActionState { error?: string; notice?: string }
 
@@ -54,6 +54,25 @@ export async function saveInviteContent(_prev: ActionState, formData: FormData):
   if (error) return { error: 'تعذّر حفظ دعوتك.' };
   revalidateInviter(inviterId);
   return { notice: 'حُفظت دعوتك — جاهزة للإرسال.' };
+}
+
+/** مرفق دعوة الداعي (صورة أو فيديو) من محرّر رسالة واتساب — يملكه الداعي وحده. */
+export async function saveInviterAttachment(
+  inviterId: string, mode: ImageMode, path: string | null,
+): Promise<ActionState> {
+  const { supabase } = await guardInviter(inviterId);
+  const fd = new FormData();
+  fd.set('image_mode', mode);
+  fd.set('image_url', path ?? '');
+  const { imageMode, imageUrl } = readImageFields(fd);
+  if (imageMode === 'uploaded' && !imageUrl) return { error: 'ملف المرفق غير صالح.' };
+
+  const { error } = await supabase
+    .from('inviters').update({ image_mode: imageUrl ? 'uploaded' : 'generated', image_url: imageUrl }).eq('id', inviterId);
+  if (error) return { error: 'تعذّر حفظ المرفق.' };
+
+  revalidateInviter(inviterId);
+  return {};
 }
 
 /**

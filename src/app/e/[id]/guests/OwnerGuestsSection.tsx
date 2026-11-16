@@ -6,7 +6,8 @@ import { GuestsTable } from './GuestsTable';
 import { ManualMessageEditor } from '@/components/manual-whatsapp/ManualMessageEditor';
 import { resolveSignature, templateText, type ManualMessageConfig } from '@/lib/manualMessage';
 import type { Guest, Inviter } from '@/lib/types';
-import { saveManualMessage } from '../actions';
+import { AttachmentBox, type AttachmentInitial } from '@/components/manual-whatsapp/AttachmentBox';
+import { saveEventAttachment, saveManualMessage } from '../actions';
 
 export interface OwnerManualSetup {
   /** وصف المناسبة كما كتبه المالك — {المناسبة} */
@@ -18,6 +19,9 @@ export interface OwnerManualSetup {
   /** اسم حساب صاحب المناسبة — التوقيع بلا خيار */
   ownerName: string;
   config: ManualMessageConfig;
+  /** حساب الرافع ومرفق الدعوة الحالي */
+  uid: string;
+  attachment: AttachmentInitial;
 }
 
 /**
@@ -53,6 +57,12 @@ export function OwnerGuestsSection({
             link: `${appUrl}/rsvp/${sampleGuest?.invite_token ?? '…'}`,
           }}
           save={(c) => saveManualMessage(eventId, c)}
+          attachment={
+            <AttachmentBox
+              uid={manual.uid} folder={eventId} initial={manual.attachment}
+              save={(mode, path) => saveEventAttachment(eventId, mode, path)}
+            />
+          }
         />
       ) : (
         <div className="rounded-xl bg-warn-soft px-3.5 py-2.5 text-[13px] text-warn">

@@ -10,11 +10,12 @@ import { SubmitButton, ActionForm } from '@/components/ActionForm';
 import { formatDateTime, formatNumber } from '@/lib/format';
 import type { Contact, Guest } from '@/lib/types';
 import {
-  addInviterGuest, addFromContacts, deleteInviterGuest, markInviterGuestManualSent,
+  addInviterGuest, addFromContacts, deleteInviterGuest, markInviterGuestManualSent, saveInviterAttachment,
   saveInviterManualMessage, sendInviterInvitations, type ActionState,
 } from './actions';
 import { WhatsAppSendLink } from '@/components/WhatsAppSendLink';
 import { buildWhatsAppUrl } from '@/lib/manualInvite';
+import { AttachmentBox, type AttachmentInitial } from '@/components/manual-whatsapp/AttachmentBox';
 
 export interface InviterManualSetup {
   /** وصف المناسبة كما كتبه الداعي — {المناسبة} */
@@ -29,6 +30,9 @@ export interface InviterManualSetup {
   subName: string;
   config: ManualMessageConfig;
   signBy: SignBy;
+  /** حساب الرافع ومرفق الدعوة الحالي */
+  uid: string;
+  attachment: AttachmentInitial;
 }
 
 export function InviterGuests({
@@ -108,6 +112,12 @@ export function InviterGuests({
               link: `${appUrl}/rsvp/${sampleGuest?.invite_token ?? '…'}`,
             }}
             save={(c, s) => saveInviterManualMessage(inviterId, c, s)}
+            attachment={
+              <AttachmentBox
+                uid={manual.uid} folder={inviterId} initial={manual.attachment}
+                save={(mode, path) => saveInviterAttachment(inviterId, mode, path)}
+              />
+            }
           />
         ) : null}
 
