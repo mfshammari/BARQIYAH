@@ -2,7 +2,9 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient, adminClientAvailable } from '@/lib/supabase/admin';
 import { appUrl } from '@/lib/env';
-import { buildButtonPayloads, buildSeatsPayload, getWhatsAppProvider, getReminderTemplateName } from '@/lib/whatsapp';
+import {
+  buildButtonPayloads, buildSeatsPayload, getWhatsAppProvider, getReminderTemplateName, platformSendAvailable,
+} from '@/lib/whatsapp';
 import type { EventRow, Guest, ImageMode, Inviter, Template, WhatsAppCategory } from '@/lib/types';
 import { resolveHeaderImage } from '@/lib/inviteImage';
 import { formatEventLine } from '@/lib/format';
@@ -95,6 +97,10 @@ export interface SendOptions {
  * مع سياق داعٍ: الحجز من حصته، والنص والصورة من عنده؛ وإلا من المالك
  * (events.invite_vars) — وسطر الموعد يُحقن من بيانات المناسبة (SPEC §6).
  */
+/** سبب رفض الإرسال من المنصة حين لا ربط حقيقياً مع واتساب */
+export const PLATFORM_SEND_OFF =
+  'الإرسال من المنصة غير متاح حتى يكتمل ربط واتساب — أرسل بزر «واتساب» بجانب كل مدعو.';
+
 export async function sendInvitations(
   supabase: SupabaseClient,
   eventId: string,
@@ -117,6 +123,15 @@ export async function sendInvitations(
     .from('guests').select('*').in('id', guestIds).eq('event_id', eventId)
     .returns<Guest[]>();
   const guestMap = new Map((guests ?? []).map((g) => [g.id, g]));
+
+  // قبل أي حجز: بلا ربط واتساب حقيقي لا إرسال من المنصة — وإلا عُلِّم المدعو
+  // «أُرسلت» وحُجزت مقاعده ولم تصله رسالة. اليدوي (زر واتساب) غير معنيّ.
+  if (!opts.manual && !(await platformSendAvailable())) {
+    return guestIds.map((id) => ({
+      guestId: id, name: guestMap.get(id)?.name ?? '', ok: false,
+      reason: PLATFORM_SEND_OFF,
+    }));
+  }
 
   if (!hasInviteVars(vars)) {
     return guestIds.map((id) => ({
@@ -400,6 +415,9 @@ export async function sendReminders(
   const { data: event } = await supabase
     .from('events').select('*').eq('id', eventId).maybeSingle<EventRow>();
   if (!event) return { sent: 0, failed: 0, none: true };
+
+  // بلا ربط واتساب حقيقي لا تذكير — وإلا عُلِّم المدعو «ذُكّر» ولم يصله شيء
+  if (!(await platformSendAvailable())) return { sent: 0, failed: 0, none: true };
 
   // التعليم أولاً: من عُلِّم هنا هو من نرسل له — لا أحد غيره
   const { data: marked, error } = await supabase.rpc('mark_reminders_sent', {

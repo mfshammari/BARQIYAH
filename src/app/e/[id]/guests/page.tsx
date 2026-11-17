@@ -9,6 +9,7 @@ import { exemptionStatus } from '@/lib/exemptions/logic';
 import { addGuest, importGuests } from '../actions';
 import { OwnerGuestsSection, type OwnerManualSetup } from './OwnerGuestsSection';
 import { appUrl } from '@/lib/env';
+import { platformSendAvailable } from '@/lib/whatsapp';
 import { formatEventLine } from '@/lib/format';
 import { hasInviteVars, type InviteVars } from '@/lib/inviteVars';
 import { parseManualMessage } from '@/lib/manualMessage';
@@ -39,6 +40,8 @@ export default async function GuestsPage({ params }: { params: Promise<{ id: str
   // قبل الدفع: الدعوات التجريبية المتبقية في الحساب تسمح بالإرسال
   const trialLeft = user.profile.trial_invites_left ?? 0;
   const canSend = e.status === 'active' || ((e.status === 'unpaid' || e.status === 'pending') && trialLeft > 0);
+  // بلا ربط واتساب حقيقي: زر «واتساب» اليدوي فقط، لا إرسال جماعي من المنصة
+  const platformSend = await platformSendAvailable();
 
   // الإرسال اليدوي عبر واتساب (الحل المؤقّت): من حساب صاحب المناسبة تصدر
   // الدعوة باسمه فقط (من الحساب لا من إدخال جديد)، ونصّ الرسالة من events.manual_message
@@ -81,6 +84,7 @@ export default async function GuestsPage({ params }: { params: Promise<{ id: str
             inviters={inviters}
             appUrl={appUrl()}
             canSend={canSend}
+            platformSend={platformSend}
             manual={manual}
           />
         </div>
@@ -143,7 +147,7 @@ export default async function GuestsPage({ params }: { params: Promise<{ id: str
                 </select>
               </div>
               <label className="flex items-center gap-2 text-[13px]">
-                <input type="checkbox" name="send_now" className="accent-brand" disabled={!canSend} />
+                <input type="checkbox" name="send_now" className="accent-brand" disabled={!canSend || !platformSend} />
                 أرسل الدعوة الآن {canSend ? '' : '(متاح بعد التفعيل)'}
               </label>
               <SubmitButton className="btn-primary w-full" pendingLabel="جارٍ الإضافة…">إضافة المدعو</SubmitButton>
@@ -163,7 +167,7 @@ export default async function GuestsPage({ params }: { params: Promise<{ id: str
                            file:px-3 file:py-2 file:text-[13px] file:font-semibold file:text-brand"
               />
               <label className="flex items-center gap-2 text-[13px]">
-                <input type="checkbox" name="send_now" className="accent-brand" disabled={!canSend} />
+                <input type="checkbox" name="send_now" className="accent-brand" disabled={!canSend || !platformSend} />
                 أرسل الدعوات فور الرفع
               </label>
               <SubmitButton className="btn-ghost w-full" pendingLabel="جارٍ الرفع…">رفع الملف</SubmitButton>
