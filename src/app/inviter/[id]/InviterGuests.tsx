@@ -14,8 +14,31 @@ import {
   saveInviterManualMessage, sendInviterInvitations, type ActionState,
 } from './actions';
 import { WhatsAppSendLink } from '@/components/WhatsAppSendLink';
+import { GUEST_STATUS_LABELS, type GuestStatus } from '@/lib/types';
+import { isUnopened, lastUpdate, matchesOpened, sortByUpdate, type OpenedFilter, type UpdatedSort } from '@/lib/guestFilters';
 import { buildWhatsAppUrl } from '@/lib/manualInvite';
 import { AttachmentBox, type AttachmentInitial } from '@/components/manual-whatsapp/AttachmentBox';
+
+/** حالات شرائح التصفية في صفحة الداعي، بترتيب مسار الدعوة */
+const STATUS_CHIPS: GuestStatus[] = ['draft', 'sent', 'accepted', 'declined', 'attended', 'expired'];
+
+function FilterChip({
+  label, count, active, onClick,
+}: {
+  label: string; count: number; active: boolean; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-lg px-2.5 py-1 text-[12px] font-semibold transition-colors ${
+        active ? 'bg-brand text-white' : 'bg-panel text-muted hover:text-ink border border-line'
+      }`}
+    >
+      {label} <span className="num opacity-70">({count})</span>
+    </button>
+  );
+}
 
 export interface InviterManualSetup {
   /** وصف المناسبة كما كتبه الداعي — {المناسبة} */
@@ -49,6 +72,9 @@ export function InviterGuests({
 }) {
   const [sendState, sendAction] = useActionState<ActionState, FormData>(sendInviterInvitations, {});
   const [query, setQuery] = useState('');
+  const [status, setStatus] = useState<GuestStatus | 'all'>('all');
+  const [opened, setOpened] = useState<OpenedFilter>('all');
+  const [sort, setSort] = useState<UpdatedSort>('none');
   const [picking, setPicking] = useState(false);
   const [config, setConfig] = useState<ManualMessageConfig>(manual?.config ?? { template: 'formal', texts: {} });
   const [signBy, setSignBy] = useState<SignBy>(manual?.signBy ?? 'both');
@@ -58,9 +84,17 @@ export function InviterGuests({
 
   const visible = useMemo(() => {
     const q = query.trim();
-    if (!q) return guests;
-    return guests.filter((g) => g.name.includes(q) || g.phone.includes(q));
-  }, [guests, query]);
+    const rows = guests.filter((g) => {
+      if (status !== 'all' && g.status !== status) return false;
+      if (!matchesOpened(g, opened)) return false;
+      return !q || g.name.includes(q) || g.phone.includes(q);
+    });
+    return sortByUpdate(rows, sort);
+  }, [guests, query, status, opened, sort]);
+
+  const countOf = (s: GuestStatus) => guests.filter((g) => g.status === s).length;
+  const openedCount = guests.filter((g) => g.opened_at).length;
+  const unopenedCount = guests.filter(isUnopened).length;
 
   const drafts = guests.filter((g) => g.status === 'draft').length;
 
@@ -90,6 +124,34 @@ export function InviterGuests({
             </form>
           ) : null}
         </div>
+
+        {guests.length > 0 ? (
+          <div className="card card-pad space-y-2.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[12px] font-semibold text-muted me-1">الحالة</span>
+              <FilterChip active={status === 'all'} onClick={() => setStatus('all')} label="الكل" count={guests.length} />
+              {STATUS_CHIPS.map((s) => (
+                <FilterChip key={s} active={status === s} onClick={() => setStatus(s)}
+                  label={GUEST_STATUS_LABELS[s]} count={countOf(s)} />
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5 border-t border-line pt-2.5">
+              <span className="text-[12px] font-semibold text-muted me-1">فتح الدعوة</span>
+              <FilterChip active={opened === 'all'} onClick={() => setOpened('all')} label="الكل" count={guests.length} />
+              <FilterChip active={opened === 'opened'} onClick={() => setOpened('opened')} label="فتح الدعوة" count={openedCount} />
+              <FilterChip active={opened === 'unopened'} onClick={() => setOpened('unopened')} label="لم يفتح" count={unopenedCount} />
+              <label className="ms-auto flex items-center gap-1.5 text-[12px] font-semibold text-muted">
+                الترتيب
+                <select className="field !w-auto !py-1 text-[12px]" value={sort}
+                  onChange={(e) => setSort(e.target.value as UpdatedSort)}>
+                  <option value="none">ترتيب الإضافة</option>
+                  <option value="desc">الأحدث تحديثاً</option>
+                  <option value="asc">الأقدم تحديثاً</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        ) : null}
 
         {!ready ? (
           <div className="rounded-xl bg-warn-soft px-3.5 py-2.5 text-[13px] text-warn">
@@ -157,7 +219,7 @@ export function InviterGuests({
                       </div>
                     </td>
                     <td className="num text-[12px] text-muted">
-                      {formatDateTime(g.responded_at ?? g.sent_at ?? g.created_at)}
+                      {formatDateTime(lastUpdate(g))}
                     </td>
                     <td>
                       <div className="flex justify-end gap-1.5">

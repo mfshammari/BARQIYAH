@@ -4,6 +4,7 @@ import { useActionState, useMemo, useState } from 'react';
 import { GuestStatusBadge, EmptyState } from '@/components/ui';
 import { SubmitButton } from '@/components/ActionForm';
 import { formatDateTime } from '@/lib/format';
+import { isUnopened, lastUpdate, matchesOpened, sortByUpdate, type OpenedFilter, type UpdatedSort } from '@/lib/guestFilters';
 import { GUEST_STATUS_LABELS, type Guest, type GuestStatus, type Inviter } from '@/lib/types';
 import { WhatsAppSendLink } from '@/components/WhatsAppSendLink';
 import { buildWhatsAppUrl } from '@/lib/manualInvite';
@@ -19,22 +20,6 @@ const FILTERS: { key: GuestStatus | 'all'; label: string }[] = [
   { key: 'attended', label: GUEST_STATUS_LABELS.attended },
   { key: 'expired', label: GUEST_STATUS_LABELS.expired },
 ];
-
-/** تصفية فتح الدعوة: «لم يفتح» = أُرسلت له ولم يفتح رابطه (المسودة لم تُرسل أصلاً) */
-type OpenedFilter = 'all' | 'opened' | 'unopened';
-/** ترتيب «آخر تحديث»: none = ترتيب القائمة الأصلي */
-type UpdatedSort = 'none' | 'desc' | 'asc';
-
-/** آخر ما جرى على الدعوة: حضور، ردّ، فتح، تذكير، إرسال — وإلا تاريخ الإضافة */
-function lastUpdate(g: Guest): string {
-  const stamps = [g.attended_at, g.responded_at, g.opened_at, g.reminded_at, g.sent_at, g.created_at]
-    .filter(Boolean) as string[];
-  return stamps.reduce((latest, t) => (Date.parse(t) > Date.parse(latest) ? t : latest), g.created_at);
-}
-
-function isUnopened(g: Guest): boolean {
-  return g.status !== 'draft' && !g.opened_at;
-}
 
 /** قيمة تصفية «بلا تقسيمة» — لا تتعارض مع اسم تقسيمة حقيقي */
 const NO_SECTION = '\u0000none';
@@ -99,20 +84,14 @@ export function GuestsTable({
     const q = query.trim();
     const rows = guests.filter((g) => {
       if (filter !== 'all' && g.status !== filter) return false;
-      if (opened === 'opened' && !g.opened_at) return false;
-      if (opened === 'unopened' && !isUnopened(g)) return false;
+      if (!matchesOpened(g, opened)) return false;
       if (section === NO_SECTION ? g.section : section && g.section !== section) return false;
       if (branch && g.branch !== branch) return false;
       if (!q) return true;
       return g.name.includes(q) || g.phone.includes(q)
         || (g.section ?? '').includes(q) || (g.branch ?? '').includes(q);
     });
-    if (sort === 'none') return rows;
-    const dir = sort === 'desc' ? -1 : 1;
-    return [...rows].sort((a, b) => {
-      const x = Date.parse(lastUpdate(a)), y = Date.parse(lastUpdate(b));
-      return x === y ? 0 : (x > y ? dir : -dir);
-    });
+    return sortByUpdate(rows, sort);
   }, [guests, filter, query, section, branch, opened, sort]);
 
   const openedCount = useMemo(() => guests.filter((g) => g.opened_at).length, [guests]);
