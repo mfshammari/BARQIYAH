@@ -25,7 +25,7 @@ const FILTERS: { key: GuestStatus | 'all'; label: string }[] = [
 const NO_SECTION = '\u0000none';
 
 export function GuestsTable({
-  eventId, guests, inviters, appUrl, canSend, manual,
+  eventId, guests, inviters, appUrl, canSend, platformSend, manual,
 }: {
   /** رسالة واتساب اليدوية: المتغيّرات ونصّ القالب المختار — null إن لم يكتب المالك دعوته بعد */
   manual: { occasion: string; date: string; venue: string; signature: string; text: string } | null;
@@ -34,6 +34,8 @@ export function GuestsTable({
   inviters: Inviter[];
   appUrl: string;
   canSend: boolean;
+  /** الإرسال من المنصة (جماعي/قالب) متاح — false حين واتساب غير مربوط */
+  platformSend: boolean;
 }) {
   const [filter, setFilter] = useState<GuestStatus | 'all'>('all');
   const [query, setQuery] = useState('');
@@ -212,7 +214,7 @@ export function GuestsTable({
             onChange={(e) => setQuery(e.target.value)}
           />
 
-          {canSend ? (
+          {canSend && platformSend ? (
             <>
               <form action={sendAction}>
                 <input type="hidden" name="event_id" value={eventId} />
@@ -348,7 +350,7 @@ export function GuestsTable({
                   </td>
                   <td>
                     <div className="flex gap-1.5 justify-end">
-                      {g.status === 'draft' && canSend ? (
+                      {g.status === 'draft' && canSend && platformSend ? (
                         <form action={sendAction}>
                           <input type="hidden" name="event_id" value={eventId} />
                           <input type="hidden" name="scope" value="selected" />

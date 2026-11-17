@@ -59,7 +59,7 @@ export interface InviterManualSetup {
 }
 
 export function InviterGuests({
-  inviterId, guests, contacts, canSend, appUrl, ready, manual,
+  inviterId, guests, contacts, canSend, platformSend, appUrl, ready, manual,
 }: {
   /** رسالة واتساب اليدوية للداعي — null إن لم يكتب نصّ دعوته بعد */
   manual: InviterManualSetup | null;
@@ -67,6 +67,8 @@ export function InviterGuests({
   guests: Guest[];
   contacts: Contact[];
   canSend: boolean;
+  /** الإرسال من المنصة (جماعي/قالب) متاح — false حين واتساب غير مربوط */
+  platformSend: boolean;
   appUrl: string;
   ready: boolean;
 }) {
@@ -111,7 +113,7 @@ export function InviterGuests({
         <div className="card card-pad flex flex-wrap items-center gap-2">
           <input className="field min-w-[160px] flex-1" placeholder="بحث…"
             value={query} onChange={(e) => setQuery(e.target.value)} />
-          {canSend ? (
+          {canSend && platformSend ? (
             <form action={sendAction}>
               <input type="hidden" name="inviter_id" value={inviterId} />
               <input type="hidden" name="scope" value="all_drafts" />
@@ -234,7 +236,7 @@ export function InviterGuests({
                     </td>
                     <td>
                       <div className="flex justify-end gap-1.5">
-                        {g.status === 'draft' && canSend && ready ? (
+                        {g.status === 'draft' && canSend && platformSend && ready ? (
                           <form action={sendAction}>
                             <input type="hidden" name="inviter_id" value={inviterId} />
                             <input type="hidden" name="scope" value="selected" />

@@ -1,3 +1,4 @@
+import { platformSendAvailable } from '@/lib/whatsapp';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
@@ -76,6 +77,8 @@ export default async function InviterWorkspace({
   const ready = Boolean(vars.host && vars.occasion);
   const trialLeft = user.profile.trial_invites_left ?? 0;
   const canSend = event.status === 'active' || ((event.status === 'unpaid' || event.status === 'pending') && trialLeft > 0);
+  // بلا ربط واتساب حقيقي: زر «واتساب» اليدوي فقط، لا إرسال جماعي من المنصة
+  const platformSend = await platformSendAvailable();
   const active = tab === 'guests' ? 'guests' : 'invite';
 
   const dateParts = {
@@ -296,6 +299,7 @@ export default async function InviterWorkspace({
           guests={guests}
           contacts={contactsData ?? []}
           canSend={canSend}
+          platformSend={platformSend}
           ready={ready}
           appUrl={appUrl()}
           manual={manual}

@@ -29,13 +29,15 @@ export interface OwnerManualSetup {
  * فوراً في أزرار «واتساب» (الحالة مشتركة هنا)، والحفظ يكتب events.manual_message.
  */
 export function OwnerGuestsSection({
-  eventId, guests, inviters, appUrl, canSend, manual,
+  eventId, guests, inviters, appUrl, canSend, platformSend, manual,
 }: {
   eventId: string;
   guests: Guest[];
   inviters: Inviter[];
   appUrl: string;
   canSend: boolean;
+  /** الإرسال من المنصة متاح (واتساب مربوط) — وإلا زر «واتساب» اليدوي فقط */
+  platformSend: boolean;
   /** null = المالك لم يكتب نصّ دعوته بعد */
   manual: OwnerManualSetup | null;
 }) {
@@ -78,6 +80,7 @@ export function OwnerGuestsSection({
         inviters={inviters}
         appUrl={appUrl}
         canSend={canSend}
+        platformSend={platformSend}
         manual={manual ? {
           occasion: manual.occasion,
           date: manual.date,
