@@ -249,6 +249,15 @@ export function GuestsTable({
         ) : null}
       </div>
 
+      <p className="px-1 text-[13px] text-muted">
+        النتيجة: <span className="num text-[15px] font-bold text-ink">{visible.length}</span> مدعو
+        {' · '}
+        <span className="num text-[15px] font-bold text-ink">
+          {visible.reduce((sum, g) => sum + (g.confirmed_seats ?? g.max_seats), 0)}
+        </span> مقعد
+        {visible.length !== guests.length ? <span> — من أصل <span className="num">{guests.length}</span></span> : null}
+      </p>
+
       {visible.length === 0 ? (
         <EmptyState
           title="لا يوجد مدعوون مطابقون"

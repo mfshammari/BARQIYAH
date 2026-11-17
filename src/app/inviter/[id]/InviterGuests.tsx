@@ -183,6 +183,17 @@ export function InviterGuests({
           />
         ) : null}
 
+        {guests.length > 0 ? (
+          <p className="px-1 text-[13px] text-muted">
+            النتيجة: <span className="num text-[15px] font-bold text-ink">{visible.length}</span> مدعو
+            {' · '}
+            <span className="num text-[15px] font-bold text-ink">
+              {visible.reduce((sum, g) => sum + (g.confirmed_seats ?? g.max_seats), 0)}
+            </span> مقعد
+            {visible.length !== guests.length ? <span> — من أصل <span className="num">{guests.length}</span></span> : null}
+          </p>
+        ) : null}
+
         {visible.length === 0 ? (
           <EmptyState
             title={guests.length === 0 ? 'لا مدعوين بعد' : 'لا نتائج'}
