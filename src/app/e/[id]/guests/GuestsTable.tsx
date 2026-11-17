@@ -20,6 +20,22 @@ const FILTERS: { key: GuestStatus | 'all'; label: string }[] = [
   { key: 'expired', label: GUEST_STATUS_LABELS.expired },
 ];
 
+/** تصفية فتح الدعوة: «لم يفتح» = أُرسلت له ولم يفتح رابطه (المسودة لم تُرسل أصلاً) */
+type OpenedFilter = 'all' | 'opened' | 'unopened';
+/** ترتيب «آخر تحديث»: none = ترتيب القائمة الأصلي */
+type UpdatedSort = 'none' | 'desc' | 'asc';
+
+/** آخر ما جرى على الدعوة: حضور، ردّ، فتح، تذكير، إرسال — وإلا تاريخ الإضافة */
+function lastUpdate(g: Guest): string {
+  const stamps = [g.attended_at, g.responded_at, g.opened_at, g.reminded_at, g.sent_at, g.created_at]
+    .filter(Boolean) as string[];
+  return stamps.reduce((latest, t) => (Date.parse(t) > Date.parse(latest) ? t : latest), g.created_at);
+}
+
+function isUnopened(g: Guest): boolean {
+  return g.status !== 'draft' && !g.opened_at;
+}
+
 /** قيمة تصفية «بلا تقسيمة» — لا تتعارض مع اسم تقسيمة حقيقي */
 const NO_SECTION = '\u0000none';
 
@@ -40,6 +56,8 @@ export function GuestsTable({
   const [section, setSection] = useState('');
   /** '' = كل فروع التقسيمة المختارة */
   const [branch, setBranch] = useState('');
+  const [opened, setOpened] = useState<OpenedFilter>('all');
+  const [sort, setSort] = useState<UpdatedSort>('none');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<Guest | null>(null);
   const [sendState, sendAction] = useActionState<ActionState, FormData>(sendGuestInvitations, {});
@@ -79,15 +97,26 @@ export function GuestsTable({
 
   const visible = useMemo(() => {
     const q = query.trim();
-    return guests.filter((g) => {
+    const rows = guests.filter((g) => {
       if (filter !== 'all' && g.status !== filter) return false;
+      if (opened === 'opened' && !g.opened_at) return false;
+      if (opened === 'unopened' && !isUnopened(g)) return false;
       if (section === NO_SECTION ? g.section : section && g.section !== section) return false;
       if (branch && g.branch !== branch) return false;
       if (!q) return true;
       return g.name.includes(q) || g.phone.includes(q)
         || (g.section ?? '').includes(q) || (g.branch ?? '').includes(q);
     });
-  }, [guests, filter, query, section, branch]);
+    if (sort === 'none') return rows;
+    const dir = sort === 'desc' ? -1 : 1;
+    return [...rows].sort((a, b) => {
+      const x = Date.parse(lastUpdate(a)), y = Date.parse(lastUpdate(b));
+      return x === y ? 0 : (x > y ? dir : -dir);
+    });
+  }, [guests, filter, query, section, branch, opened, sort]);
+
+  const openedCount = useMemo(() => guests.filter((g) => g.opened_at).length, [guests]);
+  const unopenedCount = useMemo(() => guests.filter(isUnopened).length, [guests]);
 
   const selectableIds = visible.filter((g) => g.status === 'draft').map((g) => g.id);
   const allSelected = selectableIds.length > 0 && selectableIds.every((id) => selected.has(id));
@@ -173,6 +202,29 @@ export function GuestsTable({
           </div>
         ) : null}
 
+        <div className="flex flex-wrap items-center gap-1.5 border-t border-line pt-3">
+          <span className="text-[12px] font-semibold text-muted me-1">فتح الدعوة</span>
+          <SectionChip active={opened === 'all'} onClick={() => { setOpened('all'); setSelected(new Set()); }}
+            label="الكل" count={guests.length} />
+          <SectionChip active={opened === 'opened'} onClick={() => { setOpened('opened'); setSelected(new Set()); }}
+            label="فتح الدعوة" count={openedCount} />
+          <SectionChip active={opened === 'unopened'} onClick={() => { setOpened('unopened'); setSelected(new Set()); }}
+            label="لم يفتح" count={unopenedCount} />
+
+          <label className="ms-auto flex items-center gap-1.5 text-[12px] font-semibold text-muted">
+            الترتيب
+            <select
+              className="field !w-auto !py-1 text-[12px]"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as UpdatedSort)}
+            >
+              <option value="none">ترتيب الإضافة</option>
+              <option value="desc">الأحدث تحديثاً</option>
+              <option value="asc">الأقدم تحديثاً</option>
+            </select>
+          </label>
+        </div>
+
         <div className="flex flex-wrap gap-2 items-center">
           <input
             className="field flex-1 min-w-[180px]"
@@ -241,7 +293,17 @@ export function GuestsTable({
                 <th>المقاعد</th>
                 <th>الداعي</th>
                 <th>الحالة</th>
-                <th>آخر تحديث</th>
+                <th>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 font-semibold hover:text-ink"
+                    title="رتّب بتاريخ آخر تحديث"
+                    onClick={() => setSort(sort === 'desc' ? 'asc' : sort === 'asc' ? 'none' : 'desc')}
+                  >
+                    آخر تحديث
+                    <span className="num text-[10px]">{sort === 'desc' ? '▼' : sort === 'asc' ? '▲' : '↕'}</span>
+                  </button>
+                </th>
                 <th></th>
               </tr>
             </thead>
@@ -294,7 +356,7 @@ export function GuestsTable({
                     </div>
                   </td>
                   <td className="text-muted text-[12px] num">
-                    {formatDateTime(g.responded_at ?? g.sent_at ?? g.created_at)}
+                    {formatDateTime(lastUpdate(g))}
                   </td>
                   <td>
                     <div className="flex gap-1.5 justify-end">
